@@ -44,4 +44,23 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    
+
+    public function quizAttempts()
+    {
+        return $this->hasMany(QuizAttempt::class);
+    }
+
+    public function completedSets()
+    {
+        return $this->hasManyThrough(
+            Set::class,
+            QuizAttempt::class,
+            'user_id',
+            'id',
+            'id',
+            'set_id'
+        )->where('quiz_attempts.completed', true);
+    }
 }

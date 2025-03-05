@@ -11,10 +11,27 @@
                 </div>
 
                 <!-- Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    
+                    @if(Auth::user()->role === 'student')
+                        <x-nav-link :href="route('quizzes.index')" :active="request()->routeIs('quizzes.*')">
+                            {{ __('Quizzes') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('challenges.index')" :active="request()->routeIs('challenges.*')">
+                            {{ __('Challenges') }}
+                        </x-nav-link>
+                    @elseif(Auth::user()->role === 'lecturer')
+                        <x-nav-link :href="route('lecturer.dashboard')" :active="request()->routeIs('lecturer.*')">
+                            {{ __('Lecturer Dashboard') }}
+                        </x-nav-link>
+                    @elseif(Auth::user()->role === 'accessor')
+                        <x-nav-link :href="route('accessor.dashboard')" :active="request()->routeIs('accessor.*')">
+                            {{ __('Accessor Dashboard') }}
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -69,6 +86,12 @@
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('quizzes.index')" :active="request()->routeIs('quizzes.*')">
+                {{ __('Quizzes') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('challenges.index')" :active="request()->routeIs('challenges.*')">
+                {{ __('Challenges') }}
             </x-responsive-nav-link>
         </div>
 
