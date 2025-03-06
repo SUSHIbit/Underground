@@ -64,12 +64,13 @@
                                 @foreach($set->questions as $question)
                                     <div class="mb-8 p-4 bg-gray-50 rounded-lg">
                                         <div class="mb-4">
-                                            <label for="questions[{{ $question->id }}][question_text]" class="block mb-2 font-medium text-gray-700">
+                                            <input type="hidden" name="questions[{{ $question->id }}][id]" value="{{ $question->id }}">
+                                            <label for="questions_{{ $question->id }}_question_text" class="block mb-2 font-medium text-gray-700">
                                                 Question {{ $question->question_number }}
                                             </label>
                                             <textarea 
                                                 name="questions[{{ $question->id }}][question_text]" 
-                                                id="questions[{{ $question->id }}][question_text]" 
+                                                id="questions_{{ $question->id }}_question_text" 
                                                 class="w-full p-2 border border-gray-300 rounded-md"
                                                 rows="3"
                                                 required
@@ -79,13 +80,13 @@
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                             @foreach(['A', 'B', 'C', 'D'] as $option)
                                                 <div>
-                                                    <label for="questions[{{ $question->id }}][options][{{ $option }}]" class="block mb-2 font-medium text-gray-700">
+                                                    <label for="questions_{{ $question->id }}_options_{{ $option }}" class="block mb-2 font-medium text-gray-700">
                                                         Option {{ $option }}
                                                     </label>
                                                     <input 
                                                         type="text" 
                                                         name="questions[{{ $question->id }}][options][{{ $option }}]" 
-                                                        id="questions[{{ $question->id }}][options][{{ $option }}]" 
+                                                        id="questions_{{ $question->id }}_options_{{ $option }}" 
                                                         class="w-full p-2 border border-gray-300 rounded-md"
                                                         value="{{ old("questions.{$question->id}.options.{$option}", $question->options[$option] ?? '') }}"
                                                         required
@@ -95,12 +96,12 @@
                                         </div>
                                         
                                         <div class="mb-4">
-                                            <label for="questions[{{ $question->id }}][correct_answer]" class="block mb-2 font-medium text-gray-700">
+                                            <label for="questions_{{ $question->id }}_correct_answer" class="block mb-2 font-medium text-gray-700">
                                                 Correct Answer
                                             </label>
                                             <select 
                                                 name="questions[{{ $question->id }}][correct_answer]" 
-                                                id="questions[{{ $question->id }}][correct_answer]" 
+                                                id="questions_{{ $question->id }}_correct_answer" 
                                                 class="w-full p-2 border border-gray-300 rounded-md"
                                                 required
                                             >
@@ -113,12 +114,12 @@
                                         </div>
                                         
                                         <div class="mb-2">
-                                            <label for="questions[{{ $question->id }}][reason]" class="block mb-2 font-medium text-gray-700">
+                                            <label for="questions_{{ $question->id }}_reason" class="block mb-2 font-medium text-gray-700">
                                                 Reason
                                             </label>
                                             <textarea 
                                                 name="questions[{{ $question->id }}][reason]" 
-                                                id="questions[{{ $question->id }}][reason]" 
+                                                id="questions_{{ $question->id }}_reason" 
                                                 class="w-full p-2 border border-gray-300 rounded-md"
                                                 rows="3"
                                                 required

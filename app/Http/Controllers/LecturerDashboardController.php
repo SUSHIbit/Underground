@@ -67,6 +67,8 @@ class LecturerDashboardController extends Controller
         }
     }
     
+
+    
     /**
      * Update the specified set.
      */
@@ -86,11 +88,15 @@ class LecturerDashboardController extends Controller
             'questions.*.reason' => 'required|string',
         ]);
         
+        \Log::info('Updating questions with data: ', $validated);
+        
         // Update each question
-        foreach ($validated['questions'] as $questionData) {
+        foreach ($validated['questions'] as $questionId => $questionData) {
             $question = $set->questions->firstWhere('id', $questionData['id']);
             
             if ($question) {
+                \Log::info('Updating question ID: ' . $question->id);
+                
                 $question->update([
                     'question_text' => $questionData['question_text'],
                     'options' => $questionData['options'],
@@ -101,12 +107,16 @@ class LecturerDashboardController extends Controller
                 // Mark any comments on this question as resolved
                 SetComment::where('question_id', $question->id)
                           ->update(['is_resolved' => true]);
+            } else {
+                \Log::warning('Question not found with ID: ' . $questionData['id']);
             }
         }
         
         return redirect()->route('lecturer.dashboard')
                         ->with('success', 'Set updated successfully.');
     }
+
+
     
     /**
      * Submit the set for approval.
