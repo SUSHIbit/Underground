@@ -98,6 +98,9 @@ class QuizController extends Controller
         ]);
     }
     
+
+
+    
     public function submit(Request $request, Set $set)
     {
         if ($set->type !== 'quiz') {
@@ -109,7 +112,7 @@ class QuizController extends Controller
         // Check if the user has already attempted this quiz
         if ($set->isAttemptedBy($user)) {
             return redirect()->route('quizzes.index')
-                           ->with('error', 'You have already completed this quiz.');
+                        ->with('error', 'You have already completed this quiz.');
         }
         
         $validated = $request->validate([
@@ -118,9 +121,9 @@ class QuizController extends Controller
         ]);
         
         $attempt = QuizAttempt::where('user_id', $user->id)
-                             ->where('set_id', $set->id)
-                             ->where('completed', false)
-                             ->firstOrFail();
+                            ->where('set_id', $set->id)
+                            ->where('completed', false)
+                            ->firstOrFail();
         
         $score = 0;
         $set->load('questions');
@@ -150,6 +153,9 @@ class QuizController extends Controller
             'score' => $score,
             'completed' => true
         ]);
+        
+        // Award 5 points for completing any quiz
+        $user->addPoints(5);
         
         return redirect()->route('results.show', $attempt);
     }

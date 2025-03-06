@@ -1,15 +1,16 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController; 
 use App\Http\Controllers\QuizController; 
-use App\Http\Controllers\ChallengeController; 
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ResultController; 
-use App\Http\Controllers\LecturerDashboardController; 
-use App\Http\Controllers\AccessorDashboardController; 
+use App\Http\Controllers\ChallengeController; 
+use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\SetApprovalController; 
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AccessorDashboardController; 
+use App\Http\Controllers\LecturerDashboardController; 
 
 /*
 |--------------------------------------------------------------------------
@@ -43,6 +44,9 @@ Route::middleware(['auth'])->group(function () {
     
     // Results Routes
     Route::get('/results/{attempt}', [ResultController::class, 'show'])->name('results.show');
+
+    // Add to routes/web.php
+    Route::get('/leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard');
 });
 
 Route::middleware('auth')->group(function () {

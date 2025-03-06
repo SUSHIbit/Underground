@@ -15,6 +15,10 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+
+                    <x-nav-link :href="route('leaderboard')" :active="request()->routeIs('leaderboard')">
+                        {{ __('Leaderboard') }}
+                    </x-nav-link>
                     
                     @if(Auth::user()->role === 'student')
                         <x-nav-link :href="route('quizzes.index')" :active="request()->routeIs('quizzes.*')">

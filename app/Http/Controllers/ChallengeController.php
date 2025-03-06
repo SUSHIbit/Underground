@@ -115,6 +115,9 @@ class ChallengeController extends Controller
         ]);
     }
     
+
+
+    
     public function submit(Request $request, Set $set)
     {
         if ($set->type !== 'challenge') {
@@ -126,7 +129,7 @@ class ChallengeController extends Controller
         // Check if the user has already attempted this challenge
         if ($set->isAttemptedBy($user)) {
             return redirect()->route('challenges.index')
-                           ->with('error', 'You have already completed this challenge.');
+                        ->with('error', 'You have already completed this challenge.');
         }
         
         $validated = $request->validate([
@@ -135,9 +138,9 @@ class ChallengeController extends Controller
         ]);
         
         $attempt = QuizAttempt::where('user_id', $user->id)
-                             ->where('set_id', $set->id)
-                             ->where('completed', false)
-                             ->firstOrFail();
+                            ->where('set_id', $set->id)
+                            ->where('completed', false)
+                            ->firstOrFail();
         
         $score = 0;
         $set->load('questions');
@@ -167,6 +170,27 @@ class ChallengeController extends Controller
             'score' => $score,
             'completed' => true
         ]);
+        
+        // Calculate challenge points based on score percentage
+        $totalQuestions = $set->questions->count();
+        $scorePercentage = ($score / $totalQuestions) * 100;
+        
+        // Award points based on percentage
+        $pointsToAward = 0;
+        if ($scorePercentage >= 20 && $scorePercentage < 40) {
+            $pointsToAward = 2;
+        } elseif ($scorePercentage >= 40 && $scorePercentage < 60) {
+            $pointsToAward = 4;
+        } elseif ($scorePercentage >= 60 && $scorePercentage < 80) {
+            $pointsToAward = 6;
+        } elseif ($scorePercentage >= 80 && $scorePercentage < 100) {
+            $pointsToAward = 8;
+        } elseif ($scorePercentage == 100) {
+            $pointsToAward = 10;
+        }
+        
+        // Add points to user
+        $user->addPoints($pointsToAward);
         
         return redirect()->route('results.show', $attempt);
     }

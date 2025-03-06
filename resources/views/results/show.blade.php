@@ -43,6 +43,38 @@
                             </div>
                         </div>
                     </div>
+
+                    
+
+                    <div class="mt-4 text-center">
+                        <div class="inline-block px-3 py-1 rounded bg-green-100 text-green-800">
+                            <p class="text-sm font-medium">
+                                @if($attempt->set->type === 'quiz')
+                                    <span class="font-bold">+5</span> points earned for completing this quiz
+                                @else
+                                    @php
+                                        $score = $attempt->score;
+                                        $total = $attempt->total_questions;
+                                        $percentage = ($score / $total) * 100;
+                                        $pointsEarned = 0;
+                                        
+                                        if ($percentage >= 20 && $percentage < 40) {
+                                            $pointsEarned = 2;
+                                        } elseif ($percentage >= 40 && $percentage < 60) {
+                                            $pointsEarned = 4;
+                                        } elseif ($percentage >= 60 && $percentage < 80) {
+                                            $pointsEarned = 6;
+                                        } elseif ($percentage >= 80 && $percentage < 100) {
+                                            $pointsEarned = 8;
+                                        } elseif ($percentage == 100) {
+                                            $pointsEarned = 10;
+                                        }
+                                    @endphp
+                                    <span class="font-bold">+{{ $pointsEarned }}</span> points earned for this challenge
+                                @endif
+                            </p>
+                        </div>
+                    </div>
                     
                     <h3 class="text-lg font-medium mb-4">Question Review</h3>
                     

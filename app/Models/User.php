@@ -45,8 +45,6 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
-    
-
     public function quizAttempts()
     {
         return $this->hasMany(QuizAttempt::class);
@@ -63,4 +61,67 @@ class User extends Authenticatable
             'set_id'
         )->where('quiz_attempts.completed', true);
     }
+
+
+    
+
+    /**
+     * Get the rank based on total points.
+     *
+     * @return string
+     */
+    public function getRank(): string
+    {
+        if ($this->points < 50) {
+            return 'Unranked';
+        } elseif ($this->points < 100) {
+            return 'Bronze';
+        } elseif ($this->points < 250) {
+            return 'Silver';
+        } elseif ($this->points < 500) {
+            return 'Gold';
+        } elseif ($this->points < 750) {
+            return 'Master';
+        } elseif ($this->points < 1000) {
+            return 'Grand Master';
+        } else {
+            return 'One Above All';
+        }
+    }
+
+    /**
+     * Calculate points to next rank.
+     *
+     * @return array
+     */
+    public function getPointsToNextRank(): array
+    {
+        if ($this->points < 50) {
+            return ['next_rank' => 'Bronze', 'points_needed' => 50 - $this->points];
+        } elseif ($this->points < 100) {
+            return ['next_rank' => 'Silver', 'points_needed' => 100 - $this->points];
+        } elseif ($this->points < 250) {
+            return ['next_rank' => 'Gold', 'points_needed' => 250 - $this->points];
+        } elseif ($this->points < 500) {
+            return ['next_rank' => 'Master', 'points_needed' => 500 - $this->points];
+        } elseif ($this->points < 750) {
+            return ['next_rank' => 'Grand Master', 'points_needed' => 750 - $this->points];
+        } elseif ($this->points < 1000) {
+            return ['next_rank' => 'One Above All', 'points_needed' => 1000 - $this->points];
+        } else {
+            return ['next_rank' => 'Maximum Rank Achieved', 'points_needed' => 0];
+        }
+    }
+
+    /**
+     * Add points to user.
+     *
+     * @param int $points
+     * @return void
+     */
+    public function addPoints(int $points): void
+    {
+        $this->increment('points', $points);
+    }
+
 }
