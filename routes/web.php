@@ -8,9 +8,11 @@ use App\Http\Controllers\ResultController;
 use App\Http\Controllers\ChallengeController; 
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\SetApprovalController; 
-
 use App\Http\Controllers\AccessorDashboardController; 
 use App\Http\Controllers\LecturerDashboardController; 
+
+use App\Http\Controllers\TournamentController;
+use App\Http\Controllers\TournamentApprovalController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,6 +55,31 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+// Tournament Routes
+Route::middleware(['auth'])->group(function () {
+    Route::get('/tournaments', [TournamentController::class, 'index'])->name('tournaments.index');
+    Route::get('/tournaments/{tournament}', [TournamentController::class, 'show'])->name('tournaments.show');
+    Route::post('/tournaments/{tournament}/join', [TournamentController::class, 'join'])->name('tournaments.join');
+    Route::post('/tournaments/{tournament}/submit', [TournamentController::class, 'submit'])->name('tournaments.submit');
+});
+
+// Lecturer Tournament Routes
+Route::middleware(['auth', 'lecturer'])->prefix('lecturer')->name('lecturer.')->group(function () {
+    Route::get('/tournaments', [LecturerDashboardController::class, 'tournaments'])->name('tournaments');
+    Route::get('/tournaments/{tournament}/edit', [LecturerDashboardController::class, 'editTournament'])->name('tournaments.edit');
+    Route::put('/tournaments/{tournament}', [LecturerDashboardController::class, 'updateTournament'])->name('tournaments.update');
+    Route::post('/tournaments/{tournament}/submit', [LecturerDashboardController::class, 'submitTournamentForApproval'])->name('tournaments.submit');
+});
+
+// Accessor Tournament Routes  
+Route::middleware(['auth', 'accessor'])->prefix('accessor')->name('accessor.')->group(function () {
+    Route::get('/tournaments', [AccessorDashboardController::class, 'tournaments'])->name('tournaments');
+    Route::get('/tournaments/{tournament}/review', [AccessorDashboardController::class, 'reviewTournament'])->name('tournaments.review');
+    Route::post('/tournaments/{tournament}/comment', [TournamentApprovalController::class, 'addComment'])->name('tournaments.comment');
+    Route::post('/tournaments/{tournament}/approve', [TournamentApprovalController::class, 'approve'])->name('tournaments.approve');
+    Route::post('/tournaments/{tournament}/reject', [TournamentApprovalController::class, 'reject'])->name('tournaments.reject');
 });
 
 // Lecturer Routes

@@ -36,6 +36,21 @@
                             {{ __('Accessor Dashboard') }}
                         </x-nav-link>
                     @endif
+
+                    <!-- Add this to the navigation links section -->
+                    @if(Auth::user()->role === 'student')
+                    <x-nav-link :href="route('tournaments.index')" :active="request()->routeIs('tournaments.*')">
+                        {{ __('Tournaments') }}
+                    </x-nav-link>
+                    @elseif(Auth::user()->role === 'lecturer')
+                    <x-nav-link :href="route('lecturer.tournaments')" :active="request()->routeIs('lecturer.tournaments*')">
+                        {{ __('Tournaments') }}
+                    </x-nav-link>
+                    @elseif(Auth::user()->role === 'accessor')
+                    <x-nav-link :href="route('accessor.tournaments')" :active="request()->routeIs('accessor.tournaments*')">
+                        {{ __('Tournaments') }}
+                    </x-nav-link>
+                    @endif
                 </div>
             </div>
 

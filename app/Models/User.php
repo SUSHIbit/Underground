@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\Tournament;
 
 class User extends Authenticatable
 {
@@ -124,4 +125,22 @@ class User extends Authenticatable
         $this->increment('points', $points);
     }
 
+
+    // Add to User model
+    public function tournamentParticipants()
+    {
+        return $this->hasMany(TournamentParticipant::class);
+    }
+
+    public function participatingTournaments()
+    {
+        return $this->hasManyThrough(
+            Tournament::class,
+            TournamentParticipant::class,
+            'user_id',
+            'id',
+            'id',
+            'tournament_id'
+        );
+    }
 }

@@ -116,8 +116,6 @@ class LecturerDashboardController extends Controller
                         ->with('success', 'Set updated successfully.');
     }
 
-
-    
     /**
      * Submit the set for approval.
      */
@@ -135,5 +133,119 @@ class LecturerDashboardController extends Controller
         
         return redirect()->route('lecturer.dashboard')
                         ->with('success', 'Set submitted for approval successfully.');
+    }
+
+
+
+    public function tournaments()
+    {
+        $user = auth()->user();
+        
+        // Get tournaments created by this lecturer
+        $tournaments = Tournament::where('created_by', $user->id)
+                    ->latest()
+                    ->get();
+        
+        // Group tournaments by status
+        $draftTournaments = $tournaments->filter(function ($tournament) {
+            return $tournament->isDraft();
+        });
+        
+        $pendingTournaments = $tournaments->filter(function ($tournament) {
+            return $tournament->isPendingApproval();
+        });
+        
+        $approvedTournaments = $tournaments->filter(function ($tournament) {
+            return $tournament->isApproved();
+        });
+        
+        $rejectedTournaments = $tournaments->filter(function ($tournament) {
+            return $tournament->isRejected();
+        });
+        
+        return view('lecturer.tournaments', compact(
+            'draftTournaments', 
+            'pendingTournaments', 
+            'approvedTournaments', 
+            'rejectedTournaments'
+        ));
+    }
+
+    public function editTournament(Tournament $tournament)
+    {
+        // Ensure the lecturer owns this tournament
+        if ($tournament->created_by !== auth()->id()) {
+            abort(403);
+        }
+        
+        $tournament->load(['judges', 'comments.user']);
+        
+        return view('lecturer.edit-tournament', compact('tournament'));
+    }
+
+    public function updateTournament(Request $request, Tournament $tournament)
+    {
+        // Ensure the lecturer owns this tournament
+        if ($tournament->created_by !== auth()->id()) {
+            abort(403);
+        }
+        
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'date_time' => 'required|date',
+            'location' => 'required|string|max:255',
+            'eligibility' => 'required|string',
+            'minimum_rank' => 'required|string',
+            'team_size' => 'required|integer|min:1',
+            'deadline' => 'required|date',
+            'rules' => 'required|string',
+            'judging_criteria' => 'required|string',
+            'project_submission' => 'required|string',
+            'judges' => 'required|array',
+            'judges.*.name' => 'required|string|max:255',
+            'judges.*.role' => 'nullable|string|max:255',
+        ]);
+        
+        $tournament->update([
+            'title' => $validated['title'],
+            'description' => $validated['description'],
+            'date_time' => $validated['date_time'],
+            'location' => $validated['location'],
+            'eligibility' => $validated['eligibility'],
+            'minimum_rank' => $validated['minimum_rank'],
+            'team_size' => $validated['team_size'],
+            'deadline' => $validated['deadline'],
+            'rules' => $validated['rules'],
+            'judging_criteria' => $validated['judging_criteria'],
+            'project_submission' => $validated['project_submission'],
+        ]);
+        
+        // Update judges (delete old ones and add new ones)
+        $tournament->judges()->delete();
+        
+        foreach ($validated['judges'] as $judge) {
+            TournamentJudge::create([
+                'tournament_id' => $tournament->id,
+                'name' => $judge['name'],
+                'role' => $judge['role'] ?? null,
+            ]);
+        }
+        
+        return redirect()->route('lecturer.tournaments')
+                    ->with('success', 'Tournament updated successfully.');
+    }
+
+    public function submitTournamentForApproval(Tournament $tournament)
+    {
+        // Ensure the lecturer owns this tournament
+        if ($tournament->created_by !== auth()->id()) {
+            abort(403);
+        }
+        
+        $tournament->submitForApproval();
+        
+        return redirect()->route('lecturer.tournaments')
+                    ->with('success', 'Tournament submitted for approval successfully.');
     }
 }

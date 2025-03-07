@@ -49,4 +49,36 @@ class AccessorDashboardController extends Controller
             return view('accessor.review-challenge', compact('set'));
         }
     }
+
+
+    public function tournaments()
+    {
+        // Get tournaments pending approval
+        $pendingTournaments = Tournament::where('status', 'pending_approval')
+                    ->with(['creator', 'judges'])
+                    ->latest('submitted_at')
+                    ->get();
+        
+        // Get recently reviewed tournaments
+        $reviewedTournaments = Tournament::whereIn('status', ['approved', 'rejected'])
+                    ->with(['creator', 'reviewer', 'judges'])
+                    ->latest('reviewed_at')
+                    ->limit(10)
+                    ->get();
+        
+        return view('accessor.tournaments', compact('pendingTournaments', 'reviewedTournaments'));
+    }
+
+    public function reviewTournament(Tournament $tournament)
+    {
+        // Ensure the tournament is pending approval
+        if (!$tournament->isPendingApproval()) {
+            return redirect()->route('accessor.tournaments')
+                        ->with('error', 'This tournament is not pending approval.');
+        }
+        
+        $tournament->load(['creator', 'judges', 'comments.user']);
+        
+        return view('accessor.review-tournament', compact('tournament'));
+    }
 }
