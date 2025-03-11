@@ -138,7 +138,7 @@
             <div class="flex items-center px-4">
                 <!-- Add profile picture to mobile view -->
                 <div class="flex-shrink-0 mr-3">
-                    <img class="h-10 w-10 rounded-full object-cover" 
+                    <img class="h-20 w-20 rounded-full object-cover" 
                          src="{{ Auth::user()->profile_picture ? asset('storage/' . Auth::user()->profile_picture) : asset('images/default-avatar.png') }}" 
                          alt="{{ Auth::user()->name }}">
                 </div>

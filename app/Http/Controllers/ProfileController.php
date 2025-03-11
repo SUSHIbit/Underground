@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use Intervention\Image\Facades\Image;
 
 class ProfileController extends Controller
 {
@@ -30,38 +29,28 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $user->fill($request->validated());
-
+    
         if ($request->user()->isDirty('email')) {
             $request->user()->email_verified_at = null;
         }
-
-        // Handle profile picture upload with image processing
+    
+        // Handle profile picture upload
         if ($request->hasFile('profile_picture')) {
             // Delete the old profile picture if it exists
             if ($user->profile_picture) {
                 Storage::disk('public')->delete($user->profile_picture);
             }
-
-            $image = $request->file('profile_picture');
-            $filename = time() . '.' . $image->getClientOriginalExtension();
+    
+            $file = $request->file('profile_picture');
+            $filename = 'profile_' . $user->id . '_' . time() . '.' . $file->getClientOriginalExtension();
             
-            // Create image instance
-            $img = Image::make($image->getRealPath());
-            
-            // Resize the image to a square (maintain aspect ratio by cropping)
-            $img->fit(300, 300, function ($constraint) {
-                $constraint->upsize(); // Prevent possible upsizing
-            });
-            
-            // Save the image
-            $path = 'profile-pictures/' . $filename;
-            Storage::disk('public')->put($path, (string) $img->encode());
-            
+            // Store the file directly to public storage
+            $path = $file->storeAs('profile-pictures', $filename, 'public');
             $user->profile_picture = $path;
         }
-
+    
         $user->save();
-
+    
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
