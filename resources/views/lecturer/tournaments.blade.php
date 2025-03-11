@@ -39,7 +39,7 @@
                                             </td>
                                             <td class="py-2 px-4 border-b border-gray-200">{{ $tournament->location }}</td>
                                             <td class="py-2 px-4 border-b border-gray-200">
-                                                {{ $tournament->created_at->format('M d, Y') }}
+                                                {{ $tournament->created_at ? $tournament->created_at->format('M d, Y') : 'Not set' }}
                                             </td>
                                             <td class="py-2 px-4 border-b border-gray-200">
                                                 <a href="{{ route('lecturer.tournaments.edit', $tournament) }}" class="text-blue-500 hover:text-blue-700 mr-2">

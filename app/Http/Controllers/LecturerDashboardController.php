@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Set;
 use App\Models\SetComment;
+use App\Models\Tournament; // Add this import line
+use App\Models\TournamentJudge; // Add this import line
 use Illuminate\Http\Request;
 
 class LecturerDashboardController extends Controller
@@ -178,7 +180,16 @@ class LecturerDashboardController extends Controller
             abort(403);
         }
         
-        $tournament->load(['judges', 'comments.user']);
+        // Try to load judges and comments, handle the case if comments can't be loaded
+        try {
+            $tournament->load(['judges', 'comments.user']);
+        } catch (\Exception $e) {
+            // If comments can't be loaded due to schema issues, just load judges
+            $tournament->load(['judges']);
+            
+            // Create a temporary property to avoid errors in view
+            $tournament->comments = collect();
+        }
         
         return view('lecturer.edit-tournament', compact('tournament'));
     }

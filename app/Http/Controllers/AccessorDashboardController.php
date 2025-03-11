@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Set;
+use App\Models\Tournament; // Add this import line
 use Illuminate\Http\Request;
 
 class AccessorDashboardController extends Controller

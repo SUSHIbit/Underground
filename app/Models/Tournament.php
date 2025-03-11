@@ -21,7 +21,12 @@ class Tournament extends Model
         'rules', 
         'judging_criteria', 
         'project_submission',
-        'created_by'
+        'created_by',
+        'status',
+        'submitted_at',
+        'reviewed_at',
+        'reviewed_by',
+        'review_notes'
     ];
 
     protected $casts = [
@@ -114,7 +119,7 @@ class Tournament extends Model
         }
 
         $ranks = ['Unranked', 'Bronze', 'Silver', 'Gold', 'Master', 'Grand Master', 'One Above All'];
-        $userRankIndex = array_search($user->rankTitle, $ranks);
+        $userRankIndex = array_search($user->getRank(), $ranks);
         $minRankIndex = array_search($this->minimum_rank, $ranks);
         
         return $userRankIndex >= $minRankIndex;

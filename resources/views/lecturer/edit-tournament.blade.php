@@ -18,7 +18,7 @@
                     <div class="flex justify-between items-start mb-6">
                         <div>
                             <h3 class="text-lg font-medium mb-1">{{ $tournament->title }}</h3>
-                            <p class="text-gray-600">Created: {{ $tournament->created_at->format('M d, Y') }}</p>
+                            <p class="text-gray-600">Created: {{ $tournament->created_at ? $tournament->created_at->format('M d, Y') : 'Not set' }}</p>
                         </div>
                         <div class="text-sm px-3 py-1 rounded-full 
                             {{ $tournament->status == 'draft' ? 'bg-gray-100 text-gray-800' : '' }}
@@ -79,7 +79,7 @@
                                             name="date_time" 
                                             id="date_time" 
                                             class="w-full p-2 border border-gray-300 rounded-md"
-                                            value="{{ old('date_time', \Carbon\Carbon::parse($tournament->date_time)->format('Y-m-d\TH:i')) }}"
+                                            value="{{ old('date_time', $tournament->date_time ? \Carbon\Carbon::parse($tournament->date_time)->format('Y-m-d\TH:i') : '') }}"
                                             required
                                         >
                                     </div>
@@ -117,7 +117,7 @@
                                             name="deadline" 
                                             id="deadline" 
                                             class="w-full p-2 border border-gray-300 rounded-md"
-                                            value="{{ old('deadline', \Carbon\Carbon::parse($tournament->deadline)->format('Y-m-d\TH:i')) }}"
+                                            value="{{ old('deadline', $tournament->deadline ? \Carbon\Carbon::parse($tournament->deadline)->format('Y-m-d\TH:i') : '') }}"
                                             required
                                         >
                                     </div>
@@ -280,7 +280,7 @@
                                 
                                 <div class="mb-4">
                                     <h4 class="font-medium">Date & Time</h4>
-                                    <p>{{ \Carbon\Carbon::parse($tournament->date_time)->format('F j, Y, g:i a') }}</p>
+                                    <p>{{ $tournament->date_time ? \Carbon\Carbon::parse($tournament->date_time)->format('F j, Y, g:i a') : 'Not set' }}</p>
                                 </div>
                                 
                                 <div class="mb-4">
@@ -295,7 +295,7 @@
                                 
                                 <div class="mb-4">
                                     <h4 class="font-medium">Submission Deadline</h4>
-                                    <p>{{ \Carbon\Carbon::parse($tournament->deadline)->format('F j, Y, g:i a') }}</p>
+                                    <p>{{ $tournament->deadline ? \Carbon\Carbon::parse($tournament->deadline)->format('F j, Y, g:i a') : 'Not set' }}</p>
                                 </div>
                                 
                                 <div class="mb-4">
