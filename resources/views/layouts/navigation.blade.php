@@ -65,11 +65,12 @@
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <div class="flex items-center">
-                            <!-- Profile Picture -->
+                            <!-- Profile Picture - FIXED SIZE -->
+                            <!-- Profile Picture - FIXED SIZE -->
                             <img class="h-8 w-8 rounded-full object-cover mr-2" 
-                                 src="{{ Auth::user()->profile_picture ? asset('storage/' . Auth::user()->profile_picture) : asset('images/default-avatar.png') }}" 
-                                 alt="{{ Auth::user()->name }}">
-                                 
+                                src="{{ Auth::user()->profile_picture ? asset('storage/' . Auth::user()->profile_picture) : asset('images/default-avatar.png') }}" 
+                                alt="{{ Auth::user()->name }}"> 
+
                             <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
                                 <div>{{ Auth::user()->name }}</div>
 
@@ -136,11 +137,11 @@
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200">
             <div class="flex items-center px-4">
-                <!-- Add profile picture to mobile view -->
+                <!-- Add profile picture to mobile view with proper size constraints -->
                 <div class="flex-shrink-0 mr-3">
-                    <img class="h-20 w-20 rounded-full object-cover" 
-                         src="{{ Auth::user()->profile_picture ? asset('storage/' . Auth::user()->profile_picture) : asset('images/default-avatar.png') }}" 
-                         alt="{{ Auth::user()->name }}">
+                    <img class="h-10 w-10 rounded-full object-cover" 
+                        src="{{ Auth::user()->profile_picture ? asset('storage/' . Auth::user()->profile_picture) : asset('images/default-avatar.png') }}" 
+                        alt="{{ Auth::user()->name }}">
                 </div>
                 <div>
                     <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>

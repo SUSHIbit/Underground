@@ -8,6 +8,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\Tournament;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Facades\Image;
 
 class User extends Authenticatable
 {
@@ -46,6 +48,27 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    /**
+     * Process and save the profile picture.
+     *
+     * @param \Illuminate\Http\UploadedFile $file
+     * @return string
+     */
+    public function saveProfilePicture($file)
+    {
+        // Delete the old profile picture if it exists
+        if ($this->profile_picture) {
+            Storage::disk('public')->delete($this->profile_picture);
+        }
+
+        $filename = 'profile_' . $this->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+        
+        // Save the image without resizing (simpler approach)
+        $path = $file->storeAs('profile-pictures', $filename, 'public');
+        
+        return $path;
+    }
 
     /**
      * Get the profile picture URL.

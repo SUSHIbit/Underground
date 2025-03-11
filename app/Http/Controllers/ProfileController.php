@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Facades\Image;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -34,18 +35,9 @@ class ProfileController extends Controller
             $request->user()->email_verified_at = null;
         }
 
-        // Handle profile picture upload
+        // Handle profile picture upload without using Intervention/Image
         if ($request->hasFile('profile_picture')) {
-            // Delete the old profile picture if it exists
-            if ($user->profile_picture) {
-                Storage::disk('public')->delete($user->profile_picture);
-            }
-
-            $file = $request->file('profile_picture');
-            $filename = 'profile_' . $user->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-            
-            // Store the file directly to public storage
-            $path = $file->storeAs('profile-pictures', $filename, 'public');
+            $path = $user->saveProfilePicture($request->file('profile_picture'));
             $user->profile_picture = $path;
         }
 
@@ -53,7 +45,7 @@ class ProfileController extends Controller
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
-
+    
     /**
      * Delete the user's account.
      */
