@@ -3,18 +3,44 @@
 namespace App\Http\Controllers;
 
 use App\Models\Set;
+use App\Models\Subject;
 use App\Models\QuizAttempt;
 use App\Models\QuizAnswer;
 use Illuminate\Http\Request;
 
 class ChallengeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $challenges = Set::where('type', 'challenge')
+        // Get all available subjects for the filter dropdown
+        $subjects = Subject::orderBy('name')->get();
+        
+        // Get search and filter parameters
+        $search = $request->input('search');
+        $subjectId = $request->input('subject');
+        
+        // Start with base query for approved challenges
+        $challengesQuery = Set::where('type', 'challenge')
                       ->where('status', 'approved')
-                      ->with(['challengeDetail', 'challengeDetail.prerequisites'])
-                      ->get();
+                      ->with(['challengeDetail', 'challengeDetail.prerequisites']);
+        
+        // Apply search if provided
+        if ($search) {
+            $challengesQuery->whereHas('challengeDetail', function($query) use ($search) {
+                $query->where('name', 'like', '%' . $search . '%');
+            })->orWhereHas('challengeDetail.prerequisites.quizDetail.subject', function($query) use ($search) {
+                $query->where('name', 'like', '%' . $search . '%');
+            });
+        }
+        
+        // Apply subject filter if provided
+        if ($subjectId) {
+            $challengesQuery->whereHas('challengeDetail.prerequisites.quizDetail', function($query) use ($subjectId) {
+                $query->where('subject_id', $subjectId);
+            });
+        }
+        
+        $challenges = $challengesQuery->get();
                       
         $user = auth()->user();
         $attemptedChallengeIds = $user->quizAttempts()
@@ -27,7 +53,7 @@ class ChallengeController extends Controller
             $challenge->canAttempt = $challenge->challengeDetail->hasCompletedPrerequisites($user);
         }
         
-        return view('challenges.index', compact('challenges', 'attemptedChallengeIds'));
+        return view('challenges.index', compact('challenges', 'attemptedChallengeIds', 'subjects', 'search', 'subjectId'));
     }
     
     public function show(Set $set)
@@ -114,9 +140,6 @@ class ChallengeController extends Controller
             'attempt' => $attempt
         ]);
     }
-    
-
-
     
     public function submit(Request $request, Set $set)
     {

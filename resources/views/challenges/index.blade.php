@@ -16,6 +16,44 @@
                         </div>
                     @endif
                     
+                    <!-- Search and Filter Section -->
+                    <div class="mb-6 bg-gray-50 p-4 rounded-lg">
+                        <form action="{{ route('challenges.index') }}" method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                                <input 
+                                    type="text" 
+                                    name="search" 
+                                    id="search" 
+                                    placeholder="Search by challenge or subject name..." 
+                                    class="w-full p-2 border border-gray-300 rounded-md"
+                                    value="{{ $search ?? '' }}"
+                                >
+                            </div>
+                            
+                            <div>
+                                <label for="subject" class="block text-sm font-medium text-gray-700 mb-1">Filter by Subject</label>
+                                <select name="subject" id="subject" class="w-full p-2 border border-gray-300 rounded-md">
+                                    <option value="">All Subjects</option>
+                                    @foreach($subjects as $subject)
+                                        <option value="{{ $subject->id }}" {{ isset($subjectId) && $subjectId == $subject->id ? 'selected' : '' }}>
+                                            {{ $subject->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            
+                            <div class="flex items-end">
+                                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2">
+                                    Apply
+                                </button>
+                                <a href="{{ route('challenges.index') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                                    Reset
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                    
                     <!-- Filter/Tab Navigation -->
                     <div class="border-b border-gray-200 mb-6">
                         <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
@@ -34,7 +72,14 @@
                     
                     <!-- Available Challenges Section -->
                     <div id="available-challenges" class="challenge-section">
-                        <h3 class="text-lg font-medium mb-4">Available Challenges</h3>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium">Available Challenges</h3>
+                            <p class="text-sm text-gray-600">
+                                {{ $challenges->filter(function($challenge) use ($attemptedChallengeIds) {
+                                    return !in_array($challenge->id, $attemptedChallengeIds) && $challenge->canAttempt;
+                                })->count() }} challenges available
+                            </p>
+                        </div>
                         
                         @php
                             $availableChallenges = $challenges->filter(function($challenge) use ($attemptedChallengeIds) {
@@ -112,8 +157,13 @@
                             @endif
                         @elseif($lockedChallenges->count() > 0)
                             <div class="bg-gray-50 p-6 rounded-lg text-center mb-8">
-                                <p class="text-gray-500">You don't have any available challenges yet.</p>
-                                <p class="text-gray-500 mt-2">Complete the prerequisites below to unlock challenges!</p>
+                                @if(isset($search) || isset($subjectId))
+                                    <p class="text-gray-500">No available challenges match your search criteria.</p>
+                                    <p class="text-gray-500 mt-2">Try different search terms or reset the filters.</p>
+                                @else
+                                    <p class="text-gray-500">You don't have any available challenges yet.</p>
+                                    <p class="text-gray-500 mt-2">Complete the prerequisites below to unlock challenges!</p>
+                                @endif
                             </div>
                             
                             <h4 class="text-lg font-medium mt-8 mb-4">Locked Challenges</h4>
@@ -150,15 +200,27 @@
                             </div>
                         @else
                             <div class="bg-gray-50 p-6 rounded-lg text-center">
-                                <p class="text-gray-500">No challenges available at the moment.</p>
-                                <p class="text-gray-500 mt-2">Check back later for new content!</p>
+                                @if(isset($search) || isset($subjectId))
+                                    <p class="text-gray-500">No challenges match your search criteria.</p>
+                                    <p class="text-gray-500 mt-2">Try different search terms or reset the filters.</p>
+                                @else
+                                    <p class="text-gray-500">No challenges available at the moment.</p>
+                                    <p class="text-gray-500 mt-2">Check back later for new content!</p>
+                                @endif
                             </div>
                         @endif
                     </div>
                     
                     <!-- Completed Challenges Section -->
                     <div id="completed-challenges" class="challenge-section hidden">
-                        <h3 class="text-lg font-medium mb-4">Completed Challenges</h3>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium">Completed Challenges</h3>
+                            <p class="text-sm text-gray-600">
+                                {{ $challenges->filter(function($challenge) use ($attemptedChallengeIds) {
+                                    return in_array($challenge->id, $attemptedChallengeIds);
+                                })->count() }} challenges completed
+                            </p>
+                        </div>
                         
                         @php
                             $completedChallenges = $challenges->filter(function($challenge) use ($attemptedChallengeIds) {

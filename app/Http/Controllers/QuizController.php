@@ -3,18 +3,45 @@
 namespace App\Http\Controllers;
 
 use App\Models\Set;
+use App\Models\Subject;
 use App\Models\QuizAttempt;
 use App\Models\QuizAnswer;
 use Illuminate\Http\Request;
 
 class QuizController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $quizzes = Set::where('type', 'quiz')
+        // Get all available subjects for the filter dropdown
+        $subjects = Subject::orderBy('name')->get();
+        
+        // Get search and filter parameters
+        $search = $request->input('search');
+        $subjectId = $request->input('subject');
+        
+        // Start with base query for approved quizzes
+        $quizzesQuery = Set::where('type', 'quiz')
                    ->where('status', 'approved')
-                   ->with(['quizDetail.subject', 'quizDetail.topic'])
-                   ->get();
+                   ->with(['quizDetail.subject', 'quizDetail.topic']);
+        
+        // Apply search if provided
+        if ($search) {
+            $quizzesQuery->whereHas('quizDetail.subject', function($query) use ($search) {
+                $query->where('name', 'like', '%' . $search . '%');
+            })->orWhereHas('quizDetail.topic', function($query) use ($search) {
+                $query->where('name', 'like', '%' . $search . '%');
+            });
+        }
+        
+        // Apply subject filter if provided
+        if ($subjectId) {
+            $quizzesQuery->whereHas('quizDetail', function($query) use ($subjectId) {
+                $query->where('subject_id', $subjectId);
+            });
+        }
+        
+        // Get the quizzes
+        $quizzes = $quizzesQuery->get();
                    
         $user = auth()->user();
         $attemptedQuizIds = $user->quizAttempts()
@@ -22,7 +49,7 @@ class QuizController extends Controller
                                ->pluck('set_id')
                                ->toArray();
         
-        return view('quizzes.index', compact('quizzes', 'attemptedQuizIds'));
+        return view('quizzes.index', compact('quizzes', 'attemptedQuizIds', 'subjects', 'search', 'subjectId'));
     }
     
     public function show(Set $set)
@@ -97,9 +124,6 @@ class QuizController extends Controller
             'attempt' => $attempt
         ]);
     }
-    
-
-
     
     public function submit(Request $request, Set $set)
     {
