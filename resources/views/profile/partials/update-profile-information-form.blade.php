@@ -13,10 +13,38 @@
         @csrf
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
+    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6" enctype="multipart/form-data">
         @csrf
         @method('patch')
 
+        <!-- Profile Picture -->
+        <div>
+            <x-input-label for="profile_picture" :value="__('Profile Picture')" />
+            
+            <div class="mt-2 flex items-center">
+                <div class="flex-shrink-0">
+                    <img class="h-20 w-20 rounded-full object-cover" 
+                         src="{{ $user->profile_picture ? asset('storage/' . $user->profile_picture) : asset('images/default-avatar.png') }}" 
+                         alt="{{ $user->name }}">
+                </div>
+                <div class="ml-4">
+                    <input 
+                        id="profile_picture" 
+                        name="profile_picture" 
+                        type="file" 
+                        class="mt-1 block w-full text-sm text-gray-500
+                               file:mr-4 file:py-2 file:px-4
+                               file:rounded-md file:border-0
+                               file:text-sm file:font-semibold
+                               file:bg-blue-50 file:text-blue-700
+                               hover:file:bg-blue-100"
+                    />
+                    <p class="mt-1 text-xs text-gray-500">JPG, PNG, GIF up to 2MB</p>
+                </div>
+            </div>
+            <x-input-error class="mt-2" :messages="$errors->get('profile_picture')" />
+        </div>
+        
         <div>
             <x-input-label for="name" :value="__('Name')" />
             <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user->name)" required autofocus autocomplete="name" />

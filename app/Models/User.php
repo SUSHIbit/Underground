@@ -24,6 +24,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'profile_picture', // Add this new field
     ];
 
     /**
@@ -46,6 +47,21 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
+    /**
+     * Get the profile picture URL.
+     *
+     * @return string
+     */
+    public function getProfilePictureUrlAttribute()
+    {
+        if ($this->profile_picture) {
+            return asset('storage/' . $this->profile_picture);
+        }
+        
+        // Return a default avatar if no profile picture is set
+        return asset('images/default-avatar.png');
+    }
+
     public function quizAttempts()
     {
         return $this->hasMany(QuizAttempt::class);
@@ -62,9 +78,6 @@ class User extends Authenticatable
             'set_id'
         )->where('quiz_attempts.completed', true);
     }
-
-
-    
 
     /**
      * Get the rank based on total points.
@@ -124,7 +137,6 @@ class User extends Authenticatable
     {
         $this->increment('points', $points);
     }
-
 
     // Add to User model
     public function tournamentParticipants()

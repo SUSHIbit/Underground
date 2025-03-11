@@ -7,7 +7,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Intervention\Image\Facades\Image;
 
 class ProfileController extends Controller
 {
@@ -26,13 +28,39 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $user->fill($request->validated());
 
         if ($request->user()->isDirty('email')) {
             $request->user()->email_verified_at = null;
         }
 
-        $request->user()->save();
+        // Handle profile picture upload with image processing
+        if ($request->hasFile('profile_picture')) {
+            // Delete the old profile picture if it exists
+            if ($user->profile_picture) {
+                Storage::disk('public')->delete($user->profile_picture);
+            }
+
+            $image = $request->file('profile_picture');
+            $filename = time() . '.' . $image->getClientOriginalExtension();
+            
+            // Create image instance
+            $img = Image::make($image->getRealPath());
+            
+            // Resize the image to a square (maintain aspect ratio by cropping)
+            $img->fit(300, 300, function ($constraint) {
+                $constraint->upsize(); // Prevent possible upsizing
+            });
+            
+            // Save the image
+            $path = 'profile-pictures/' . $filename;
+            Storage::disk('public')->put($path, (string) $img->encode());
+            
+            $user->profile_picture = $path;
+        }
+
+        $user->save();
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
@@ -47,6 +75,11 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
+
+        // Delete the user's profile picture if it exists
+        if ($user->profile_picture) {
+            Storage::disk('public')->delete($user->profile_picture);
+        }
 
         Auth::logout();
 
