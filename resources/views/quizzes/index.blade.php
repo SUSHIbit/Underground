@@ -1,3 +1,4 @@
+<!-- resources/views/quizzes/index.blade.php -->
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
@@ -9,46 +10,153 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
-                    <h3 class="text-lg font-medium mb-4">Available Quizzes</h3>
-                    
                     @if(session('error'))
                         <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
                             <p>{{ session('error') }}</p>
                         </div>
                     @endif
                     
-                    @if($quizzes->count() > 0)
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            @foreach($quizzes as $quiz)
-                                <div class="border rounded-lg overflow-hidden shadow-sm">
-                                    <div class="p-4 bg-gray-50 border-b">
-                                        <h4 class="font-medium">Set #{{ $quiz->set_number }}: {{ $quiz->quizDetail->subject->name }}</h4>
-                                        <p class="text-sm text-gray-600">{{ $quiz->quizDetail->topic->name }}</p>
-                                    </div>
-                                    <div class="p-4">
-                                        <p class="mb-4">
-                                            <span class="text-sm text-gray-600">Questions:</span> 
-                                            {{ $quiz->questions->count() }}
-                                        </p>
-                                        
-                                        @if(in_array($quiz->id, $attemptedQuizIds))
-                                            <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                                                Completed
-                                            </span>
-                                        @else
+                    <!-- Filter/Tab Navigation -->
+                    <div class="border-b border-gray-200 mb-6">
+                        <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
+                            <li class="mr-2">
+                                <a href="#available-quizzes" class="inline-block p-4 border-b-2 border-blue-500 rounded-t-lg active text-blue-600" id="available-tab" onclick="showTab('available')">
+                                    Available Quizzes
+                                </a>
+                            </li>
+                            <li class="mr-2">
+                                <a href="#completed-quizzes" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="completed-tab" onclick="showTab('completed')">
+                                    Completed Quizzes
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Available Quizzes Section -->
+                    <div id="available-quizzes" class="quiz-section">
+                        <h3 class="text-lg font-medium mb-4">Available Quizzes</h3>
+                        
+                        @php
+                            $availableQuizzes = $quizzes->filter(function($quiz) use ($attemptedQuizIds) {
+                                return !in_array($quiz->id, $attemptedQuizIds);
+                            });
+                        @endphp
+                        
+                        @if($availableQuizzes->count() > 0)
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                @foreach($availableQuizzes as $quiz)
+                                    <div class="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
+                                        <div class="p-4 bg-blue-50 border-b">
+                                            <h4 class="font-medium">Set #{{ $quiz->set_number }}: {{ $quiz->quizDetail->subject->name }}</h4>
+                                            <p class="text-sm text-gray-600">{{ $quiz->quizDetail->topic->name }}</p>
+                                        </div>
+                                        <div class="p-4">
+                                            <p class="mb-4">
+                                                <span class="text-sm text-gray-600">Questions:</span> 
+                                                {{ $quiz->questions->count() }}
+                                            </p>
+                                            
                                             <a href="{{ route('quizzes.show', $quiz) }}" class="inline-block bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                                                 Start Quiz
                                             </a>
-                                        @endif
+                                        </div>
                                     </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <p class="text-gray-500">No quizzes available at the moment.</p>
-                    @endif
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="bg-gray-50 p-6 rounded-lg text-center">
+                                <p class="text-gray-500">You've completed all available quizzes!</p>
+                                <p class="text-gray-500 mt-2">Check back later for new content.</p>
+                            </div>
+                        @endif
+                    </div>
+                    
+                    <!-- Completed Quizzes Section -->
+                    <div id="completed-quizzes" class="quiz-section hidden">
+                        <h3 class="text-lg font-medium mb-4">Completed Quizzes</h3>
+                        
+                        @php
+                            $completedQuizzes = $quizzes->filter(function($quiz) use ($attemptedQuizIds) {
+                                return in_array($quiz->id, $attemptedQuizIds);
+                            });
+                        @endphp
+                        
+                        @if($completedQuizzes->count() > 0)
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                @foreach($completedQuizzes as $quiz)
+                                    @php
+                                        $attempt = \App\Models\QuizAttempt::where('user_id', auth()->id())
+                                                 ->where('set_id', $quiz->id)
+                                                 ->where('completed', true)
+                                                 ->first();
+                                    @endphp
+                                    <div class="border rounded-lg overflow-hidden shadow-sm">
+                                        <div class="p-4 bg-green-50 border-b">
+                                            <h4 class="font-medium">Set #{{ $quiz->set_number }}: {{ $quiz->quizDetail->subject->name }}</h4>
+                                            <p class="text-sm text-gray-600">{{ $quiz->quizDetail->topic->name }}</p>
+                                        </div>
+                                        <div class="p-4">
+                                            <div class="mb-4">
+                                                <p class="text-sm text-gray-600">Questions: {{ $quiz->questions->count() }}</p>
+                                                @if($attempt)
+                                                    <p class="mt-1">
+                                                        <span class="text-sm font-medium">Score:</span>
+                                                        <span class="font-medium {{ $attempt->score_percentage >= 70 ? 'text-green-600' : ($attempt->score_percentage >= 50 ? 'text-yellow-600' : 'text-red-600') }}">
+                                                            {{ $attempt->score }}/{{ $attempt->total_questions }}
+                                                            ({{ $attempt->score_percentage }}%)
+                                                        </span>
+                                                    </p>
+                                                    <p class="mt-1 text-sm text-gray-500">
+                                                        Completed on {{ $attempt->created_at->format('M d, Y') }}
+                                                    </p>
+                                                    <p class="mt-1 text-sm text-green-600">
+                                                        <span class="font-medium">Points earned:</span> +5
+                                                    </p>
+                                                @endif
+                                            </div>
+                                            
+                                            @if($attempt)
+                                                <a href="{{ route('results.show', $attempt) }}" class="inline-block bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                                                    View Results
+                                                </a>
+                                            @else
+                                                <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                                                    Completed
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="bg-gray-50 p-6 rounded-lg text-center">
+                                <p class="text-gray-500">You haven't completed any quizzes yet.</p>
+                                <p class="text-gray-500 mt-2">Start taking quizzes to see your progress here!</p>
+                            </div>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+    
+    <script>
+        function showTab(tabName) {
+            // Hide all sections
+            document.querySelectorAll('.quiz-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('[id$="-tab"]').forEach(tab => {
+                tab.classList.remove('text-blue-600', 'border-blue-500');
+                tab.classList.add('border-transparent');
+            });
+            
+            // Show the selected section and activate tab
+            document.getElementById(tabName + '-quizzes').classList.remove('hidden');
+            document.getElementById(tabName + '-tab').classList.add('text-blue-600', 'border-blue-500');
+            document.getElementById(tabName + '-tab').classList.remove('border-transparent');
+        }
+    </script>
 </x-app-layout>
