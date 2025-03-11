@@ -29,18 +29,18 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $user->fill($request->validated());
-    
+
         if ($request->user()->isDirty('email')) {
             $request->user()->email_verified_at = null;
         }
-    
+
         // Handle profile picture upload
         if ($request->hasFile('profile_picture')) {
             // Delete the old profile picture if it exists
             if ($user->profile_picture) {
                 Storage::disk('public')->delete($user->profile_picture);
             }
-    
+
             $file = $request->file('profile_picture');
             $filename = 'profile_' . $user->id . '_' . time() . '.' . $file->getClientOriginalExtension();
             
@@ -48,9 +48,9 @@ class ProfileController extends Controller
             $path = $file->storeAs('profile-pictures', $filename, 'public');
             $user->profile_picture = $path;
         }
-    
+
         $user->save();
-    
+
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
