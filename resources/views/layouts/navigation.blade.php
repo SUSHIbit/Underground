@@ -28,6 +28,9 @@
                         <x-nav-link :href="route('challenges.index')" :active="request()->routeIs('challenges.*')">
                             {{ __('Challenges') }}
                         </x-nav-link>
+                        <x-nav-link :href="route('legions.index')" :active="request()->routeIs('legions.*')">
+                            {{ __('Legions') }}
+                        </x-nav-link>
                     @elseif(Auth::user()->role === 'lecturer')
                         <x-nav-link :href="route('lecturer.dashboard')" :active="request()->routeIs('lecturer.*')">
                             {{ __('Lecturer Dashboard') }}
@@ -131,6 +134,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('challenges.index')" :active="request()->routeIs('challenges.*')">
                 {{ __('Challenges') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('legions.index')" :active="request()->routeIs('legions.*')">
+                {{ __('Legions') }}
             </x-responsive-nav-link>
         </div>
 

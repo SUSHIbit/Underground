@@ -178,4 +178,78 @@ class User extends Authenticatable
             'tournament_id'
         );
     }
+
+    
+
+    /**
+     * Get the user's legion membership.
+     */
+    public function legionMembership()
+    {
+        return $this->hasOne(LegionMember::class);
+    }
+
+    /**
+     * Get the legion that the user belongs to.
+     */
+    public function legion()
+    {
+        return $this->belongsToMany(Legion::class, 'legion_members')
+                    ->withPivot('role', 'is_accepted', 'joined_at')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Check if user is in a legion.
+     */
+    public function isInLegion()
+    {
+        return $this->legionMembership()->where('is_accepted', true)->exists();
+    }
+
+    /**
+     * Check if user has a pending legion invitation.
+     */
+    public function hasPendingLegionInvitation()
+    {
+        return $this->legionMembership()->where('is_accepted', false)->exists();
+    }
+
+    /**
+     * Get the user's current legion.
+     */
+    public function getCurrentLegion()
+    {
+        $membership = $this->legionMembership()->where('is_accepted', true)->first();
+        
+        if ($membership) {
+            return $membership->legion;
+        }
+        
+        return null;
+    }
+
+    /**
+     * Check if user is a legion leader.
+     */
+    public function isLegionLeader()
+    {
+        return $this->legionMembership()->where('role', 'leader')->exists();
+    }
+
+    /**
+     * Check if user is a legion officer.
+     */
+    public function isLegionOfficer()
+    {
+        return $this->legionMembership()->where('role', 'officer')->exists();
+    }
+
+    /**
+     * Check if user has legion management privileges.
+     */
+    public function hasLegionManagementPrivileges()
+    {
+        return $this->isLegionLeader() || $this->isLegionOfficer();
+    }
 }
