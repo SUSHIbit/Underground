@@ -70,9 +70,10 @@
                         <div class="flex items-center">
                             <!-- Profile Picture - FIXED SIZE -->
                             <!-- Profile Picture - FIXED SIZE -->
-                            <img class="h-8 w-8 rounded-full object-cover mr-2" 
+                            <img class="h-8 w-8 !important rounded-full object-cover mr-2" 
+                                style="max-width: 32px !important; max-height: 32px !important;"
                                 src="{{ Auth::user()->profile_picture ? asset('storage/' . Auth::user()->profile_picture) : asset('images/default-avatar.png') }}" 
-                                alt="{{ Auth::user()->name }}"> 
+                                alt="{{ Auth::user()->name }}">
 
                             <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
                                 <div>{{ Auth::user()->name }}</div>
