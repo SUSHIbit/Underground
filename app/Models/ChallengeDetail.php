@@ -9,7 +9,7 @@ class ChallengeDetail extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['set_id', 'name'];
+    protected $fillable = ['set_id', 'name', 'timer_minutes'];
 
     public function set()
     {

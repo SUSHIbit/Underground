@@ -7,6 +7,7 @@ use App\Models\Subject;
 use App\Models\QuizAttempt;
 use App\Models\QuizAnswer;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class QuizController extends Controller
 {
@@ -90,7 +91,7 @@ class QuizController extends Controller
         
         $set->load(['questions' => function($query) {
             $query->orderBy('question_number');
-        }]);
+        }, 'quizDetail']);
         
         $questions = $set->questions;
         $currentPage = $request->query('page', 1);
@@ -116,13 +117,56 @@ class QuizController extends Controller
             ]
         );
         
+        // Start timer if not already started and if quiz has timer
+        if (!$attempt->started_at && isset($set->quizDetail->timer_minutes) && $set->quizDetail->timer_minutes > 0) {
+            $attempt->startTimer($set->quizDetail->timer_minutes);
+        }
+        
+        // Check if timer has expired
+        if ($attempt->hasTimerExpired()) {
+            // Auto-submit the quiz with current answers
+            return $this->autoSubmitExpiredQuiz($attempt, $set);
+        }
+        
+        $timer_minutes = isset($set->quizDetail->timer_minutes) ? $set->quizDetail->timer_minutes : null;
+        $remaining_seconds = $attempt->remaining_time;
+        
         return view('quizzes.attempt', [
             'set' => $set,
             'question' => $currentQuestion,
             'currentPage' => $currentPage,
             'totalPages' => $questions->count(),
-            'attempt' => $attempt
+            'attempt' => $attempt,
+            'timer_minutes' => $timer_minutes,
+            'remaining_seconds' => $remaining_seconds
         ]);
+    }
+    
+    private function autoSubmitExpiredQuiz(QuizAttempt $attempt, Set $set)
+    {
+        // Get all answered questions
+        $answeredQuestions = $attempt->answers()->pluck('selected_answer', 'question_id')->toArray();
+        
+        // Calculate score based on currently answered questions
+        $score = 0;
+        foreach ($answeredQuestions as $questionId => $answer) {
+            $question = $set->questions->firstWhere('id', $questionId);
+            if ($question && $question->correct_answer === $answer) {
+                $score++;
+            }
+        }
+        
+        // Mark the attempt as completed
+        $attempt->update([
+            'score' => $score,
+            'completed' => true
+        ]);
+        
+        // Award 5 points for completing any quiz
+        $attempt->user->addPoints(5);
+        
+        return redirect()->route('results.show', $attempt)
+                        ->with('warning', 'Your time has expired. The quiz was automatically submitted.');
     }
     
     public function submit(Request $request, Set $set)
@@ -139,15 +183,20 @@ class QuizController extends Controller
                         ->with('error', 'You have already completed this quiz.');
         }
         
-        $validated = $request->validate([
-            'answers' => 'required|array',
-            'answers.*' => 'required|string|size:1',
-        ]);
-        
         $attempt = QuizAttempt::where('user_id', $user->id)
                             ->where('set_id', $set->id)
                             ->where('completed', false)
                             ->firstOrFail();
+        
+        // Check if timer has expired
+        if ($attempt->hasTimerExpired()) {
+            return $this->autoSubmitExpiredQuiz($attempt, $set);
+        }
+        
+        $validated = $request->validate([
+            'answers' => 'required|array',
+            'answers.*' => 'required|string|size:1',
+        ]);
         
         $score = 0;
         $set->load('questions');

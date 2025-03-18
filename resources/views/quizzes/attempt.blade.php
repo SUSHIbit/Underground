@@ -11,12 +11,23 @@
                 <div class="p-6 text-gray-900">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-lg font-medium">Question {{ $currentPage }} of {{ $totalPages }}</h3>
-                        <div class="text-gray-600">
-                            Set #{{ $set->set_number }}
-                        </div>
+                        
+                        <!-- Timer Display -->
+                        @if(isset($timer_minutes) && $timer_minutes > 0)
+                            <div class="text-center">
+                                <div id="timer" class="text-xl font-bold px-4 py-2 rounded-lg bg-blue-100">
+                                    <span id="minutes">--</span>:<span id="seconds">--</span>
+                                </div>
+                                <div class="text-sm text-gray-600 mt-1">Time Remaining</div>
+                            </div>
+                        @else
+                            <div class="text-gray-600">
+                                Set #{{ $set->set_number }}
+                            </div>
+                        @endif
                     </div>
                     
-                    <form action="{{ route('quizzes.submit', $set) }}" method="POST" id="quiz-form">
+                    <form action="{{ route('quizzes.submit', $set) }}" method="POST" id="quiz-form" onsubmit="return confirmSubmit()">
                         @csrf
                         
                         <div class="mb-6">
@@ -65,8 +76,7 @@
                                         Next
                                     </a>
                                 @else
-                                    <button type="button" 
-                                            onclick="submitForm()" 
+                                    <button type="submit" 
                                             class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                                         Submit Quiz
                                     </button>
@@ -106,55 +116,58 @@
             });
         });
         
-        function submitForm() {
-            // Check if all questions have been answered
-            let allAnswered = true;
-            const totalPages = {{ $totalPages }};
-            const setId = {{ $set->id }};
-            
-            for (let i = 1; i <= {{ $totalPages }}; i++) {
-                const questionId = document.querySelector(`input[name^="answers["]`).name.match(/\d+/)[0];
-                const hasAnswer = localStorage.getItem(`quiz_${setId}_answer_${questionId}`);
+        // Timer functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up the timer if it exists
+            @if(isset($timer_minutes) && $timer_minutes > 0 && isset($remaining_seconds))
+                const totalSeconds = {{ $remaining_seconds }};
+                let timeLeft = totalSeconds;
                 
-                if (!hasAnswer) {
-                    allAnswered = false;
-                    break;
-                }
-            }
-            
-            if (!allAnswered) {
-                if (!confirm('You have not answered all questions. Are you sure you want to submit?')) {
-                    return;
-                }
-            }
-            
-            // Add all saved answers to the form
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith(`quiz_${setId}_answer_`)) {
-                    const questionId = key.split('_').pop();
-                    const value = localStorage.getItem(key);
+                function updateTimer() {
+                    const minutes = Math.floor(timeLeft / 60);
+                    const seconds = timeLeft % 60;
                     
-                    if (!document.querySelector(`input[name="answers[${questionId}]"]`)) {
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = `answers[${questionId}]`;
-                        input.value = value;
-                        document.getElementById('quiz-form').appendChild(input);
+                    document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+                    document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+                    
+                    // Change color as time decreases
+                    const timerElement = document.getElementById('timer');
+                    if (timeLeft < 60) { // Less than 1 minute
+                        timerElement.classList.remove('bg-blue-100', 'bg-yellow-100');
+                        timerElement.classList.add('bg-red-100', 'text-red-700');
+                    } else if (timeLeft < 300) { // Less than 5 minutes
+                        timerElement.classList.remove('bg-blue-100');
+                        timerElement.classList.add('bg-yellow-100', 'text-yellow-700');
+                    }
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(timerInterval);
+                        // Auto-submit the form
+                        document.getElementById('quiz-form').submit();
+                    } else {
+                        timeLeft--;
                     }
                 }
+                
+                // Initial update
+                updateTimer();
+                
+                // Update timer every second
+                const timerInterval = setInterval(updateTimer, 1000);
+            @endif
+        });
+        
+        function confirmSubmit() {
+            // Get all radio buttons
+            const totalQuestions = {{ $totalPages }};
+            const radioButtons = document.querySelectorAll('input[type="radio"]:checked');
+            
+            // Check if all questions are answered
+            if (radioButtons.length < totalQuestions) {
+                return confirm('You have not answered all questions. Are you sure you want to submit?');
             }
             
-            // Submit the form
-            document.getElementById('quiz-form').submit();
-            
-            // Clear localStorage for this quiz
-            for (let i = localStorage.length - 1; i >= 0; i--) {
-                const key = localStorage.key(i);
-                if (key.startsWith(`quiz_${setId}_answer_`)) {
-                    localStorage.removeItem(key);
-                }
-            }
+            return true;
         }
     </script>
 </x-app-layout>

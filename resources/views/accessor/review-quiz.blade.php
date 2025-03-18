@@ -36,6 +36,26 @@
                             <p class="{{ $set->isApproved() ? 'text-green-700' : 'text-red-700' }}">{{ $set->review_notes }}</p>
                         </div>
                     @endif
+
+                    <!-- Add this section to resources/views/accessor/review-quiz.blade.php -->
+                    <!-- Insert after the title section and before the comments section -->
+
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h4 class="font-medium mb-2">Quiz Settings</h4>
+                        
+                        <div class="mb-1">
+                            <span class="font-medium">Time Limit:</span> 
+                            @if(isset($set->quizDetail->timer_minutes) && $set->quizDetail->timer_minutes > 0)
+                                {{ $set->quizDetail->timer_minutes }} minutes
+                            @else
+                                No time limit
+                            @endif
+                        </div>
+                        
+                        <div>
+                            <span class="font-medium">Questions:</span> {{ $set->questions->count() }}
+                        </div>
+                    </div>
                     
                     <!-- Overall comments for the set -->
                     <div class="mb-6">

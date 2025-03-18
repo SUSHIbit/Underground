@@ -7,6 +7,7 @@ use App\Models\Subject;
 use App\Models\QuizAttempt;
 use App\Models\QuizAnswer;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class ChallengeController extends Controller
 {
@@ -106,7 +107,7 @@ class ChallengeController extends Controller
         
         $set->load(['questions' => function($query) {
             $query->orderBy('question_number');
-        }]);
+        }, 'challengeDetail']);
         
         $questions = $set->questions;
         $currentPage = $request->query('page', 1);
@@ -132,13 +133,73 @@ class ChallengeController extends Controller
             ]
         );
         
+        // Start timer if not already started and if challenge has timer
+        if (!$attempt->started_at && isset($set->challengeDetail->timer_minutes) && $set->challengeDetail->timer_minutes > 0) {
+            $attempt->startTimer($set->challengeDetail->timer_minutes);
+        }
+        
+        // Check if timer has expired
+        if ($attempt->hasTimerExpired()) {
+            // Auto-submit the challenge with current answers
+            return $this->autoSubmitExpiredChallenge($attempt, $set);
+        }
+        
+        $timer_minutes = isset($set->challengeDetail->timer_minutes) ? $set->challengeDetail->timer_minutes : null;
+        $remaining_seconds = $attempt->remaining_time;
+        
         return view('challenges.attempt', [
             'set' => $set,
             'question' => $currentQuestion,
             'currentPage' => $currentPage,
             'totalPages' => $questions->count(),
-            'attempt' => $attempt
+            'attempt' => $attempt,
+            'timer_minutes' => $timer_minutes,
+            'remaining_seconds' => $remaining_seconds
         ]);
+    }
+    
+    private function autoSubmitExpiredChallenge(QuizAttempt $attempt, Set $set)
+    {
+        // Get all answered questions
+        $answeredQuestions = $attempt->answers()->pluck('selected_answer', 'question_id')->toArray();
+        
+        // Calculate score based on currently answered questions
+        $score = 0;
+        foreach ($answeredQuestions as $questionId => $answer) {
+            $question = $set->questions->firstWhere('id', $questionId);
+            if ($question && $question->correct_answer === $answer) {
+                $score++;
+            }
+        }
+        
+        $attempt->update([
+            'score' => $score,
+            'completed' => true
+        ]);
+        
+        // Calculate challenge points based on score percentage
+        $totalQuestions = $set->questions->count();
+        $scorePercentage = ($score / $totalQuestions) * 100;
+        
+        // Award points based on percentage
+        $pointsToAward = 0;
+        if ($scorePercentage >= 20 && $scorePercentage < 40) {
+            $pointsToAward = 2;
+        } elseif ($scorePercentage >= 40 && $scorePercentage < 60) {
+            $pointsToAward = 4;
+        } elseif ($scorePercentage >= 60 && $scorePercentage < 80) {
+            $pointsToAward = 6;
+        } elseif ($scorePercentage >= 80 && $scorePercentage < 100) {
+            $pointsToAward = 8;
+        } elseif ($scorePercentage == 100) {
+            $pointsToAward = 10;
+        }
+        
+        // Add points to user
+        $attempt->user->addPoints($pointsToAward);
+        
+        return redirect()->route('results.show', $attempt)
+                        ->with('warning', 'Your time has expired. The challenge was automatically submitted.');
     }
     
     public function submit(Request $request, Set $set)
@@ -155,15 +216,20 @@ class ChallengeController extends Controller
                         ->with('error', 'You have already completed this challenge.');
         }
         
-        $validated = $request->validate([
-            'answers' => 'required|array',
-            'answers.*' => 'required|string|size:1',
-        ]);
-        
         $attempt = QuizAttempt::where('user_id', $user->id)
                             ->where('set_id', $set->id)
                             ->where('completed', false)
                             ->firstOrFail();
+                            
+        // Check if timer has expired
+        if ($attempt->hasTimerExpired()) {
+            return $this->autoSubmitExpiredChallenge($attempt, $set);
+        }
+        
+        $validated = $request->validate([
+            'answers' => 'required|array',
+            'answers.*' => 'required|string|size:1',
+        ]);
         
         $score = 0;
         $set->load('questions');

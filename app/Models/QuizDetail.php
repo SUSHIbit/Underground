@@ -9,7 +9,7 @@ class QuizDetail extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['set_id', 'subject_id', 'topic_id'];
+    protected $fillable = ['set_id', 'subject_id', 'topic_id', 'timer_minutes'];
 
     public function set()
     {

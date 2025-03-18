@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Set;
 use App\Models\SetComment;
-use App\Models\Tournament; // Add this import line
-use App\Models\TournamentJudge; // Add this import line
+use App\Models\Tournament; 
+use App\Models\TournamentJudge; 
 use Illuminate\Http\Request;
 
 class LecturerDashboardController extends Controller
@@ -69,8 +69,6 @@ class LecturerDashboardController extends Controller
         }
     }
     
-
-    
     /**
      * Update the specified set.
      */
@@ -88,6 +86,8 @@ class LecturerDashboardController extends Controller
             'questions.*.options' => 'required|array',
             'questions.*.correct_answer' => 'required|string|size:1',
             'questions.*.reason' => 'required|string',
+            'enable_timer' => 'sometimes|boolean',
+            'timer_minutes' => 'nullable|integer|min:1|max:180',
         ]);
         
         \Log::info('Updating questions with data: ', $validated);
@@ -114,6 +114,27 @@ class LecturerDashboardController extends Controller
             }
         }
         
+        // Update timer settings
+        if ($set->type === 'quiz' && $set->quizDetail) {
+            $timerMinutes = null;
+            if ($request->has('enable_timer') && $request->input('enable_timer')) {
+                $timerMinutes = $request->input('timer_minutes');
+            }
+            
+            $set->quizDetail->update([
+                'timer_minutes' => $timerMinutes,
+            ]);
+        } elseif ($set->type === 'challenge' && $set->challengeDetail) {
+            $timerMinutes = null;
+            if ($request->has('enable_timer') && $request->input('enable_timer')) {
+                $timerMinutes = $request->input('timer_minutes');
+            }
+            
+            $set->challengeDetail->update([
+                'timer_minutes' => $timerMinutes,
+            ]);
+        }
+        
         return redirect()->route('lecturer.dashboard')
                         ->with('success', 'Set updated successfully.');
     }
@@ -136,8 +157,6 @@ class LecturerDashboardController extends Controller
         return redirect()->route('lecturer.dashboard')
                         ->with('success', 'Set submitted for approval successfully.');
     }
-
-
 
     public function tournaments()
     {

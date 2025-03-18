@@ -11,12 +11,23 @@
                 <div class="p-6 text-gray-900">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-lg font-medium">Question {{ $currentPage }} of {{ $totalPages }}</h3>
-                        <div class="text-gray-600">
-                            Set #{{ $set->set_number }}
-                        </div>
+                        
+                        <!-- Timer Display -->
+                        @if(isset($timer_minutes) && $timer_minutes > 0)
+                            <div class="text-center">
+                                <div id="timer" class="text-xl font-bold px-4 py-2 rounded-lg bg-blue-100">
+                                    <span id="minutes">--</span>:<span id="seconds">--</span>
+                                </div>
+                                <div class="text-sm text-gray-600 mt-1">Time Remaining</div>
+                            </div>
+                        @else
+                            <div class="text-gray-600">
+                                Set #{{ $set->set_number }}
+                            </div>
+                        @endif
                     </div>
                     
-                    <form action="{{ route('challenges.submit', $set) }}" method="POST" id="challenge-form">
+                    <form action="{{ route('challenges.submit', $set) }}" method="POST" id="challenge-form" onsubmit="return confirmSubmit()">
                         @csrf
                         
                         <div class="mb-6">
@@ -104,9 +115,47 @@
                     }
                 });
             });
+            
+            // Set up the timer if it exists
+            @if(isset($timer_minutes) && $timer_minutes > 0 && isset($remaining_seconds))
+                const totalSeconds = {{ $remaining_seconds }};
+                let timeLeft = totalSeconds;
+                
+                function updateTimer() {
+                    const minutes = Math.floor(timeLeft / 60);
+                    const seconds = timeLeft % 60;
+                    
+                    document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+                    document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+                    
+                    // Change color as time decreases
+                    const timerElement = document.getElementById('timer');
+                    if (timeLeft < 60) { // Less than 1 minute
+                        timerElement.classList.remove('bg-blue-100', 'bg-yellow-100');
+                        timerElement.classList.add('bg-red-100', 'text-red-700');
+                    } else if (timeLeft < 300) { // Less than 5 minutes
+                        timerElement.classList.remove('bg-blue-100');
+                        timerElement.classList.add('bg-yellow-100', 'text-yellow-700');
+                    }
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(timerInterval);
+                        // Auto-submit the form
+                        submitForm(true);
+                    } else {
+                        timeLeft--;
+                    }
+                }
+                
+                // Initial update
+                updateTimer();
+                
+                // Update timer every second
+                const timerInterval = setInterval(updateTimer, 1000);
+            @endif
         });
         
-        function submitForm() {
+        function confirmSubmit() {
             // Check if all questions have been answered
             let allAnswered = true;
             const totalPages = {{ $totalPages }};
@@ -124,11 +173,17 @@
             
             if (!allAnswered) {
                 if (!confirm('You have not answered all questions. Are you sure you want to submit?')) {
-                    return;
+                    return false;
                 }
             }
             
+            return true;
+        }
+        
+        function submitForm(isTimeExpired = false) {
             // Add all saved answers to the form
+            const setId = {{ $set->id }};
+            
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
                 if (key.startsWith(`challenge_${setId}_answer_`)) {
@@ -145,14 +200,16 @@
                 }
             }
             
-            // Submit the form
-            document.getElementById('challenge-form').submit();
-            
-            // Clear localStorage for this challenge
-            for (let i = localStorage.length - 1; i >= 0; i--) {
-                const key = localStorage.key(i);
-                if (key.startsWith(`challenge_${setId}_answer_`)) {
-                    localStorage.removeItem(key);
+            if (isTimeExpired || confirmSubmit()) {
+                // Submit the form
+                document.getElementById('challenge-form').submit();
+                
+                // Clear localStorage for this challenge
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith(`challenge_${setId}_answer_`)) {
+                        localStorage.removeItem(key);
+                    }
                 }
             }
         }

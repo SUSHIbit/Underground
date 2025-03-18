@@ -78,11 +78,19 @@
                         </div>
                     @else
                         <div class="mb-6">
-                            <h4 class="font-medium mb-2">Instructions:</h4>
+                            <h4 class="font-medium mb-2">Quiz Information:</h4>
                             <ul class="list-disc list-inside space-y-1 text-gray-600">
                                 <li>This quiz contains {{ $set->questions->count() }} multiple-choice questions.</li>
                                 <li>You can only attempt this quiz once.</li>
                                 <li>Each question has one correct answer.</li>
+                                @if(isset($set->quizDetail->timer_minutes) && $set->quizDetail->timer_minutes > 0)
+                                    <li class="font-medium text-blue-600">
+                                        Time Limit: {{ $set->quizDetail->timer_minutes }} minutes
+                                        <span class="block ml-5 mt-1 text-sm">The quiz will be automatically submitted when the time expires.</span>
+                                    </li>
+                                @else
+                                    <li>There is no time limit for this quiz.</li>
+                                @endif
                                 <li>Use the navigation on the right to move between questions.</li>
                                 <li>You must answer all questions before submitting.</li>
                             </ul>

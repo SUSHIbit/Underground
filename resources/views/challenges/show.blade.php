@@ -79,7 +79,7 @@
                         </div>
                         
                         <!-- Challenge Information -->
-                        <div class="border rounded-lg p-6">
+                        {{-- <div class="border rounded-lg p-6">
                             <h4 class="font-medium mb-4">Challenge Information</h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
@@ -108,6 +108,25 @@
                                     <p><span class="font-medium">Points:</span> <span class="text-green-600">+{{ $pointsEarned }}</span></p>
                                 </div>
                             </div>
+                        </div> --}}
+
+                        <div class="mb-6">
+                            <h4 class="font-medium mb-2">Challenge Information:</h4>
+                            <ul class="list-disc list-inside space-y-1 text-gray-600">
+                                <li>This challenge contains {{ $set->questions->count() }} multiple-choice questions.</li>
+                                <li>You can only attempt this challenge once.</li>
+                                <li>Each question has one correct answer.</li>
+                                @if(isset($set->challengeDetail->timer_minutes) && $set->challengeDetail->timer_minutes > 0)
+                                    <li class="font-medium text-blue-600">
+                                        Time Limit: {{ $set->challengeDetail->timer_minutes }} minutes
+                                        <span class="block ml-5 mt-1 text-sm">The challenge will be automatically submitted when the time expires.</span>
+                                    </li>
+                                @else
+                                    <li>There is no time limit for this challenge.</li>
+                                @endif
+                                <li>Use the navigation on the right to move between questions.</li>
+                                <li>You must answer all questions before submitting.</li>
+                            </ul>
                         </div>
                     @else
                         <div class="mb-6">

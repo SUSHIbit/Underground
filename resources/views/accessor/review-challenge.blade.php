@@ -54,6 +54,26 @@
                             @endforeach
                         </ul>
                     </div>
+
+                    <!-- Add this section to resources/views/accessor/review-challenge.blade.php -->
+                    <!-- Insert after the prerequisites section and before the comments section -->
+
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h4 class="font-medium mb-2">Challenge Settings</h4>
+                        
+                        <div class="mb-1">
+                            <span class="font-medium">Time Limit:</span> 
+                            @if(isset($set->challengeDetail->timer_minutes) && $set->challengeDetail->timer_minutes > 0)
+                                {{ $set->challengeDetail->timer_minutes }} minutes
+                            @else
+                                No time limit
+                            @endif
+                        </div>
+                        
+                        <div>
+                            <span class="font-medium">Questions:</span> {{ $set->questions->count() }}
+                        </div>
+                    </div>
                     
                     <!-- Overall comments for the set -->
                     <div class="mb-6">

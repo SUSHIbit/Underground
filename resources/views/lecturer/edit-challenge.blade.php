@@ -75,6 +75,28 @@
                         <form action="{{ route('lecturer.sets.update', $set) }}" method="POST">
                             @csrf
                             @method('PUT')
+
+                            <!-- Insert after the challenge details section and before the questions section -->
+
+                            <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                                <h4 class="font-medium mb-2">Challenge Timer Settings</h4>
+                                
+                                <div class="flex items-center mb-2">
+                                    <input type="checkbox" id="enable_timer" name="enable_timer" class="h-4 w-4 text-blue-600" 
+                                        {{ isset($set->challengeDetail->timer_minutes) && $set->challengeDetail->timer_minutes > 0 ? 'checked' : '' }}>
+                                    <label for="enable_timer" class="ml-2 text-gray-700">Enable Timer</label>
+                                </div>
+                                
+                                <div id="timer_settings" class="{{ isset($set->challengeDetail->timer_minutes) && $set->challengeDetail->timer_minutes > 0 ? '' : 'hidden' }}">
+                                    <div class="flex items-center">
+                                        <input type="number" id="timer_minutes" name="timer_minutes" 
+                                            class="w-20 p-2 border border-gray-300 rounded-md"
+                                            min="1" max="180" value="{{ $set->challengeDetail->timer_minutes ?? 45 }}">
+                                        <label for="timer_minutes" class="ml-2 text-gray-700">minutes</label>
+                                    </div>
+                                    <p class="mt-1 text-sm text-gray-500">Students will have this amount of time to complete the challenge. After the time expires, the challenge will be automatically submitted with the answers provided so far.</p>
+                                </div>
+                            </div>
                             
                             <div class="mb-6">
                                 <h4 class="font-medium mb-4">Questions</h4>
@@ -248,4 +270,20 @@
             </div>
         </div>
     </div>
+
+    <!-- Add this JavaScript to the bottom of the file -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const enableTimerCheckbox = document.getElementById('enable_timer');
+            const timerSettings = document.getElementById('timer_settings');
+            
+            enableTimerCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    timerSettings.classList.remove('hidden');
+                } else {
+                    timerSettings.classList.add('hidden');
+                }
+            });
+        });
+    </script>
 </x-app-layout>
