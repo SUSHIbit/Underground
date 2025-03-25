@@ -140,10 +140,12 @@
                                                  ->first();
                                     @endphp
                                     <div class="border rounded-lg overflow-hidden shadow-sm">
-                                        <div class="p-4 bg-green-50 border-b">
-                                            <h4 class="font-medium">Set #{{ $quiz->set_number }}: {{ $quiz->quizDetail->subject->name }}</h4>
-                                            <p class="text-sm text-gray-600">{{ $quiz->quizDetail->topic->name }}</p>
-                                        </div>
+                                        <a href="{{ route('quizzes.show', $quiz) }}" class="block">
+                                            <div class="p-4 bg-green-50 border-b">
+                                                <h4 class="font-medium">Set #{{ $quiz->set_number }}: {{ $quiz->quizDetail->subject->name }}</h4>
+                                                <p class="text-sm text-gray-600">{{ $quiz->quizDetail->topic->name }}</p>
+                                            </div>
+                                        </a>
                                         <div class="p-4">
                                             <div class="mb-4">
                                                 <p class="text-sm text-gray-600">Questions: {{ $quiz->questions->count() }}</p>
@@ -164,15 +166,20 @@
                                                 @endif
                                             </div>
                                             
-                                            @if($attempt)
-                                                <a href="{{ route('results.show', $attempt) }}" class="inline-block bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                                                    View Results
-                                                </a>
-                                            @else
-                                                <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                                                    Completed
-                                                </span>
-                                            @endif
+                                            <div class="flex space-x-2">
+                                                @if($attempt)
+                                                    <a href="{{ route('results.show', $attempt) }}" class="inline-block bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                                                        View Results
+                                                    </a>
+                                                    <a href="{{ route('quizzes.show', $quiz) }}" class="inline-block bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                                        Quiz Details
+                                                    </a>
+                                                @else
+                                                    <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                                                        Completed
+                                                    </span>
+                                                @endif
+                                            </div>
                                         </div>
                                     </div>
                                 @endforeach
