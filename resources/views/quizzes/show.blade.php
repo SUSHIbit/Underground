@@ -76,6 +76,39 @@
                                 </div>
                             </div>
                         </div>
+
+                        @if($isCompleted && $canRetake)
+                            <div class="mt-6 border-t pt-6">
+                                <h4 class="text-lg font-medium mb-2">Retake Quiz</h4>
+                                <p class="mb-4">
+                                    Want to improve your score? You can retake this quiz for <strong>5 UEPoints</strong>.
+                                    <br>
+                                    <span class="text-sm text-gray-600">Your new score will overwrite the previous one.</span>
+                                </p>
+                                
+                                <form action="{{ route('quizzes.retake', $set) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded">
+                                        Retake Quiz (5 UEPoints)
+                                    </button>
+                                </form>
+                                
+                                <p class="mt-2 text-sm text-gray-600">
+                                    Your current UEPoints: <strong>{{ auth()->user()->ue_points }}</strong>
+                                </p>
+                            </div>
+                        @elseif($isCompleted && !$canRetake)
+                            <div class="mt-6 border-t pt-6">
+                                <p class="text-gray-600">
+                                    You don't have enough UEPoints to retake this quiz. 
+                                    <a href="{{ route('uepoints.index') }}" class="text-blue-500 hover:underline">Learn how to earn more</a>.
+                                </p>
+                                
+                                <p class="mt-2 text-sm text-gray-600">
+                                    Your current UEPoints: <strong>{{ auth()->user()->ue_points }}</strong>
+                                </p>
+                            </div>
+                        @endif
                     @else
                         <div class="mb-6">
                             <h4 class="font-medium mb-2">Quiz Information:</h4>

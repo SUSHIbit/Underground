@@ -7,10 +7,11 @@ use App\Http\Controllers\QuizController;
 use App\Http\Controllers\LegionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ResultController; 
+use App\Http\Controllers\UEPointsController;
 use App\Http\Controllers\ChallengeController; 
 use App\Http\Controllers\TournamentController;
-use App\Http\Controllers\LeaderboardController;
 
+use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\SetApprovalController; 
 use App\Http\Controllers\AccessorDashboardController; 
 use App\Http\Controllers\LecturerDashboardController; 
@@ -134,6 +135,17 @@ Route::middleware(['auth'])->group(function () {
     
     // Legion leaderboard
     Route::get('/legion-leaderboard', [LegionController::class, 'leaderboard'])->name('legions.leaderboard');
+});
+
+Route::middleware(['auth'])->group(function () {
+    // Quiz retake routes
+    Route::post('/quizzes/{set}/retake', [QuizController::class, 'retake'])->name('quizzes.retake');
+
+    // Challenge retake routes
+    Route::post('/challenges/{set}/retake', [ChallengeController::class, 'retake'])->name('challenges.retake');
+
+    // UEPoints management route
+    Route::get('/uepoints', [UEPointsController::class, 'index'])->name('uepoints.index');
 });
 
 require __DIR__.'/auth.php';

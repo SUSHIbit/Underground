@@ -44,14 +44,57 @@
                         </div>
                     </div>
 
-                    
+                    @if($attempt->is_retake)
+                    <div class="bg-blue-50 rounded-lg p-4 mb-6">
+                        <h4 class="text-lg font-bold text-blue-700">Retake Information</h4>
+                        <p class="text-gray-700">This was a retake attempt. You spent {{ $attempt->ue_points_spent }} UEPoints.</p>
+                        
+                        @php
+                            $originalAttempt = $attempt->originalAttempt;
+                            $scoreImprovement = null;
+                            
+                            if ($originalAttempt) {
+                                $scoreImprovement = $attempt->score - $originalAttempt->score;
+                            }
+                        @endphp
+                        
+                        @if($originalAttempt && $scoreImprovement !== null)
+                            <div class="mt-2">
+                                <p class="text-gray-700">
+                                    Original score: {{ $originalAttempt->score }}/{{ $originalAttempt->total_questions }} 
+                                    ({{ $originalAttempt->score_percentage }}%)
+                                </p>
+                                <p class="text-gray-700">
+                                    New score: {{ $attempt->score }}/{{ $attempt->total_questions }} 
+                                    ({{ $attempt->score_percentage }}%)
+                                </p>
+                                
+                                @if($scoreImprovement > 0)
+                                    <p class="text-green-600 font-medium mt-2">
+                                        You improved by {{ $scoreImprovement }} {{ Str::plural('point', $scoreImprovement) }}!
+                                    </p>
+                                @elseif($scoreImprovement < 0)
+                                    <p class="text-red-600 font-medium mt-2">
+                                        Your score decreased by {{ abs($scoreImprovement) }} {{ Str::plural('point', abs($scoreImprovement)) }}.
+                                    </p>
+                                @else
+                                    <p class="text-yellow-600 font-medium mt-2">
+                                        Your score remained the same.
+                                    </p>
+                                @endif
+                            </div>
+                        @endif
+                        
+                        <!-- No UEPoints rewards for retakes -->
+                    </div>
+                    @endif
 
                     <div class="mt-4 text-center">
                         <div class="inline-block px-3 py-1 rounded bg-green-100 text-green-800">
                             <p class="text-sm font-medium">
-                                @if($attempt->set->type === 'quiz')
+                                @if($attempt->set->type === 'quiz' && !$attempt->is_retake)
                                     <span class="font-bold">+5</span> points earned for completing this quiz
-                                @else
+                                @elseif($attempt->set->type === 'challenge' && !$attempt->is_retake)
                                     @php
                                         $score = $attempt->score;
                                         $total = $attempt->total_questions;

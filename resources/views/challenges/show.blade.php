@@ -78,38 +78,6 @@
                             </div>
                         </div>
                         
-                        <!-- Challenge Information -->
-                        {{-- <div class="border rounded-lg p-6">
-                            <h4 class="font-medium mb-4">Challenge Information</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <p class="mb-2"><span class="font-medium">Name:</span> {{ $set->challengeDetail->name }}</p>
-                                    <p><span class="font-medium">Questions:</span> {{ $set->questions->count() }}</p>
-                                    
-                                    <div class="mt-4">
-                                        <p class="font-medium mb-2">Prerequisites:</p>
-                                        <ul class="list-disc list-inside space-y-1 text-gray-600">
-                                            @foreach($set->challengeDetail->prerequisites as $prereq)
-                                                <li class="{{ $prereq->isAttemptedBy($user) ? 'text-green-600' : '' }}">
-                                                    Set #{{ $prereq->set_number }}:
-                                                    {{ $prereq->quizDetail->subject->name }} - 
-                                                    {{ $prereq->quizDetail->topic->name }}
-                                                    @if($prereq->isAttemptedBy($user))
-                                                        ✓
-                                                    @endif
-                                                </li>
-                                            @endforeach
-                                        </ul>
-                                    </div>
-                                </div>
-                                <div>
-                                    <p class="mb-2"><span class="font-medium">Status:</span> <span class="text-green-600">Completed</span></p>
-                                    <p class="mb-2"><span class="font-medium">Score:</span> {{ $attempt->score }}/{{ $attempt->total_questions }} ({{ $attempt->score_percentage }}%)</p>
-                                    <p><span class="font-medium">Points:</span> <span class="text-green-600">+{{ $pointsEarned }}</span></p>
-                                </div>
-                            </div>
-                        </div> --}}
-
                         <div class="mb-6">
                             <h4 class="font-medium mb-2">Challenge Information:</h4>
                             <ul class="list-disc list-inside space-y-1 text-gray-600">
@@ -128,6 +96,45 @@
                                 <li>You must answer all questions before submitting.</li>
                             </ul>
                         </div>
+
+                        @if($isCompleted && $canRetake)
+                            <div class="mt-6 border-t pt-6">
+                                <h4 class="text-lg font-medium mb-2">Retake Challenge</h4>
+                                <p class="mb-4">
+                                    Want to improve your score? You can retake this challenge for <strong>10 UEPoints</strong>.
+                                    <br>
+                                    <span class="text-sm text-gray-600">Your new score will overwrite the previous one.</span>
+                                </p>
+                                
+                                <form action="{{ route('challenges.retake', $set) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded">
+                                        Retake Challenge (10 UEPoints)
+                                    </button>
+                                </form>
+                                
+                                <p class="mt-2 text-sm text-gray-600">
+                                    Your current UEPoints: <strong>{{ auth()->user()->ue_points }}</strong>
+                                </p>
+                            </div>
+                        @elseif($isCompleted && !$canRetake)
+                            <div class="mt-6 border-t pt-6">
+                                @if(!auth()->user()->hasEnoughUEPoints(10))
+                                    <p class="text-gray-600">
+                                        You don't have enough UEPoints to retake this challenge. 
+                                        <a href="{{ route('uepoints.index') }}" class="text-blue-500 hover:underline">Learn how to earn more</a>.
+                                    </p>
+                                @elseif(!$hasCompletedPrerequisites)
+                                    <p class="text-gray-600">
+                                        You need to complete all prerequisites again before you can retake this challenge.
+                                    </p>
+                                @endif
+                                
+                                <p class="mt-2 text-sm text-gray-600">
+                                    Your current UEPoints: <strong>{{ auth()->user()->ue_points }}</strong>
+                                </p>
+                            </div>
+                        @endif
                     @else
                         <div class="mb-6">
                             <h4 class="font-medium mb-2">Prerequisites:</h4>

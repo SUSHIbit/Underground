@@ -17,13 +17,17 @@ class QuizAttempt extends Model
         'total_questions', 
         'completed',
         'started_at',
-        'time_expires_at'
+        'time_expires_at',
+        'is_retake',
+        'ue_points_spent',
+        'original_attempt_id'
     ];
 
     protected $casts = [
         'completed' => 'boolean',
         'started_at' => 'datetime',
-        'time_expires_at' => 'datetime'
+        'time_expires_at' => 'datetime',
+        'is_retake' => 'boolean'
     ];
 
     public function user()
@@ -39,6 +43,16 @@ class QuizAttempt extends Model
     public function answers()
     {
         return $this->hasMany(QuizAnswer::class);
+    }
+
+    public function originalAttempt()
+    {
+        return $this->belongsTo(QuizAttempt::class, 'original_attempt_id');
+    }
+
+    public function retakeAttempts()
+    {
+        return $this->hasMany(QuizAttempt::class, 'original_attempt_id');
     }
 
     public function getScorePercentageAttribute()

@@ -26,7 +26,9 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
-        'profile_picture', // Add this new field
+        'profile_picture',
+        'points',
+        'ue_points', // Add UEPoints to fillable
     ];
 
     /**
@@ -251,5 +253,43 @@ class User extends Authenticatable
     public function hasLegionManagementPrivileges()
     {
         return $this->isLegionLeader() || $this->isLegionOfficer();
+    }
+
+
+    /**
+     * Add UEPoints to user.
+     *
+     * @param int $points
+     * @return void
+     */
+    public function addUEPoints(int $points): void
+    {
+        $this->increment('ue_points', $points);
+    }
+
+    /**
+     * Deduct UEPoints from user.
+     *
+     * @param int $points
+     * @return bool
+     */
+    public function deductUEPoints(int $points): bool
+    {
+        if ($this->ue_points >= $points) {
+            $this->decrement('ue_points', $points);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check if user has enough UEPoints.
+     *
+     * @param int $points
+     * @return bool
+     */
+    public function hasEnoughUEPoints(int $points): bool
+    {
+        return $this->ue_points >= $points;
     }
 }

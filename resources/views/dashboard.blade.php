@@ -37,6 +37,17 @@
                                 </div>
                                 
                                 <div class="border rounded-lg p-4">
+                                    <h4 class="font-medium text-gray-700 mb-2">UEPoints</h4>
+                                    <p class="text-2xl font-bold text-blue-600">{{ $user->ue_points }}</p>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        Use UEPoints to retake quizzes and challenges
+                                    </p>
+                                    <a href="{{ route('uepoints.index') }}" class="mt-2 inline-block text-sm text-blue-500 hover:underline">
+                                        Learn more about UEPoints
+                                    </a>
+                                </div>
+                                
+                                <div class="border rounded-lg p-4">
                                     <h4 class="font-medium text-gray-700 mb-2">Next Rank</h4>
                                     @php
                                         $nextRankInfo = $user->getPointsToNextRank();
@@ -69,8 +80,6 @@
                             </div>
                         </div>
                     </div>
-
-
                     
                     <div class="mb-6">
                         <div class="flex gap-4">

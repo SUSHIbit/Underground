@@ -63,16 +63,68 @@ class QuizController extends Controller
         $user = auth()->user();
         
         // Check if the user has already attempted this quiz
-        if ($set->isAttemptedBy($user)) {
-            $attempt = QuizAttempt::where('user_id', $user->id)
-                                 ->where('set_id', $set->id)
-                                 ->where('completed', true)
-                                 ->first();
-                                 
-            return redirect()->route('results.show', $attempt);
+        $attempt = QuizAttempt::where('user_id', $user->id)
+                             ->where('set_id', $set->id)
+                             ->where('completed', true)
+                             ->orderBy('created_at', 'desc')
+                             ->first();
+        
+        $isCompleted = $attempt !== null;
+        $canRetake = $isCompleted && $user->hasEnoughUEPoints(5); // Assuming 5 UEPoints per retake
+        
+        return view('quizzes.show', compact('set', 'isCompleted', 'attempt', 'canRetake'));
+    }
+    
+    public function retake(Set $set)
+    {
+        if ($set->type !== 'quiz') {
+            abort(404);
         }
         
-        return view('quizzes.show', compact('set'));
+        $user = auth()->user();
+        
+        // Check if UEPoints are sufficient (assuming 5 points per retake)
+        if (!$user->hasEnoughUEPoints(5)) {
+            return redirect()->route('quizzes.show', $set)
+                           ->with('error', 'You do not have enough UEPoints to retake this quiz.');
+        }
+        
+        // Find the original attempt
+        $originalAttempt = QuizAttempt::where('user_id', $user->id)
+                                    ->where('set_id', $set->id)
+                                    ->where('completed', true)
+                                    ->whereNull('original_attempt_id')
+                                    ->first();
+        
+        if (!$originalAttempt) {
+            $originalAttempt = QuizAttempt::where('user_id', $user->id)
+                                        ->where('set_id', $set->id)
+                                        ->where('completed', true)
+                                        ->first();
+        }
+                                    
+        if (!$originalAttempt) {
+            return redirect()->route('quizzes.show', $set)
+                           ->with('error', 'No previous attempt found.');
+        }
+        
+        // Deduct UEPoints
+        $user->deductUEPoints(5);
+        
+        // Create a new attempt as a retake
+        $retakeAttempt = QuizAttempt::create([
+            'user_id' => $user->id,
+            'set_id' => $set->id,
+            'score' => 0,
+            'total_questions' => $set->questions->count(),
+            'completed' => false,
+            'is_retake' => true,
+            'ue_points_spent' => 5,
+            'original_attempt_id' => $originalAttempt->id
+        ]);
+        
+        return redirect()->route('quizzes.attempt', $set)
+                       ->with('success', 'You are now retaking the quiz. 5 UEPoints have been deducted.');
     }
     
     public function attempt(Set $set, Request $request)
@@ -83,10 +135,24 @@ class QuizController extends Controller
         
         $user = auth()->user();
         
-        // Check if the user has already attempted this quiz
-        if ($set->isAttemptedBy($user)) {
-            return redirect()->route('quizzes.index')
-                           ->with('error', 'You have already completed this quiz.');
+        // Check if the user has an incomplete retake attempt
+        $attemptQuery = QuizAttempt::where('user_id', $user->id)
+                                 ->where('set_id', $set->id)
+                                 ->where('completed', false);
+        
+        $attempt = $attemptQuery->first();
+        
+        // If no incomplete attempt exists, check if user has already completed the quiz
+        if (!$attempt) {
+            $completedAttempt = QuizAttempt::where('user_id', $user->id)
+                                         ->where('set_id', $set->id)
+                                         ->where('completed', true)
+                                         ->first();
+            
+            // If completed and not explicitly requesting a retake, redirect to results
+            if ($completedAttempt && !session('retaking')) {
+                return redirect()->route('results.show', $completedAttempt);
+            }
         }
         
         $set->load(['questions' => function($query) {
@@ -104,18 +170,17 @@ class QuizController extends Controller
             abort(404);
         }
         
-        // Create or get existing attempt
-        $attempt = QuizAttempt::firstOrCreate(
-            [
+        // Create or get existing attempt if doesn't exist
+        if (!$attempt) {
+            $attempt = QuizAttempt::create([
                 'user_id' => $user->id,
                 'set_id' => $set->id,
-                'completed' => false
-            ],
-            [
                 'score' => 0,
-                'total_questions' => $questions->count()
-            ]
-        );
+                'total_questions' => $questions->count(),
+                'completed' => false,
+                'is_retake' => session('retaking', false)
+            ]);
+        }
         
         // Start timer if not already started and if quiz has timer
         if (!$attempt->started_at && isset($set->quizDetail->timer_minutes) && $set->quizDetail->timer_minutes > 0) {
@@ -138,7 +203,8 @@ class QuizController extends Controller
             'totalPages' => $questions->count(),
             'attempt' => $attempt,
             'timer_minutes' => $timer_minutes,
-            'remaining_seconds' => $remaining_seconds
+            'remaining_seconds' => $remaining_seconds,
+            'is_retake' => $attempt->is_retake
         ]);
     }
     
@@ -162,8 +228,10 @@ class QuizController extends Controller
             'completed' => true
         ]);
         
-        // Award 5 points for completing any quiz
-        $attempt->user->addPoints(5);
+        // Award 5 points for completing any quiz (only if it's not a retake)
+        if (!$attempt->is_retake) {
+            $attempt->user->addPoints(5);
+        }
         
         return redirect()->route('results.show', $attempt)
                         ->with('warning', 'Your time has expired. The quiz was automatically submitted.');
@@ -177,16 +245,13 @@ class QuizController extends Controller
         
         $user = auth()->user();
         
-        // Check if the user has already attempted this quiz
-        if ($set->isAttemptedBy($user)) {
-            return redirect()->route('quizzes.index')
-                        ->with('error', 'You have already completed this quiz.');
-        }
-        
+        // Find the current attempt
         $attempt = QuizAttempt::where('user_id', $user->id)
                             ->where('set_id', $set->id)
                             ->where('completed', false)
                             ->firstOrFail();
+        
+        $isRetake = $attempt->is_retake;
         
         // Check if timer has expired
         if ($attempt->hasTimerExpired()) {
@@ -200,6 +265,9 @@ class QuizController extends Controller
         
         $score = 0;
         $set->load('questions');
+        
+        // Delete previous answers for this attempt (if it's a retake)
+        $attempt->answers()->delete();
         
         foreach ($validated['answers'] as $questionId => $answer) {
             $question = $set->questions->firstWhere('id', $questionId);
@@ -227,8 +295,11 @@ class QuizController extends Controller
             'completed' => true
         ]);
         
-        // Award 5 points for completing any quiz
-        $user->addPoints(5);
+        // Award points only if it's not a retake
+        if (!$isRetake) {
+            $user->addPoints(5);
+        } 
+        // No UEPoints rewards for retakes
         
         return redirect()->route('results.show', $attempt);
     }

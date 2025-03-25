@@ -67,22 +67,79 @@ class ChallengeController extends Controller
         $user = auth()->user();
         
         // Check if the user has already attempted this challenge
-        if ($set->isAttemptedBy($user)) {
-            $attempt = QuizAttempt::where('user_id', $user->id)
-                                 ->where('set_id', $set->id)
-                                 ->where('completed', true)
-                                 ->first();
-                                 
-            return redirect()->route('results.show', $attempt);
+        $attempt = QuizAttempt::where('user_id', $user->id)
+                             ->where('set_id', $set->id)
+                             ->where('completed', true)
+                             ->orderBy('created_at', 'desc')
+                             ->first();
+        
+        $isCompleted = $attempt !== null;
+        
+        // Check if user has met prerequisites
+        $hasCompletedPrerequisites = $set->challengeDetail->hasCompletedPrerequisites($user);
+        
+        // Challenge retakes cost more - 10 UEPoints
+        $canRetake = $isCompleted && $user->hasEnoughUEPoints(10) && $hasCompletedPrerequisites;
+        
+        return view('challenges.show', compact('set', 'isCompleted', 'attempt', 'canRetake', 'hasCompletedPrerequisites'));
+    }
+    
+    public function retake(Set $set)
+    {
+        if ($set->type !== 'challenge') {
+            abort(404);
+        }
+        
+        $user = auth()->user();
+        
+        // Check if UEPoints are sufficient (10 points for challenge retake)
+        if (!$user->hasEnoughUEPoints(10)) {
+            return redirect()->route('challenges.show', $set)
+                           ->with('error', 'You do not have enough UEPoints to retake this challenge.');
         }
         
         // Check if user has met prerequisites
         if (!$set->challengeDetail->hasCompletedPrerequisites($user)) {
             return redirect()->route('challenges.index')
-                           ->with('error', 'You must complete all prerequisites before attempting this challenge.');
+                           ->with('error', 'You must complete all prerequisites before retaking this challenge.');
         }
         
-        return view('challenges.show', compact('set'));
+        // Find the original attempt
+        $originalAttempt = QuizAttempt::where('user_id', $user->id)
+                                    ->where('set_id', $set->id)
+                                    ->where('completed', true)
+                                    ->whereNull('original_attempt_id')
+                                    ->first();
+                                    
+        if (!$originalAttempt) {
+            $originalAttempt = QuizAttempt::where('user_id', $user->id)
+                                        ->where('set_id', $set->id)
+                                        ->where('completed', true)
+                                        ->first();
+        }
+                                    
+        if (!$originalAttempt) {
+            return redirect()->route('challenges.show', $set)
+                           ->with('error', 'No previous attempt found.');
+        }
+        
+        // Deduct UEPoints
+        $user->deductUEPoints(10);
+        
+        // Create a new attempt as a retake
+        $retakeAttempt = QuizAttempt::create([
+            'user_id' => $user->id,
+            'set_id' => $set->id,
+            'score' => 0,
+            'total_questions' => $set->questions->count(),
+            'completed' => false,
+            'is_retake' => true,
+            'ue_points_spent' => 10,
+            'original_attempt_id' => $originalAttempt->id
+        ]);
+        
+        return redirect()->route('challenges.attempt', $set)
+                       ->with('success', 'You are now retaking the challenge. 10 UEPoints have been deducted.');
     }
     
     public function attempt(Set $set, Request $request)
@@ -93,10 +150,24 @@ class ChallengeController extends Controller
         
         $user = auth()->user();
         
-        // Check if the user has already attempted this challenge
-        if ($set->isAttemptedBy($user)) {
-            return redirect()->route('challenges.index')
-                           ->with('error', 'You have already completed this challenge.');
+        // Check if the user has an incomplete retake attempt
+        $attemptQuery = QuizAttempt::where('user_id', $user->id)
+                                 ->where('set_id', $set->id)
+                                 ->where('completed', false);
+        
+        $attempt = $attemptQuery->first();
+        
+        // If no incomplete attempt exists, check if user has already completed the challenge
+        if (!$attempt) {
+            $completedAttempt = QuizAttempt::where('user_id', $user->id)
+                                         ->where('set_id', $set->id)
+                                         ->where('completed', true)
+                                         ->first();
+            
+            // If completed and not in retake mode, redirect to results
+            if ($completedAttempt && !session('retaking')) {
+                return redirect()->route('results.show', $completedAttempt);
+            }
         }
         
         // Check if user has met prerequisites
@@ -121,17 +192,16 @@ class ChallengeController extends Controller
         }
         
         // Create or get existing attempt
-        $attempt = QuizAttempt::firstOrCreate(
-            [
+        if (!$attempt) {
+            $attempt = QuizAttempt::create([
                 'user_id' => $user->id,
                 'set_id' => $set->id,
-                'completed' => false
-            ],
-            [
                 'score' => 0,
-                'total_questions' => $questions->count()
-            ]
-        );
+                'total_questions' => $questions->count(),
+                'completed' => false,
+                'is_retake' => session('retaking', false)
+            ]);
+        }
         
         // Start timer if not already started and if challenge has timer
         if (!$attempt->started_at && isset($set->challengeDetail->timer_minutes) && $set->challengeDetail->timer_minutes > 0) {
@@ -154,7 +224,8 @@ class ChallengeController extends Controller
             'totalPages' => $questions->count(),
             'attempt' => $attempt,
             'timer_minutes' => $timer_minutes,
-            'remaining_seconds' => $remaining_seconds
+            'remaining_seconds' => $remaining_seconds,
+            'is_retake' => $attempt->is_retake
         ]);
     }
     
@@ -177,26 +248,31 @@ class ChallengeController extends Controller
             'completed' => true
         ]);
         
-        // Calculate challenge points based on score percentage
-        $totalQuestions = $set->questions->count();
-        $scorePercentage = ($score / $totalQuestions) * 100;
+        $isRetake = $attempt->is_retake;
         
-        // Award points based on percentage
-        $pointsToAward = 0;
-        if ($scorePercentage >= 20 && $scorePercentage < 40) {
-            $pointsToAward = 2;
-        } elseif ($scorePercentage >= 40 && $scorePercentage < 60) {
-            $pointsToAward = 4;
-        } elseif ($scorePercentage >= 60 && $scorePercentage < 80) {
-            $pointsToAward = 6;
-        } elseif ($scorePercentage >= 80 && $scorePercentage < 100) {
-            $pointsToAward = 8;
-        } elseif ($scorePercentage == 100) {
-            $pointsToAward = 10;
+        // Calculate challenge points based on score percentage and award only if not a retake
+        if (!$isRetake) {
+            $totalQuestions = $set->questions->count();
+            $scorePercentage = ($score / $totalQuestions) * 100;
+            
+            // Award points based on percentage
+            $pointsToAward = 0;
+            if ($scorePercentage >= 20 && $scorePercentage < 40) {
+                $pointsToAward = 2;
+            } elseif ($scorePercentage >= 40 && $scorePercentage < 60) {
+                $pointsToAward = 4;
+            } elseif ($scorePercentage >= 60 && $scorePercentage < 80) {
+                $pointsToAward = 6;
+            } elseif ($scorePercentage >= 80 && $scorePercentage < 100) {
+                $pointsToAward = 8;
+            } elseif ($scorePercentage == 100) {
+                $pointsToAward = 10;
+            }
+            
+            // Add points to user
+            $attempt->user->addPoints($pointsToAward);
         }
-        
-        // Add points to user
-        $attempt->user->addPoints($pointsToAward);
+        // No UEPoints rewards for retakes
         
         return redirect()->route('results.show', $attempt)
                         ->with('warning', 'Your time has expired. The challenge was automatically submitted.');
@@ -210,16 +286,13 @@ class ChallengeController extends Controller
         
         $user = auth()->user();
         
-        // Check if the user has already attempted this challenge
-        if ($set->isAttemptedBy($user)) {
-            return redirect()->route('challenges.index')
-                        ->with('error', 'You have already completed this challenge.');
-        }
-        
+        // Find the current attempt
         $attempt = QuizAttempt::where('user_id', $user->id)
                             ->where('set_id', $set->id)
                             ->where('completed', false)
                             ->firstOrFail();
+                            
+        $isRetake = $attempt->is_retake;
                             
         // Check if timer has expired
         if ($attempt->hasTimerExpired()) {
@@ -233,6 +306,9 @@ class ChallengeController extends Controller
         
         $score = 0;
         $set->load('questions');
+        
+        // Delete previous answers for this attempt if it's a retake
+        $attempt->answers()->delete();
         
         foreach ($validated['answers'] as $questionId => $answer) {
             $question = $set->questions->firstWhere('id', $questionId);
@@ -264,22 +340,26 @@ class ChallengeController extends Controller
         $totalQuestions = $set->questions->count();
         $scorePercentage = ($score / $totalQuestions) * 100;
         
-        // Award points based on percentage
-        $pointsToAward = 0;
-        if ($scorePercentage >= 20 && $scorePercentage < 40) {
-            $pointsToAward = 2;
-        } elseif ($scorePercentage >= 40 && $scorePercentage < 60) {
-            $pointsToAward = 4;
-        } elseif ($scorePercentage >= 60 && $scorePercentage < 80) {
-            $pointsToAward = 6;
-        } elseif ($scorePercentage >= 80 && $scorePercentage < 100) {
-            $pointsToAward = 8;
-        } elseif ($scorePercentage == 100) {
-            $pointsToAward = 10;
+        // Only award regular points if it's not a retake
+        if (!$isRetake) {
+            // Award points based on percentage
+            $pointsToAward = 0;
+            if ($scorePercentage >= 20 && $scorePercentage < 40) {
+                $pointsToAward = 2;
+            } elseif ($scorePercentage >= 40 && $scorePercentage < 60) {
+                $pointsToAward = 4;
+            } elseif ($scorePercentage >= 60 && $scorePercentage < 80) {
+                $pointsToAward = 6;
+            } elseif ($scorePercentage >= 80 && $scorePercentage < 100) {
+                $pointsToAward = 8;
+            } elseif ($scorePercentage == 100) {
+                $pointsToAward = 10;
+            }
+            
+            // Add points to user
+            $user->addPoints($pointsToAward);
         }
-        
-        // Add points to user
-        $user->addPoints($pointsToAward);
+        // No UEPoints rewards for retakes
         
         return redirect()->route('results.show', $attempt);
     }
