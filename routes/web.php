@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RankController;
 use App\Http\Controllers\HomeController; 
 use App\Http\Controllers\QuizController; 
+use App\Http\Controllers\AdminController; 
 use App\Http\Controllers\LegionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ResultController; 
@@ -100,6 +101,13 @@ Route::middleware(['auth', 'accessor'])->prefix('accessor')->name('accessor.')->
     Route::post('/sets/{set}/comment', [SetApprovalController::class, 'addComment'])->name('sets.comment');
     Route::post('/sets/{set}/approve', [SetApprovalController::class, 'approve'])->name('sets.approve');
     Route::post('/sets/{set}/reject', [SetApprovalController::class, 'reject'])->name('sets.reject');
+});
+
+// Admin Routes
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
+    Route::get('/users/{user}/edit-role', [AdminController::class, 'editRole'])->name('edit-role');
+    Route::put('/users/{user}/update-role', [AdminController::class, 'updateRole'])->name('update-role');
 });
 
 Route::middleware(['auth'])->group(function () {

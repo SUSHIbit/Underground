@@ -39,6 +39,10 @@
                         <x-nav-link :href="route('accessor.dashboard')" :active="request()->routeIs('accessor.*')">
                             {{ __('Accessor Dashboard') }}
                         </x-nav-link>
+                    @elseif(Auth::user()->role === 'admin')
+                        <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
+                            {{ __('Admin Dashboard') }}
+                        </x-nav-link>
                     @endif
 
                     <!-- Add this to the navigation links section -->
@@ -142,15 +146,38 @@
                 {{ __('View Ranks') }}
             </x-responsive-nav-link>
 
-            <x-responsive-nav-link :href="route('quizzes.index')" :active="request()->routeIs('quizzes.*')">
-                {{ __('Quizzes') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('challenges.index')" :active="request()->routeIs('challenges.*')">
-                {{ __('Challenges') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('legions.index')" :active="request()->routeIs('legions.*')">
-                {{ __('Legions') }}
-            </x-responsive-nav-link>
+            @if(Auth::user()->role === 'student')
+                <x-responsive-nav-link :href="route('quizzes.index')" :active="request()->routeIs('quizzes.*')">
+                    {{ __('Quizzes') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('challenges.index')" :active="request()->routeIs('challenges.*')">
+                    {{ __('Challenges') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('legions.index')" :active="request()->routeIs('legions.*')">
+                    {{ __('Legions') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('tournaments.index')" :active="request()->routeIs('tournaments.*')">
+                    {{ __('Tournaments') }}
+                </x-responsive-nav-link>
+            @elseif(Auth::user()->role === 'lecturer')
+                <x-responsive-nav-link :href="route('lecturer.dashboard')" :active="request()->routeIs('lecturer.*')">
+                    {{ __('Lecturer Dashboard') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('lecturer.tournaments')" :active="request()->routeIs('lecturer.tournaments*')">
+                    {{ __('Tournaments') }}
+                </x-responsive-nav-link>
+            @elseif(Auth::user()->role === 'accessor')
+                <x-responsive-nav-link :href="route('accessor.dashboard')" :active="request()->routeIs('accessor.*')">
+                    {{ __('Accessor Dashboard') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('accessor.tournaments')" :active="request()->routeIs('accessor.tournaments*')">
+                    {{ __('Tournaments') }}
+                </x-responsive-nav-link>
+            @elseif(Auth::user()->role === 'admin')
+                <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
+                    {{ __('Admin Dashboard') }}
+                </x-responsive-nav-link>
+            @endif
             
             <!-- Add UEPoints link for mobile -->
             @if(Auth::user()->role === 'student')
