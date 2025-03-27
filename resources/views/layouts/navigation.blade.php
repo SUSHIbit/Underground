@@ -16,10 +16,6 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
-
-                    <x-nav-link :href="route('leaderboard')" :active="request()->routeIs('leaderboard')">
-                        {{ __('Leaderboard') }}
-                    </x-nav-link>
                     
                     @if(Auth::user()->role === 'student')
                         <x-nav-link :href="route('quizzes.index')" :active="request()->routeIs('quizzes.*')">
@@ -27,9 +23,6 @@
                         </x-nav-link>
                         <x-nav-link :href="route('challenges.index')" :active="request()->routeIs('challenges.*')">
                             {{ __('Challenges') }}
-                        </x-nav-link>
-                        <x-nav-link :href="route('legions.index')" :active="request()->routeIs('legions.*')">
-                            {{ __('Legions') }}
                         </x-nav-link>
                     @elseif(Auth::user()->role === 'lecturer')
                         <x-nav-link :href="route('lecturer.dashboard')" :active="request()->routeIs('lecturer.*')">
@@ -62,26 +55,8 @@
                 </div>
             </div>
 
-            <!-- UEPoints Display -->
-            @if(Auth::user()->role === 'student')
-            <div class="hidden sm:flex sm:items-center sm:ms-6 mr-4">
-                <a href="{{ route('uepoints.index') }}" class="flex items-center px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-md text-sm font-medium">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd" />
-                    </svg>
-                    <span>{{ Auth::user()->ue_points }} UEPoints</span>
-                </a>
-            </div>
-            @endif
-
-            <!-- Settings Dropdown with View Ranks Button -->
+            <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6">
-                <!-- View Ranks Button -->
-                <a href="{{ route('ranks.index') }}" class="mr-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm font-medium">
-                    View Ranks
-                </a>
-                
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <div class="flex items-center">
@@ -106,6 +81,11 @@
                     <x-slot name="content">
                         <x-dropdown-link :href="route('profile.edit')">
                             {{ __('Profile') }}
+                        </x-dropdown-link>
+
+                        <!-- New Settings Section -->
+                        <x-dropdown-link :href="route('settings')">
+                            {{ __('Settings') }}
                         </x-dropdown-link>
 
                         <!-- Authentication -->
@@ -140,11 +120,6 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
-            
-            <!-- Add View Ranks link for mobile -->
-            <x-responsive-nav-link :href="route('ranks.index')" :active="request()->routeIs('ranks.index')">
-                {{ __('View Ranks') }}
-            </x-responsive-nav-link>
 
             @if(Auth::user()->role === 'student')
                 <x-responsive-nav-link :href="route('quizzes.index')" :active="request()->routeIs('quizzes.*')">
@@ -152,9 +127,6 @@
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('challenges.index')" :active="request()->routeIs('challenges.*')">
                     {{ __('Challenges') }}
-                </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('legions.index')" :active="request()->routeIs('legions.*')">
-                    {{ __('Legions') }}
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('tournaments.index')" :active="request()->routeIs('tournaments.*')">
                     {{ __('Tournaments') }}
@@ -178,19 +150,6 @@
                     {{ __('Admin Dashboard') }}
                 </x-responsive-nav-link>
             @endif
-            
-            <!-- Add UEPoints link for mobile -->
-            @if(Auth::user()->role === 'student')
-                <x-responsive-nav-link :href="route('uepoints.index')" :active="request()->routeIs('uepoints.*')">
-                    <span class="flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd" />
-                        </svg>
-                        {{ Auth::user()->ue_points }} UEPoints
-                    </span>
-                </x-responsive-nav-link>
-            @endif
         </div>
 
         <!-- Responsive Settings Options -->
@@ -211,6 +170,11 @@
             <div class="mt-3 space-y-1">
                 <x-responsive-nav-link :href="route('profile.edit')">
                     {{ __('Profile') }}
+                </x-responsive-nav-link>
+
+                <!-- Responsive Settings Link -->
+                <x-responsive-nav-link :href="route('settings')">
+                    {{ __('Settings') }}
                 </x-responsive-nav-link>
 
                 <!-- Authentication -->

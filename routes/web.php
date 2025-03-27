@@ -9,6 +9,7 @@ use App\Http\Controllers\LegionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ResultController; 
 use App\Http\Controllers\UEPointsController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ChallengeController; 
 use App\Http\Controllers\TournamentController;
 
@@ -51,8 +52,11 @@ Route::middleware(['auth'])->group(function () {
     // Results Routes
     Route::get('/results/{attempt}', [ResultController::class, 'show'])->name('results.show');
 
-    // Add to routes/web.php
+    // Leaderboard Route (kept for backward compatibility)
     Route::get('/leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard');
+    
+    // Settings Route
+    Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
 });
 
 Route::middleware('auth')->group(function () {
@@ -113,8 +117,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 Route::middleware(['auth'])->group(function () {
     Route::get('/ranks', [RankController::class, 'index'])->name('ranks.index');
 });
-
-// Add these routes to routes/web.php within the auth middleware group
 
 // Legion Routes
 Route::middleware(['auth'])->group(function () {
