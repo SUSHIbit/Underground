@@ -156,6 +156,8 @@ Route::middleware(['auth'])->group(function () {
 
     // UEPoints management route
     Route::get('/uepoints', [UEPointsController::class, 'index'])->name('uepoints.index');
+
+    Route::put('/tournaments/{tournament}/update-team', [TournamentController::class, 'updateTeam'])->name('tournaments.update-team');
 });
 
 require __DIR__.'/auth.php';

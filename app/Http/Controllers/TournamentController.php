@@ -34,14 +34,16 @@ class TournamentController extends Controller
         $user = auth()->user();
         
         // Check if the user is already participating
-        $isParticipating = TournamentParticipant::where('tournament_id', $tournament->id)
-                           ->where('user_id', $user->id)
-                           ->exists();
-                           
+        $participant = TournamentParticipant::where('tournament_id', $tournament->id)
+                       ->where('user_id', $user->id)
+                       ->first();
+                          
+        $isParticipating = !is_null($participant);
+           
         // Check eligibility
         $canParticipate = $tournament->isEligible($user);
         
-        return view('tournaments.show', compact('tournament', 'isParticipating', 'canParticipate'));
+        return view('tournaments.show', compact('tournament', 'isParticipating', 'canParticipate', 'participant'));
     }
     
     public function join(Request $request, Tournament $tournament)
@@ -104,5 +106,32 @@ class TournamentController extends Controller
         
         return redirect()->route('tournaments.show', $tournament)
                        ->with('success', 'Your project has been submitted successfully.');
+    }
+
+    // Add this method to TournamentController.php:
+    public function updateTeam(Request $request, Tournament $tournament)
+    {
+        $user = auth()->user();
+        
+        // Find participant record
+        $participant = TournamentParticipant::where('tournament_id', $tournament->id)
+                    ->where('user_id', $user->id)
+                    ->firstOrFail();
+        
+        // Validate request
+        $validated = $request->validate([
+            'team_name' => 'required_if:team_size,>,1|nullable|string|max:255',
+            'team_members' => 'required_if:team_size,>,1|nullable|array',
+            'team_members.*' => 'nullable|string|max:255',
+        ]);
+        
+        // Update team information
+        $participant->update([
+            'team_name' => $validated['team_name'] ?? null,
+            'team_members' => $validated['team_members'] ?? null,
+        ]);
+        
+        return redirect()->route('tournaments.show', $tournament)
+                    ->with('success', 'Team information updated successfully.');
     }
 }

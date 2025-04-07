@@ -88,44 +88,130 @@
                     @if($isParticipating)
                         <!-- Show submission form if already registered -->
                         <div class="bg-blue-50 p-6 rounded-lg mb-6">
-                            <h4 class="font-semibold text-lg mb-4">Submit Your Project</h4>
+                            <h4 class="font-semibold text-lg mb-4">Your Registration</h4>
                             
-                            @php 
-                                $participant = \App\Models\TournamentParticipant::where('tournament_id', $tournament->id)
-                                              ->where('user_id', auth()->id())
-                                              ->first();
-                            @endphp
-                            
-                            @if($participant && $participant->submission_url)
+                            @if(isset($participant) && $participant)
                                 <div class="mb-4">
-                                    <p class="font-medium text-green-700">Your project has been submitted:</p>
-                                    <a href="{{ $participant->submission_url }}" target="_blank" class="text-blue-600 hover:underline">
-                                        {{ $participant->submission_url }}
-                                    </a>
-                                </div>
-                            @endif
-                            
-                            <form action="{{ route('tournaments.submit', $tournament) }}" method="POST">
-                                @csrf
-                                <div class="mb-4">
-                                    <label for="submission_url" class="block mb-2 text-sm font-medium text-gray-700">
-                                        Project URL (GitHub, Vercel, etc.)
-                                    </label>
-                                    <input 
-                                        type="url" 
-                                        name="submission_url" 
-                                        id="submission_url" 
-                                        value="{{ $participant->submission_url ?? '' }}"
-                                        class="w-full p-2 border border-gray-300 rounded-md"
-                                        placeholder="https://github.com/yourusername/project"
-                                        required
-                                    >
+                                    @if($tournament->team_size > 1)
+                                        <div class="mb-3">
+                                            <p class="font-medium text-gray-700">Team Name: 
+                                                <span class="text-gray-900">{{ $participant->team_name ?? 'Not specified' }}</span>
+                                            </p>
+                                            
+                                            @if(isset($participant->team_members) && is_array($participant->team_members) && count($participant->team_members) > 0)
+                                                <p class="font-medium text-gray-700 mt-2">Team Members:</p>
+                                                <ul class="list-disc list-inside ml-4 text-gray-900">
+                                                    @foreach($participant->team_members as $member)
+                                                        <li>{{ $member }}</li>
+                                                    @endforeach
+                                                </ul>
+                                            @endif
+                                        </div>
+                                    @endif
+                                    
+                                    @if($participant->submission_url)
+                                        <div class="mb-4">
+                                            <p class="font-medium text-green-700">Your project has been submitted:</p>
+                                            <a href="{{ $participant->submission_url }}" target="_blank" class="text-blue-600 hover:underline">
+                                                {{ $participant->submission_url }}
+                                            </a>
+                                        </div>
+                                    @endif
                                 </div>
                                 
-                                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                                    Submit Project
-                                </button>
-                            </form>
+                                <!-- Project submission form -->
+                                <form action="{{ route('tournaments.submit', $tournament) }}" method="POST" class="border-t pt-4 mt-4">
+                                    @csrf
+                                    <h5 class="font-medium text-lg mb-3">
+                                        {{ $participant->submission_url ? 'Update Your Submission' : 'Submit Your Project' }}
+                                    </h5>
+                                    <div class="mb-4">
+                                        <label for="submission_url" class="block mb-2 text-sm font-medium text-gray-700">
+                                            Project URL (GitHub, Vercel, etc.)
+                                        </label>
+                                        <input 
+                                            type="url" 
+                                            name="submission_url" 
+                                            id="submission_url" 
+                                            value="{{ $participant->submission_url ?? '' }}"
+                                            class="w-full p-2 border border-gray-300 rounded-md"
+                                            placeholder="https://github.com/yourusername/project"
+                                            required
+                                        >
+                                    </div>
+                                    
+                                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                        {{ $participant->submission_url ? 'Update Submission' : 'Submit Project' }}
+                                    </button>
+                                </form>
+                                
+                                @if($tournament->team_size > 1 && now() < \Carbon\Carbon::parse($tournament->date_time))
+                                    <!-- Team members update form -->
+                                    <form action="{{ route('tournaments.update-team', $tournament) }}" method="POST" class="border-t pt-4 mt-4">
+                                        @csrf
+                                        @method('PUT')
+                                        <h5 class="font-medium text-lg mb-3">Update Team Information</h5>
+                                        
+                                        <div class="mb-4">
+                                            <label for="team_name" class="block mb-2 text-sm font-medium text-gray-700">
+                                                Team Name
+                                            </label>
+                                            <input 
+                                                type="text" 
+                                                name="team_name" 
+                                                id="team_name" 
+                                                class="w-full p-2 border border-gray-300 rounded-md"
+                                                value="{{ $participant->team_name ?? '' }}"
+                                                required
+                                            >
+                                        </div>
+                                        
+                                        <div class="mb-4">
+                                            <label class="block mb-2 text-sm font-medium text-gray-700">
+                                                Team Members ({{ $tournament->team_size - 1 }} additional members)
+                                            </label>
+                                            
+                                            @for($i = 0; $i < $tournament->team_size - 1; $i++)
+                                                <div class="mb-2">
+                                                    <input 
+                                                        type="text" 
+                                                        name="team_members[]" 
+                                                        class="w-full p-2 border border-gray-300 rounded-md"
+                                                        placeholder="Full name of team member {{ $i + 1 }}"
+                                                        value="{{ isset($participant->team_members[$i]) ? $participant->team_members[$i] : '' }}"
+                                                        required
+                                                    >
+                                                </div>
+                                            @endfor
+                                        </div>
+                                        
+                                        <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                                            Update Team Information
+                                        </button>
+                                    </form>
+                                @endif
+                                
+                                <!-- Tournament deadline information -->
+                                <div class="mt-6 bg-gray-100 p-4 rounded-lg">
+                                    <p class="text-gray-700">
+                                        <span class="font-medium">Submission Deadline:</span> 
+                                        {{ \Carbon\Carbon::parse($tournament->deadline)->format('F j, Y, g:i a') }}
+                                    </p>
+                                    <p class="text-gray-700">
+                                        <span class="font-medium">Tournament Date:</span> 
+                                        {{ \Carbon\Carbon::parse($tournament->date_time)->format('F j, Y, g:i a') }}
+                                    </p>
+                                    
+                                    @php
+                                        $timeLeft = \Carbon\Carbon::parse($tournament->deadline)->diffForHumans(['parts' => 2]);
+                                    @endphp
+                                    <p class="mt-2 {{ \Carbon\Carbon::parse($tournament->deadline)->isPast() ? 'text-red-600' : 'text-blue-600' }} font-medium">
+                                        {{ \Carbon\Carbon::parse($tournament->deadline)->isPast() 
+                                            ? 'Submission deadline has passed' 
+                                            : "Time remaining for submission: {$timeLeft}" }}
+                                    </p>
+                                </div>
+                            @endif
                         </div>
                     @elseif($canParticipate)
                         <!-- Show registration form -->

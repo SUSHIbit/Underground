@@ -27,10 +27,13 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             @foreach($tournaments as $tournament)
                                 <div class="border rounded-lg overflow-hidden shadow-sm">
-                                    <div class="p-4 bg-gray-50 border-b">
-                                        <h4 class="font-medium">{{ $tournament->title }}</h4>
-                                        <p class="text-sm text-gray-600">{{ \Carbon\Carbon::parse($tournament->date_time)->format('F j, Y, g:i a') }}</p>
-                                    </div>
+                                    <!-- Make the entire header section a link -->
+                                    <a href="{{ route('tournaments.show', $tournament) }}" class="block">
+                                        <div class="p-4 bg-gray-50 border-b">
+                                            <h4 class="font-medium">{{ $tournament->title }}</h4>
+                                            <p class="text-sm text-gray-600">{{ \Carbon\Carbon::parse($tournament->date_time)->format('F j, Y, g:i a') }}</p>
+                                        </div>
+                                    </a>
                                     <div class="p-4">
                                         <p class="mb-4 text-sm text-gray-600">
                                             <span class="font-medium">Location:</span> {{ $tournament->location }}
@@ -43,9 +46,14 @@
                                         </p>
                                         
                                         @if($tournament->isParticipating)
-                                            <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                                                Registered
-                                            </span>
+                                            <div class="flex space-x-2">
+                                                <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                                                    Registered
+                                                </span>
+                                                <a href="{{ route('tournaments.show', $tournament) }}" class="inline-block bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 text-xs rounded">
+                                                    View Details
+                                                </a>
+                                            </div>
                                         @elseif(!$tournament->canParticipate)
                                             <span class="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
                                                 Not Eligible

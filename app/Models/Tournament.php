@@ -114,14 +114,32 @@ class Tournament extends Model
 
     public function isEligible(User $user)
     {
-        if (!$user->rankTitle) {
+        // Get user's rank, ensuring it's not null
+        $userRank = $user->getRank();
+        if (!$userRank) {
             return false;
         }
-
+    
+        // Define ranks in order from lowest to highest
         $ranks = ['Unranked', 'Bronze', 'Silver', 'Gold', 'Master', 'Grand Master', 'One Above All'];
-        $userRankIndex = array_search($user->getRank(), $ranks);
+        
+        // Get index of user's rank and minimum required rank
+        $userRankIndex = array_search($userRank, $ranks);
         $minRankIndex = array_search($this->minimum_rank, $ranks);
         
+        // If either rank isn't found in our array, handle the error
+        if ($userRankIndex === false) {
+            \Log::error("User rank '{$userRank}' not found in ranks array.");
+            return false;
+        }
+        
+        if ($minRankIndex === false) {
+            \Log::error("Tournament minimum rank '{$this->minimum_rank}' not found in ranks array.");
+            // Default to allowing participation if rank requirement is invalid
+            return true;
+        }
+        
+        // Check if user's rank meets or exceeds the minimum rank
         return $userRankIndex >= $minRankIndex;
     }
 }
