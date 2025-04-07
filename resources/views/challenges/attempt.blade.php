@@ -48,7 +48,26 @@
                                     </div>
                                 @endforeach
                             </div>
+                            
+                            <!-- Add a hidden input to ensure this question ID is always included in submission -->
+                            <input type="hidden" name="question_ids[]" value="{{ $question->id }}">
                         </div>
+                        
+                        <!-- Add a debug section that only shows in development -->
+                        @if(config('app.env') === 'local')
+                        <div class="mt-4 p-3 bg-gray-100 rounded-lg">
+                            <details>
+                                <summary class="cursor-pointer text-sm text-gray-600">Debug Info</summary>
+                                <div class="mt-2 text-xs">
+                                    <p>Current Question ID: {{ $question->id }}</p>
+                                    <p>Current Question Number: {{ $currentPage }}</p>
+                                    <p>Total Questions: {{ $totalPages }}</p>
+                                    <p>Current Set ID: {{ $set->id }}</p>
+                                    <div id="answered-status" class="mt-1"></div>
+                                </div>
+                            </details>
+                        </div>
+                        @endif
                         
                         <div class="flex justify-between items-center">
                             <div>
@@ -63,7 +82,7 @@
                             <div class="flex space-x-1">
                                 @for($i = 1; $i <= $totalPages; $i++)
                                     <a href="{{ route('challenges.attempt', ['set' => $set, 'page' => $i]) }}" 
-                                       class="inline-flex justify-center items-center w-8 h-8 {{ $i == $currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700' }} rounded">
+                                       class="inline-flex justify-center items-center w-8 h-8 {{ $i == $currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700' }} rounded question-nav-link">
                                         {{ $i }}
                                     </a>
                                 @endfor
@@ -116,6 +135,29 @@
                 });
             });
             
+            // Track all answered questions
+            trackAnsweredQuestions();
+            
+            // Add class to style the navigation links
+            const styleElement = document.createElement('style');
+            styleElement.innerHTML = `
+                .answered {
+                    background-color: #d1fae5 !important; /* Light green */
+                }
+                .answer-indicator {
+                    display: inline-block;
+                    margin-left: 4px;
+                    color: #10b981; /* Green color */
+                }
+            `;
+            document.head.appendChild(styleElement);
+            
+            // Add classes to the navigation links
+            const navLinks = document.querySelectorAll('.inline-flex.justify-center.items-center');
+            navLinks.forEach(link => {
+                link.classList.add('question-nav-link');
+            });
+            
             // Set up the timer if it exists
             @if(isset($timer_minutes) && $timer_minutes > 0 && isset($remaining_seconds))
                 const totalSeconds = {{ $remaining_seconds }};
@@ -153,61 +195,164 @@
                 // Update timer every second
                 const timerInterval = setInterval(updateTimer, 1000);
             @endif
+            
+            // Debug info for local environment
+            @if(config('app.env') === 'local')
+            if (localStorage.getItem(`challenge_{{ $set->id }}_answered_all`)) {
+                const status = JSON.parse(localStorage.getItem(`challenge_{{ $set->id }}_answered_all`));
+                const statusEl = document.getElementById('answered-status');
+                if (statusEl) {
+                    statusEl.innerHTML = '<p>Questions answered status:</p>';
+                    for (const [num, answered] of Object.entries(status)) {
+                        statusEl.innerHTML += `<p>Question ${num}: ${answered ? '✓' : '❌'}</p>`;
+                    }
+                }
+            }
+            @endif
         });
         
+        // Track all answered questions
+        function trackAnsweredQuestions() {
+            const setId = {{ $set->id }};
+            const totalQuestions = {{ $totalPages }};
+            
+            // Initialize the tracking object if not exists
+            if (!localStorage.getItem(`challenge_${setId}_answered_all`)) {
+                let answeredQuestions = {};
+                for (let i = 1; i <= totalQuestions; i++) {
+                    answeredQuestions[i] = false;
+                }
+                localStorage.setItem(`challenge_${setId}_answered_all`, JSON.stringify(answeredQuestions));
+            }
+            
+            // Update the current question's status
+            const currentQuestion = {{ $question->id }};
+            const radios = document.querySelectorAll('input[type="radio"]');
+            const questionNumber = {{ $currentPage }};
+            
+            // Check if any radio button is selected
+            let isAnswered = false;
+            radios.forEach(radio => {
+                if (radio.checked) {
+                    isAnswered = true;
+                    
+                    // Update tracking
+                    let answeredQuestions = JSON.parse(localStorage.getItem(`challenge_${setId}_answered_all`));
+                    answeredQuestions[questionNumber] = true;
+                    localStorage.setItem(`challenge_${setId}_answered_all`, JSON.stringify(answeredQuestions));
+                    
+                    // Also make sure the answer is saved
+                    localStorage.setItem(`challenge_${setId}_answer_${currentQuestion}`, radio.value);
+                }
+                
+                // Add event listener to track when an answer is selected
+                radio.addEventListener('change', function() {
+                    if (this.checked) {
+                        // Update tracking
+                        let answeredQuestions = JSON.parse(localStorage.getItem(`challenge_${setId}_answered_all`));
+                        answeredQuestions[questionNumber] = true;
+                        localStorage.setItem(`challenge_${setId}_answered_all`, JSON.stringify(answeredQuestions));
+                        
+                        // Save the answer
+                        localStorage.setItem(`challenge_${setId}_answer_${currentQuestion}`, this.value);
+                    }
+                });
+            });
+            
+            // Check if this question was previously answered
+            const answeredQuestions = JSON.parse(localStorage.getItem(`challenge_${setId}_answered_all`));
+            if (answeredQuestions[questionNumber]) {
+                isAnswered = true;
+            }
+            
+            // Update navigation to show which questions are answered
+            updateNavigationStatus(answeredQuestions);
+            
+            return isAnswered;
+        }
+
+        // Update the navigation to show which questions are answered
+        function updateNavigationStatus(answeredQuestions) {
+            const navLinks = document.querySelectorAll('.question-nav-link');
+            navLinks.forEach(link => {
+                const questionNum = parseInt(link.textContent.trim());
+                if (answeredQuestions[questionNum]) {
+                    link.classList.add('answered');
+                    // Add a visual indicator
+                    if (!link.querySelector('.answer-indicator')) {
+                        const indicator = document.createElement('span');
+                        indicator.className = 'answer-indicator';
+                        indicator.innerHTML = '✓';
+                        link.appendChild(indicator);
+                    }
+                }
+            });
+        }
+        
         function confirmSubmit() {
+            const setId = {{ $set->id }};
+            const totalQuestions = {{ $totalPages }};
+            
+            // Get tracking data
+            const answeredQuestions = JSON.parse(localStorage.getItem(`challenge_${setId}_answered_all`));
+            
             // Check if all questions have been answered
             let allAnswered = true;
-            const totalPages = {{ $totalPages }};
-            const setId = {{ $set->id }};
+            let unansweredCount = 0;
             
-            for (let i = 1; i <= {{ $totalPages }}; i++) {
-                const questionId = document.querySelector(`input[name^="answers["]`).name.match(/\d+/)[0];
-                const hasAnswer = localStorage.getItem(`challenge_${setId}_answer_${questionId}`);
-                
-                if (!hasAnswer) {
+            for (let i = 1; i <= totalQuestions; i++) {
+                if (!answeredQuestions[i]) {
                     allAnswered = false;
-                    break;
+                    unansweredCount++;
                 }
             }
             
             if (!allAnswered) {
-                if (!confirm('You have not answered all questions. Are you sure you want to submit?')) {
-                    return false;
-                }
+                return confirm(`You have not answered ${unansweredCount} question(s). Are you sure you want to submit?`);
             }
             
             return true;
         }
         
         function submitForm(isTimeExpired = false) {
-            // Add all saved answers to the form
             const setId = {{ $set->id }};
+            const totalQuestions = {{ $totalPages }};
+            const questionIds = {!! json_encode($set->questions->pluck('id', 'question_number')->toArray()) !!};
             
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith(`challenge_${setId}_answer_`)) {
-                    const questionId = key.split('_').pop();
-                    const value = localStorage.getItem(key);
+            // Add all saved answers to the form
+            for (let i = 1; i <= totalQuestions; i++) {
+                const questionId = questionIds[i];
+                if (questionId) {
+                    const answerKey = `challenge_${setId}_answer_${questionId}`;
+                    const value = localStorage.getItem(answerKey);
                     
-                    if (!document.querySelector(`input[name="answers[${questionId}]"]`)) {
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = `answers[${questionId}]`;
-                        input.value = value;
-                        document.getElementById('challenge-form').appendChild(input);
+                    if (value) {
+                        // Check if input already exists
+                        if (!document.querySelector(`input[name="answers[${questionId}]"]`)) {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = `answers[${questionId}]`;
+                            input.value = value;
+                            document.getElementById('challenge-form').appendChild(input);
+                        }
                     }
                 }
             }
             
             if (isTimeExpired || confirmSubmit()) {
+                // Log what we're submitting
+                console.log("Submitting challenge with answers:", 
+                    Array.from(document.querySelectorAll('input[name^="answers["]'))
+                        .map(el => `${el.name}: ${el.value}`)
+                );
+                
                 // Submit the form
                 document.getElementById('challenge-form').submit();
                 
                 // Clear localStorage for this challenge
                 for (let i = localStorage.length - 1; i >= 0; i--) {
                     const key = localStorage.key(i);
-                    if (key.startsWith(`challenge_${setId}_answer_`)) {
+                    if (key.startsWith(`challenge_${setId}_`)) {
                         localStorage.removeItem(key);
                     }
                 }

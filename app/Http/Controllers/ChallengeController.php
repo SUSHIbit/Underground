@@ -231,15 +231,33 @@ class ChallengeController extends Controller
     
     private function autoSubmitExpiredChallenge(QuizAttempt $attempt, Set $set)
     {
+        // Load the set with questions to ensure we have all questions
+        $set->load('questions');
+        
         // Get all answered questions
         $answeredQuestions = $attempt->answers()->pluck('selected_answer', 'question_id')->toArray();
         
         // Calculate score based on currently answered questions
         $score = 0;
-        foreach ($answeredQuestions as $questionId => $answer) {
-            $question = $set->questions->firstWhere('id', $questionId);
-            if ($question && $question->correct_answer === $answer) {
-                $score++;
+        
+        // Process all questions, not just answered ones
+        foreach ($set->questions as $question) {
+            // Check if this question was answered
+            if (isset($answeredQuestions[$question->id])) {
+                $answer = $answeredQuestions[$question->id];
+                
+                // Check if the answer is correct
+                if ($question->correct_answer === $answer) {
+                    $score++;
+                }
+            } else {
+                // Create a blank answer record for unanswered questions
+                QuizAnswer::create([
+                    'quiz_attempt_id' => $attempt->id,
+                    'question_id' => $question->id,
+                    'selected_answer' => null,
+                    'is_correct' => false
+                ]);
             }
         }
         
@@ -273,6 +291,9 @@ class ChallengeController extends Controller
             $attempt->user->addPoints($pointsToAward);
         }
         // No UEPoints rewards for retakes
+        
+        // Log for debugging
+        \Log::info("Challenge auto-submitted due to timer expiration. ID: {$attempt->id}, Score: {$score}/{$set->questions->count()}");
         
         return redirect()->route('results.show', $attempt)
                         ->with('warning', 'Your time has expired. The challenge was automatically submitted.');
@@ -310,25 +331,44 @@ class ChallengeController extends Controller
         // Delete previous answers for this attempt if it's a retake
         $attempt->answers()->delete();
         
-        foreach ($validated['answers'] as $questionId => $answer) {
-            $question = $set->questions->firstWhere('id', $questionId);
+        // Get all questions to ensure we're tracking all answers
+        $allQuestionIds = $set->questions->pluck('id')->toArray();
+        $answeredQuestionIds = array_keys($validated['answers']);
+        
+        // Log for debugging
+        \Log::info('Challenge submission - All question IDs: ' . json_encode($allQuestionIds));
+        \Log::info('Challenge submission - Answered question IDs: ' . json_encode($answeredQuestionIds));
+        
+        foreach ($set->questions as $question) {
+            $questionId = $question->id;
             
-            if (!$question) {
-                continue;
+            // Check if this question was answered
+            if (isset($validated['answers'][$questionId])) {
+                $answer = $validated['answers'][$questionId];
+                $isCorrect = $question->correct_answer === $answer;
+                
+                if ($isCorrect) {
+                    $score++;
+                }
+                
+                QuizAnswer::create([
+                    'quiz_attempt_id' => $attempt->id,
+                    'question_id' => $questionId,
+                    'selected_answer' => $answer,
+                    'is_correct' => $isCorrect
+                ]);
+            } else {
+                // If a question wasn't answered, log it
+                \Log::warning("Question ID {$questionId} not found in submitted answers");
+                
+                // Create a blank answer record
+                QuizAnswer::create([
+                    'quiz_attempt_id' => $attempt->id,
+                    'question_id' => $questionId,
+                    'selected_answer' => null,
+                    'is_correct' => false
+                ]);
             }
-            
-            $isCorrect = $question->correct_answer === $answer;
-            
-            if ($isCorrect) {
-                $score++;
-            }
-            
-            QuizAnswer::create([
-                'quiz_attempt_id' => $attempt->id,
-                'question_id' => $questionId,
-                'selected_answer' => $answer,
-                'is_correct' => $isCorrect
-            ]);
         }
         
         $attempt->update([
