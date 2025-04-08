@@ -1,62 +1,61 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-amber-400 leading-tight">
             {{ __('Dashboard') }}
         </h2>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    <h3 class="text-lg font-medium mb-4">Welcome, {{ $user->username }}!</h3>
+            <div class="bg-gray-800 border border-amber-800/20 overflow-hidden shadow-lg rounded-lg">
+                <div class="p-6 text-gray-200">
+                    <h3 class="text-lg font-medium mb-4 text-amber-400">Welcome, {{ $user->username }}!</h3>
 
-
-                    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mt-4">
-                        <div class="p-6 text-gray-900">
-                            <h3 class="text-lg font-medium mb-4">Your Progress</h3>
+                    <div class="bg-gray-900 overflow-hidden shadow-sm rounded-lg mt-6">
+                        <div class="p-6 text-gray-200">
+                            <h3 class="text-lg font-medium mb-4 text-amber-400">Your Progress</h3>
                             
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div class="border rounded-lg p-4 bg-blue-50">
-                                    <h4 class="font-medium text-gray-700 mb-2">Current Rank</h4>
+                                <div class="border border-amber-800/20 rounded-lg p-4 bg-gray-800">
+                                    <h4 class="font-medium text-gray-300 mb-2">Current Rank</h4>
                                     <p class="text-2xl font-bold 
-                                        {{ $user->getRank() === 'Unranked' ? 'text-gray-600' : '' }}
+                                        {{ $user->getRank() === 'Unranked' ? 'text-gray-400' : '' }}
                                         {{ $user->getRank() === 'Bronze' ? 'text-amber-600' : '' }}
                                         {{ $user->getRank() === 'Silver' ? 'text-gray-400' : '' }}
-                                        {{ $user->getRank() === 'Gold' ? 'text-yellow-500' : '' }}
-                                        {{ $user->getRank() === 'Master' ? 'text-purple-600' : '' }}
-                                        {{ $user->getRank() === 'Grand Master' ? 'text-red-600' : '' }}
-                                        {{ $user->getRank() === 'One Above All' ? 'text-indigo-600' : '' }}">
+                                        {{ $user->getRank() === 'Gold' ? 'text-amber-500' : '' }}
+                                        {{ $user->getRank() === 'Master' ? 'text-purple-400' : '' }}
+                                        {{ $user->getRank() === 'Grand Master' ? 'text-red-400' : '' }}
+                                        {{ $user->getRank() === 'One Above All' ? 'text-indigo-400' : '' }}">
                                         {{ $user->getRank() }}
                                     </p>
                                 </div>
                                 
-                                <div class="border rounded-lg p-4">
-                                    <h4 class="font-medium text-gray-700 mb-2">Total Points</h4>
-                                    <p class="text-2xl font-bold text-blue-600">{{ $user->points }}</p>
+                                <div class="border border-amber-800/20 rounded-lg p-4 bg-gray-800">
+                                    <h4 class="font-medium text-gray-300 mb-2">Total Points</h4>
+                                    <p class="text-2xl font-bold text-amber-500">{{ $user->points }}</p>
                                 </div>
                                 
-                                <div class="border rounded-lg p-4">
-                                    <h4 class="font-medium text-gray-700 mb-2">UEPoints</h4>
-                                    <p class="text-2xl font-bold text-blue-600">{{ $user->ue_points }}</p>
-                                    <p class="text-sm text-gray-600 mt-1">
+                                <div class="border border-amber-800/20 rounded-lg p-4 bg-gray-800">
+                                    <h4 class="font-medium text-gray-300 mb-2">UEPoints</h4>
+                                    <p class="text-2xl font-bold text-amber-500">{{ $user->ue_points }}</p>
+                                    <p class="text-sm text-gray-400 mt-1">
                                         Use UEPoints to retake quizzes and challenges
                                     </p>
-                                    <a href="{{ route('uepoints.index') }}" class="mt-2 inline-block text-sm text-blue-500 hover:underline">
+                                    <a href="{{ route('uepoints.index') }}" class="mt-2 inline-block text-sm text-amber-400 hover:text-amber-300">
                                         Learn more about UEPoints
                                     </a>
                                 </div>
                                 
-                                <div class="border rounded-lg p-4">
-                                    <h4 class="font-medium text-gray-700 mb-2">Next Rank</h4>
+                                <div class="border border-amber-800/20 rounded-lg p-4 bg-gray-800">
+                                    <h4 class="font-medium text-gray-300 mb-2">Next Rank</h4>
                                     @php
                                         $nextRankInfo = $user->getPointsToNextRank();
                                     @endphp
-                                    <p class="text-lg font-medium">{{ $nextRankInfo['next_rank'] }}</p>
-                                    <p class="text-sm text-gray-600">{{ $nextRankInfo['points_needed'] }} points needed</p>
+                                    <p class="text-lg font-medium text-amber-500">{{ $nextRankInfo['next_rank'] }}</p>
+                                    <p class="text-sm text-gray-400">{{ $nextRankInfo['points_needed'] }} points needed</p>
                                     
                                     @if($nextRankInfo['points_needed'] > 0)
-                                        <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                                        <div class="w-full bg-gray-600 rounded-full h-2.5 mt-2">
                                             @php
                                                 $progressPercentage = 0;
                                                 if ($user->getRank() === 'Unranked') {
@@ -73,7 +72,7 @@
                                                     $progressPercentage = (($user->points - 750) / 250) * 100;
                                                 }
                                             @endphp
-                                            <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ $progressPercentage }}%"></div>
+                                            <div class="bg-amber-600 h-2.5 rounded-full" style="width: {{ $progressPercentage }}%"></div>
                                         </div>
                                     @endif
                                 </div>
@@ -81,36 +80,44 @@
                         </div>
                     </div>
                     
-                    <div class="mb-6">
-                        <div class="flex gap-4">
-                            <a href="{{ route('quizzes.index') }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    <div class="mt-8 mb-6">
+                        <div class="flex flex-wrap gap-4">
+                            <a href="{{ route('quizzes.index') }}" class="bg-amber-600 hover:bg-amber-700 text-white font-medium py-2 px-4 rounded-md shadow transition-colors">
                                 Take a Quiz
                             </a>
-                            <a href="{{ route('challenges.index') }}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                            <a href="{{ route('challenges.index') }}" class="bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-md shadow border border-amber-800/20 transition-colors">
                                 Take a Challenge
+                            </a>
+                            <a href="{{ route('tournaments.index') }}" class="bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-md shadow border border-amber-800/20 transition-colors">
+                                Join a Tournament
                             </a>
                         </div>
                     </div>
                     
-                    <h4 class="text-lg font-medium mb-2">Your Recent Results:</h4>
+                    <h4 class="text-lg font-medium mb-4 text-amber-400">Your Recent Results:</h4>
                     
                     @if($quizAttempts->count() > 0)
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full bg-white">
-                                <thead>
+                        <div class="overflow-x-auto rounded-lg border border-amber-800/20">
+                            <table class="min-w-full divide-y divide-amber-800/20">
+                                <thead class="bg-gray-900">
                                     <tr>
-                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
-                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Title</th>
-                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Score</th>
-                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
-                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                                        <th scope="col" class="py-3 px-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Type</th>
+                                        <th scope="col" class="py-3 px-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Title</th>
+                                        <th scope="col" class="py-3 px-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Score</th>
+                                        <th scope="col" class="py-3 px-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
+                                        <th scope="col" class="py-3 px-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody class="bg-gray-800 divide-y divide-amber-800/10">
                                     @foreach($quizAttempts as $attempt)
                                         <tr>
-                                            <td class="py-2 px-4 border-b border-gray-200">{{ ucfirst($attempt->set->type) }}</td>
-                                            <td class="py-2 px-4 border-b border-gray-200">
+                                            <td class="py-3 px-4 whitespace-nowrap">
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                                    {{ $attempt->set->type === 'quiz' ? 'bg-amber-100 text-amber-800' : 'bg-purple-100 text-purple-800' }}">
+                                                    {{ ucfirst($attempt->set->type) }}
+                                                </span>
+                                            </td>
+                                            <td class="py-3 px-4 whitespace-nowrap text-sm text-gray-300">
                                                 @if($attempt->set->type === 'quiz')
                                                     {{ $attempt->set->quizDetail->subject->name }} - 
                                                     {{ $attempt->set->quizDetail->topic->name }}
@@ -118,13 +125,15 @@
                                                     {{ $attempt->set->challengeDetail->name }}
                                                 @endif
                                             </td>
-                                            <td class="py-2 px-4 border-b border-gray-200">
-                                                {{ $attempt->score }}/{{ $attempt->total_questions }}
-                                                ({{ $attempt->score_percentage }}%)
+                                            <td class="py-3 px-4 whitespace-nowrap text-sm">
+                                                <span class="{{ $attempt->score_percentage >= 70 ? 'text-green-400' : ($attempt->score_percentage >= 50 ? 'text-amber-400' : 'text-red-400') }}">
+                                                    {{ $attempt->score }}/{{ $attempt->total_questions }}
+                                                    ({{ $attempt->score_percentage }}%)
+                                                </span>
                                             </td>
-                                            <td class="py-2 px-4 border-b border-gray-200">{{ $attempt->created_at->format('M d, Y') }}</td>
-                                            <td class="py-2 px-4 border-b border-gray-200">
-                                                <a href="{{ route('results.show', $attempt) }}" class="text-blue-500 hover:text-blue-700">
+                                            <td class="py-3 px-4 whitespace-nowrap text-sm text-gray-300">{{ $attempt->created_at->format('M d, Y') }}</td>
+                                            <td class="py-3 px-4 whitespace-nowrap text-sm">
+                                                <a href="{{ route('results.show', $attempt) }}" class="text-amber-400 hover:text-amber-300">
                                                     View Results
                                                 </a>
                                             </td>
@@ -134,7 +143,10 @@
                             </table>
                         </div>
                     @else
-                        <p class="text-gray-500">You haven't completed any quizzes or challenges yet.</p>
+                        <div class="bg-gray-900 rounded-lg border border-amber-800/20 p-6 text-center">
+                            <p class="text-gray-400">You haven't completed any quizzes or challenges yet.</p>
+                            <p class="mt-2 text-gray-500">Start your journey by taking a quiz or challenge above!</p>
+                        </div>
                     @endif
                 </div>
             </div>
