@@ -27,24 +27,22 @@
                             </div>
                         </div>
                         <!-- Auth Links -->
-                        <div class="flex items-center space-x-4">
+                        <div class="flex items-center">
                             @if (Route::has('login'))
-                                <div>
+                                <div class="flex items-center space-x-4">
                                     @auth
-                                        <a href="{{ url('/dashboard') }}" class="text-amber-500 hover:text-amber-400 font-medium transition-colors">
+                                        <a href="{{ url('/dashboard') }}" class="px-4 py-2 rounded-full border border-amber-500 text-amber-500 hover:text-amber-400 hover:border-amber-400 font-medium transition-colors">
                                             Dashboard
                                         </a>
                                     @else
-                                        <div class="flex space-x-4">
-                                            <a href="{{ route('login') }}" class="text-amber-500 hover:text-amber-400 font-medium transition-colors">
-                                                Log in
+                                        <a href="{{ route('login') }}" class="px-4 py-2 rounded-full border border-amber-500 text-amber-500 hover:text-amber-400 hover:border-amber-400 font-medium transition-colors">
+                                            Log in
+                                        </a>
+                                        @if (Route::has('register'))
+                                            <a href="{{ route('register') }}" class="px-4 py-2 rounded-full bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 transition-colors shadow">
+                                                Register
                                             </a>
-                                            @if (Route::has('register'))
-                                                <a href="{{ route('register') }}" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-amber-600 text-white hover:bg-amber-700 h-9 px-4 py-2">
-                                                    Register
-                                                </a>
-                                            @endif
-                                        </div>
+                                        @endif
                                     @endauth
                                 </div>
                             @endif
@@ -76,13 +74,13 @@
                     </p>
 
                     <!-- CTA Button -->
-                    <div>
+                    <div class="mt-6">
                         @auth
-                            <a href="{{ url('/dashboard') }}" class="inline-flex h-10 items-center justify-center rounded-md bg-amber-600 px-8 text-sm font-medium text-white shadow transition-colors hover:bg-amber-700 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500">
+                            <a href="{{ url('/dashboard') }}" class="px-8 py-3 rounded-full bg-amber-600 text-white font-medium text-sm shadow hover:bg-amber-700 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-gray-900">
                                 Go to Dashboard
                             </a>
                         @else
-                            <a href="{{ route('register') }}" class="inline-flex h-10 items-center justify-center rounded-md bg-amber-600 px-8 text-sm font-medium text-white shadow transition-colors hover:bg-amber-700 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500">
+                            <a href="{{ route('register') }}" class="px-8 py-3 rounded-full bg-amber-600 text-white font-medium text-sm shadow hover:bg-amber-700 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-gray-900">
                                 Get Started
                             </a>
                         @endauth
