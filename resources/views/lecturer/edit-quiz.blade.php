@@ -20,18 +20,26 @@
                             <h3 class="text-lg font-medium mb-1">Quiz: {{ $set->quizDetail->subject->name }} - {{ $set->quizDetail->topic->name }}</h3>
                             <p class="text-gray-600">Set #{{ $set->set_number }}</p>
                         </div>
-                        <div class="text-sm px-3 py-1 rounded-full 
-                            {{ $set->status == 'draft' ? 'bg-gray-100 text-gray-800' : '' }}
-                            {{ $set->status == 'pending_approval' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                            {{ $set->status == 'approved' ? 'bg-green-100 text-green-800' : '' }}
-                            {{ $set->status == 'rejected' ? 'bg-red-100 text-red-800' : '' }}">
-                            {{ ucfirst(str_replace('_', ' ', $set->status)) }}
+                        <div class="flex items-center">
+                            <div class="text-sm px-3 py-1 rounded-full 
+                                {{ $set->status == 'draft' ? 'bg-gray-100 text-gray-800' : '' }}
+                                {{ $set->status == 'pending_approval' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                                {{ $set->status == 'approved_unpublished' ? 'bg-blue-100 text-blue-800' : '' }}
+                                {{ $set->status == 'approved' ? 'bg-green-100 text-green-800' : '' }}
+                                {{ $set->status == 'rejected' ? 'bg-red-100 text-red-800' : '' }}">
+                                {{ ucfirst(str_replace('_', ' ', $set->status)) }}
+                            </div>
+                            @if($set->isApprovedUnpublished())
+                                <div class="ml-4 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
+                                    Approved - Ready to Publish
+                                </div>
+                            @endif
                         </div>
                     </div>
                     
                     @if($set->isRejected())
                         <div class="mb-6 p-4 bg-red-50 rounded-lg border border-red-200">
-                            <h4 class="font-medium text-red-800 mb-2">Rejection Notes from {{ $set->reviewer->name }}</h4>
+                            <h4 class="font-medium text-red-800 mb-2">Rejection Notes from {{ $set->reviewer ? $set->reviewer->name : 'Reviewer' }}</h4>
                             <p class="text-red-700">{{ $set->review_notes }}</p>
                         </div>
                     @endif
@@ -190,6 +198,25 @@
                             @csrf
                         </form>
                     @else
+                        <!-- Add this status message for approved_unpublished sets -->
+                        @if($set->isApprovedUnpublished())
+                            <div class="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                                <h4 class="font-medium text-yellow-800 mb-2">This set has been approved by an accessor</h4>
+                                <p class="text-yellow-700">
+                                    It is ready to be published. Once published, it will be available to students.
+                                    You cannot make further edits to this content.
+                                </p>
+                                <div class="mt-4">
+                                    <form action="{{ route('lecturer.sets.publish', $set) }}" method="POST" class="inline">
+                                        @csrf
+                                        <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                                            Publish Now
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        @endif
+                        
                         <div class="mb-6">
                             <h4 class="font-medium mb-4">Questions</h4>
                             

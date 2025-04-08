@@ -21,4 +21,5 @@ class LeaderboardController extends Controller
         
         return view('leaderboard.index', compact('users'));
     }
+    
 }

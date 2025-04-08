@@ -129,6 +129,75 @@
                 </div>
             </div>
 
+            <!-- Ready to Publish -->
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
+                <div class="p-6 text-gray-900">
+                    <h3 class="text-lg font-medium mb-4">Ready to Publish</h3>
+                    
+                    @php
+                        $readyToPublishSets = $sets->filter(function ($set) {
+                            return $set->isApprovedUnpublished();
+                        });
+                    @endphp
+                    
+                    @if($readyToPublishSets->count() > 0)
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-white">
+                                <thead>
+                                    <tr>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Set #</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Title</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Approved</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Reviewer</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($readyToPublishSets as $set)
+                                        <tr>
+                                            <td class="py-2 px-4 border-b border-gray-200">{{ $set->set_number }}</td>
+                                            <td class="py-2 px-4 border-b border-gray-200">{{ ucfirst($set->type) }}</td>
+                                            <td class="py-2 px-4 border-b border-gray-200">
+                                                @if($set->type === 'quiz')
+                                                    @if($set->quizDetail && $set->quizDetail->subject && $set->quizDetail->topic)
+                                                        {{ $set->quizDetail->subject->name }} - 
+                                                        {{ $set->quizDetail->topic->name }}
+                                                    @else
+                                                        No details available
+                                                    @endif
+                                                @else
+                                                    @if($set->challengeDetail)
+                                                        {{ $set->challengeDetail->name }}
+                                                    @else
+                                                        No details available
+                                                    @endif
+                                                @endif
+                                            </td>
+                                            <td class="py-2 px-4 border-b border-gray-200">{{ $set->reviewed_at ? $set->reviewed_at->format('M d, Y') : 'Not reviewed' }}</td>
+                                            <td class="py-2 px-4 border-b border-gray-200">{{ $set->reviewer ? $set->reviewer->name : 'Not reviewed' }}</td>
+                                            <td class="py-2 px-4 border-b border-gray-200">
+                                                <a href="{{ route('lecturer.sets.edit', $set) }}" class="text-blue-500 hover:text-blue-700 mr-2">
+                                                    View
+                                                </a>
+                                                <form action="{{ route('lecturer.sets.publish', $set) }}" method="POST" class="inline">
+                                                    @csrf
+                                                    <button type="submit" class="text-green-500 hover:text-green-700">
+                                                        Publish
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <p class="text-gray-500">No sets ready to publish.</p>
+                    @endif
+                </div>
+            </div>
+
             <!-- Rejected -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
                 <div class="p-6 text-gray-900">

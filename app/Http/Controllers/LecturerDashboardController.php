@@ -19,9 +19,9 @@ class LecturerDashboardController extends Controller
         
         // Get sets created by this lecturer
         $sets = Set::where('created_by', $user->id)
-                 ->with(['quizDetail.subject', 'quizDetail.topic', 'challengeDetail'])
-                 ->latest()
-                 ->get();
+                ->with(['quizDetail.subject', 'quizDetail.topic', 'challengeDetail'])
+                ->latest()
+                ->get();
         
         // Group sets by status
         $draftSets = $sets->filter(function ($set) {
@@ -32,8 +32,12 @@ class LecturerDashboardController extends Controller
             return $set->isPendingApproval();
         });
         
+        $approvedUnpublishedSets = $sets->filter(function ($set) {
+            return $set->isApprovedUnpublished();
+        });
+        
         $approvedSets = $sets->filter(function ($set) {
-            return $set->isApproved();
+            return $set->isPublished();
         });
         
         $rejectedSets = $sets->filter(function ($set) {
@@ -41,8 +45,10 @@ class LecturerDashboardController extends Controller
         });
         
         return view('lecturer.dashboard', compact(
+            'sets',
             'draftSets', 
-            'pendingSets', 
+            'pendingSets',
+            'approvedUnpublishedSets',
             'approvedSets', 
             'rejectedSets'
         ));
@@ -277,5 +283,44 @@ class LecturerDashboardController extends Controller
         
         return redirect()->route('lecturer.tournaments')
                     ->with('success', 'Tournament submitted for approval successfully.');
+    }
+
+    public function tournamentSubmissions(Tournament $tournament)
+    {
+        // Ensure the lecturer owns this tournament
+        if ($tournament->created_by !== auth()->id()) {
+            abort(403);
+        }
+        
+        // Load the tournament with its participants and their users
+        $tournament->load(['participants.user']);
+        
+        // Get all participants
+        $participants = $tournament->participants;
+        
+        return view('lecturer.tournament-submissions', compact('tournament', 'participants'));
+    }
+
+    /**
+     * Publish the set that has been approved by accessor.
+     */
+    public function publishSet(Set $set)
+    {
+        // Ensure the lecturer owns this set
+        if ($set->created_by !== auth()->id()) {
+            abort(403);
+        }
+        
+        // Ensure the set is in the approved_unpublished state
+        if (!$set->isApprovedUnpublished()) {
+            return redirect()->route('lecturer.dashboard')
+                            ->with('error', 'Only sets that have been approved by an accessor can be published.');
+        }
+        
+        // Publish the set
+        $set->publish();
+        
+        return redirect()->route('lecturer.dashboard')
+                        ->with('success', 'Set published successfully. It is now available to students.');
     }
 }

@@ -37,10 +37,15 @@ class SetApprovalController extends Controller
             'review_notes' => 'nullable|string'
         ]);
         
-        $set->approve(auth()->user(), $validated['review_notes'] ?? null);
+        // Changed status to 'approved_unpublished' instead of 'approved'
+        $set->status = 'approved_unpublished';
+        $set->reviewed_at = now();
+        $set->reviewed_by = auth()->id();
+        $set->review_notes = $validated['review_notes'] ?? null;
+        $set->save();
         
         return redirect()->route('accessor.dashboard')
-                        ->with('success', 'Set approved successfully.');
+                        ->with('success', 'Set approved successfully. It is now ready for the lecturer to publish.');
     }
     
     /**

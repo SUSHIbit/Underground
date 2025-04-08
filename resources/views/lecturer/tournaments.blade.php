@@ -92,8 +92,11 @@
                                                 {{ $tournament->submitted_at ? $tournament->submitted_at->format('M d, Y') : 'Not submitted' }}
                                             </td>
                                             <td class="py-2 px-4 border-b border-gray-200">
-                                                <a href="{{ route('lecturer.tournaments.edit', $tournament) }}" class="text-blue-500 hover:text-blue-700">
+                                                <a href="{{ route('lecturer.tournaments.edit', $tournament) }}" class="text-blue-500 hover:text-blue-700 mr-2">
                                                     View
+                                                </a>
+                                                <a href="{{ route('lecturer.tournaments.submissions', $tournament) }}" class="text-green-500 hover:text-green-700">
+                                                    View Submissions
                                                 </a>
                                             </td>
                                         </tr>
@@ -190,8 +193,11 @@
                                                 {{ $tournament->reviewer ? $tournament->reviewer->name : 'Not reviewed' }}
                                             </td>
                                             <td class="py-2 px-4 border-b border-gray-200">
-                                                <a href="{{ route('lecturer.tournaments.edit', $tournament) }}" class="text-blue-500 hover:text-blue-700">
+                                                <a href="{{ route('lecturer.tournaments.edit', $tournament) }}" class="text-blue-500 hover:text-blue-700 mr-2">
                                                     View
+                                                </a>
+                                                <a href="{{ route('lecturer.tournaments.submissions', $tournament) }}" class="text-green-500 hover:text-green-700">
+                                                    View Submissions
                                                 </a>
                                             </td>
                                         </tr>

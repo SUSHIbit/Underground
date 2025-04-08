@@ -15,88 +15,29 @@
                         </a>
                     </div>
                     
-                    <div class="flex justify-between items-start mb-6">
-                        <div>
-                            <h3 class="text-lg font-medium mb-1">Quiz: {{ $set->quizDetail->subject->name }} - {{ $set->quizDetail->topic->name }}</h3>
-                            <p class="text-gray-600">Set #{{ $set->set_number }}</p>
-                            <p class="text-gray-600">Created by: {{ $set->creator->name }}</p>
-                            <p class="text-gray-600">Submitted: {{ $set->submitted_at->format('M d, Y H:i') }}</p>
-                        </div>
-                        <div class="text-sm px-3 py-1 rounded-full 
-                            {{ $set->status == 'pending_approval' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                            {{ $set->status == 'approved' ? 'bg-green-100 text-green-800' : '' }}
-                            {{ $set->status == 'rejected' ? 'bg-red-100 text-red-800' : '' }}">
-                            {{ ucfirst(str_replace('_', ' ', $set->status)) }}
-                        </div>
+                    <div class="mb-6">
+                        <h3 class="text-lg font-medium mb-1">Quiz: {{ $set->quizDetail->subject->name }} - {{ $set->quizDetail->topic->name }}</h3>
+                        <p class="text-gray-600">Set #{{ $set->set_number }}</p>
+                        <p class="text-gray-600">Created by: {{ $set->creator->name }}</p>
                     </div>
                     
-                    @if($set->isRejected() || $set->isApproved())
-                        <div class="mb-6 p-4 {{ $set->isApproved() ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200' }} rounded-lg">
-                            <h4 class="font-medium {{ $set->isApproved() ? 'text-green-800' : 'text-red-800' }} mb-2">Review Notes</h4>
-                            <p class="{{ $set->isApproved() ? 'text-green-700' : 'text-red-700' }}">{{ $set->review_notes }}</p>
+                    @if($set->comments->count() > 0)
+                        <div class="mb-6">
+                            <h4 class="font-medium mb-2">Comments</h4>
+                            <div class="space-y-3">
+                                @foreach($set->comments->where('question_id', null) as $comment)
+                                    <div class="p-3 bg-gray-50 rounded-lg">
+                                        <div class="flex justify-between items-center mb-1">
+                                            <span class="font-medium">{{ $comment->user->name }}</span>
+                                            <span class="text-sm text-gray-500">{{ $comment->created_at->format('M d, Y H:i') }}</span>
+                                        </div>
+                                        <p>{{ $comment->comment }}</p>
+                                    </div>
+                                @endforeach
+                            </div>
                         </div>
                     @endif
-
-                    <!-- Add this section to resources/views/accessor/review-quiz.blade.php -->
-                    <!-- Insert after the title section and before the comments section -->
-
-                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-                        <h4 class="font-medium mb-2">Quiz Settings</h4>
-                        
-                        <div class="mb-1">
-                            <span class="font-medium">Time Limit:</span> 
-                            @if(isset($set->quizDetail->timer_minutes) && $set->quizDetail->timer_minutes > 0)
-                                {{ $set->quizDetail->timer_minutes }} minutes
-                            @else
-                                No time limit
-                            @endif
-                        </div>
-                        
-                        <div>
-                            <span class="font-medium">Questions:</span> {{ $set->questions->count() }}
-                        </div>
-                    </div>
                     
-                    <!-- Overall comments for the set -->
-                    <div class="mb-6">
-                        <h4 class="font-medium mb-2">Set Comments</h4>
-                        
-                        <div class="space-y-3 mb-4">
-                            @foreach($set->comments->where('question_id', null) as $comment)
-                                <div class="p-3 bg-gray-50 rounded-lg">
-                                    <div class="flex justify-between items-center mb-1">
-                                        <span class="font-medium">{{ $comment->user->name }}</span>
-                                        <span class="text-sm text-gray-500">{{ $comment->created_at->format('M d, Y H:i') }}</span>
-                                    </div>
-                                    <p>{{ $comment->comment }}</p>
-                                </div>
-                            @endforeach
-                        </div>
-                        
-                        @if($set->isPendingApproval())
-                            <form action="{{ route('accessor.sets.comment', $set) }}" method="POST" class="space-y-2">
-                                @csrf
-                                <div>
-                                    <label for="comment" class="block mb-1 text-sm font-medium text-gray-700">Add a comment</label>
-                                    <textarea 
-                                        name="comment" 
-                                        id="comment" 
-                                        rows="3" 
-                                        class="w-full p-2 border border-gray-300 rounded-md"
-                                        placeholder="Enter your comment about the entire set"
-                                        required
-                                    ></textarea>
-                                </div>
-                                <div>
-                                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm">
-                                        Add Comment
-                                    </button>
-                                </div>
-                            </form>
-                        @endif
-                    </div>
-                    
-                    <!-- Questions review -->
                     <div class="mb-6">
                         <h4 class="font-medium mb-4">Questions</h4>
                         
@@ -122,142 +63,126 @@
                                         </ul>
                                     </div>
                                     
-                                    <div class="mb-4">
+                                    <div>
                                         <h6 class="font-medium text-gray-700 mb-2">Reason:</h6>
                                         <p class="text-gray-600">{{ $question->reason }}</p>
                                     </div>
-                                    
-                                    <!-- Question-specific comments -->
-                                    <div>
-                                        <h6 class="font-medium text-gray-700 mb-2">Comments on this Question:</h6>
-                                        
-                                        <div class="space-y-3 mb-3">
+                                </div>
+                                
+                                <div class="mt-4 border-t pt-4">
+                                    <h5 class="font-medium text-gray-700 mb-2">Add Comment</h5>
+                                    <form action="{{ route('accessor.sets.comment', $set) }}" method="POST">
+                                        @csrf
+                                        <input type="hidden" name="question_id" value="{{ $question->id }}">
+                                        <div class="mb-2">
+                                            <textarea 
+                                                name="comment" 
+                                                rows="2" 
+                                                class="w-full p-2 border border-gray-300 rounded-md"
+                                                placeholder="Add a comment about this question..."
+                                            ></textarea>
+                                        </div>
+                                        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white text-sm font-bold py-1 px-3 rounded">
+                                            Add Comment
+                                        </button>
+                                    </form>
+                                </div>
+                                
+                                @if($set->comments->where('question_id', $question->id)->count() > 0)
+                                    <div class="mt-4 p-3 bg-yellow-50 rounded-lg">
+                                        <h5 class="font-medium text-yellow-800 mb-2">Comments on this question</h5>
+                                        <div class="space-y-2">
                                             @foreach($set->comments->where('question_id', $question->id) as $comment)
-                                                <div class="p-2 bg-yellow-50 rounded-lg">
+                                                <div class="p-2 bg-yellow-100 rounded">
                                                     <div class="flex justify-between items-center mb-1">
                                                         <span class="font-medium">{{ $comment->user->name }}</span>
                                                         <span class="text-sm text-gray-500">{{ $comment->created_at->format('M d, Y H:i') }}</span>
                                                     </div>
-                                                    <p class="text-gray-700">{{ $comment->comment }}</p>
+                                                    <p class="text-yellow-700">{{ $comment->comment }}</p>
                                                 </div>
                                             @endforeach
                                         </div>
-                                        
-                                        @if($set->isPendingApproval())
-                                            <form action="{{ route('accessor.sets.comment', $set) }}" method="POST" class="space-y-2">
-                                                @csrf
-                                                <input type="hidden" name="question_id" value="{{ $question->id }}">
-                                                <div>
-                                                    <textarea 
-                                                        name="comment" 
-                                                        rows="2" 
-                                                        class="w-full p-2 border border-gray-300 rounded-md"
-                                                        placeholder="Add a comment about this specific question"
-                                                        required
-                                                    ></textarea>
-                                                </div>
-                                                <div>
-                                                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm">
-                                                        Add Comment
-                                                    </button>
-                                                </div>
-                                            </form>
-                                        @endif
                                     </div>
-                                </div>
+                                @endif
                             </div>
                         @endforeach
                     </div>
                     
-                    @if($set->isPendingApproval())
-                        <div class="flex justify-between items-center">
-                            <a href="{{ route('accessor.dashboard') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
-                            Back to Dashboard
-                            </a>
-                            <div class="flex space-x-4">
-                                <button type="button" onclick="document.getElementById('rejection-modal').classList.remove('hidden')" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                    <div class="mt-8 border-t pt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-medium mb-2">Approve Quiz</h4>
+                            <p class="mb-4 text-gray-600">Approving this quiz means you've reviewed it and found it suitable for students.</p>
+                            
+                            <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-500 rounded-r-md">
+                                <p class="text-sm text-blue-700">
+                                    <strong>Note:</strong> Approving this set will make it available for the lecturer to publish. The lecturer will need to explicitly publish it to make it visible to students.
+                                </p>
+                            </div>
+                            
+                            <form action="{{ route('accessor.sets.approve', $set) }}" method="POST" class="mt-4">
+                                @csrf
+                                <div class="mb-4">
+                                    <label for="review_notes_approve" class="block mb-2 text-sm font-medium text-gray-700">
+                                        Review Notes (Optional)
+                                    </label>
+                                    <textarea 
+                                        name="review_notes" 
+                                        id="review_notes_approve" 
+                                        rows="3" 
+                                        class="w-full p-2 border border-gray-300 rounded-md"
+                                        placeholder="Add any notes or feedback about this quiz..."
+                                    ></textarea>
+                                </div>
+                                <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                                    Approve (Ready for Publishing)
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-medium mb-2">Reject Quiz</h4>
+                            <p class="mb-4 text-gray-600">Rejecting this quiz will send it back to the lecturer for revisions.</p>
+                            
+                            <form action="{{ route('accessor.sets.reject', $set) }}" method="POST">
+                                @csrf
+                                <div class="mb-4">
+                                    <label for="review_notes_reject" class="block mb-2 text-sm font-medium text-gray-700">
+                                        Review Notes (Required)
+                                    </label>
+                                    <textarea 
+                                        name="review_notes" 
+                                        id="review_notes_reject" 
+                                        rows="3" 
+                                        class="w-full p-2 border border-gray-300 rounded-md"
+                                        placeholder="Explain why this quiz is being rejected and what changes are needed..."
+                                        required
+                                    ></textarea>
+                                </div>
+                                <button type="submit" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
                                     Reject
                                 </button>
-                                
-                                <button type="button" onclick="document.getElementById('approval-modal').classList.remove('hidden')" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                                    Approve
-                                </button>
-                            </div>
+                            </form>
                         </div>
+                    </div>
+                    
+                    <div class="mt-8">
+                        <h4 class="font-medium mb-2">Add General Comment</h4>
                         
-                        <!-- Approval Modal -->
-                        <div id="approval-modal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex justify-center items-center">
-                            <div class="bg-white rounded-lg p-8 max-w-md w-full">
-                                <h3 class="text-lg font-medium mb-4">Approve this Set</h3>
-                                
-                                <form action="{{ route('accessor.sets.approve', $set) }}" method="POST">
-                                    @csrf
-                                    
-                                    <div class="mb-4">
-                                        <label for="review_notes" class="block mb-2 text-sm font-medium text-gray-700">
-                                            Approval Notes (optional)
-                                        </label>
-                                        <textarea 
-                                            name="review_notes" 
-                                            id="review_notes" 
-                                            rows="3" 
-                                            class="w-full p-2 border border-gray-300 rounded-md"
-                                            placeholder="Add any notes about your approval"
-                                        ></textarea>
-                                    </div>
-                                    
-                                    <div class="flex justify-end space-x-3">
-                                        <button type="button" onclick="document.getElementById('approval-modal').classList.add('hidden')" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
-                                            Cancel
-                                        </button>
-                                        <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                                            Confirm Approval
-                                        </button>
-                                    </div>
-                                </form>
+                        <form action="{{ route('accessor.sets.comment', $set) }}" method="POST">
+                            @csrf
+                            <div class="mb-4">
+                                <textarea 
+                                    name="comment" 
+                                    rows="3" 
+                                    class="w-full p-2 border border-gray-300 rounded-md"
+                                    placeholder="Add a general comment about this quiz..."
+                                ></textarea>
                             </div>
-                        </div>
-                        
-                        <!-- Rejection Modal -->
-                        <div id="rejection-modal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex justify-center items-center">
-                            <div class="bg-white rounded-lg p-8 max-w-md w-full">
-                                <h3 class="text-lg font-medium mb-4">Reject this Set</h3>
-                                
-                                <form action="{{ route('accessor.sets.reject', $set) }}" method="POST">
-                                    @csrf
-                                    
-                                    <div class="mb-4">
-                                        <label for="review_notes" class="block mb-2 text-sm font-medium text-gray-700">
-                                            Rejection Reason (required)
-                                        </label>
-                                        <textarea 
-                                            name="review_notes" 
-                                            id="review_notes" 
-                                            rows="3" 
-                                            class="w-full p-2 border border-gray-300 rounded-md"
-                                            placeholder="Please explain why you are rejecting this set"
-                                            required
-                                        ></textarea>
-                                    </div>
-                                    
-                                    <div class="flex justify-end space-x-3">
-                                        <button type="button" onclick="document.getElementById('rejection-modal').classList.add('hidden')" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
-                                            Cancel
-                                        </button>
-                                        <button type="submit" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-                                            Confirm Rejection
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    @else
-                        <div>
-                            <a href="{{ route('accessor.dashboard') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
-                                Back to Dashboard
-                            </a>
-                        </div>
-                    @endif
+                            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                Add Comment
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

@@ -150,4 +150,34 @@ class Set extends Model
         
         return $this;
     }
+
+    /**
+     * Check if this set is approved but not published.
+     */
+    public function isApprovedUnpublished()
+    {
+        return $this->status === 'approved_unpublished';
+    }
+
+    /**
+     * Check if this set is published.
+     */
+    public function isPublished()
+    {
+        return $this->status === 'approved';
+    }
+
+    /**
+     * Publish this set.
+     */
+    public function publish()
+    {
+        if ($this->status === 'approved_unpublished') {
+            $this->status = 'approved';
+            $this->published_at = now();
+            $this->save();
+        }
+        
+        return $this;
+    }
 }

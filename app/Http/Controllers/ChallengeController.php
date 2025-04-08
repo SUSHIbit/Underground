@@ -21,9 +21,10 @@ class ChallengeController extends Controller
         $subjectId = $request->input('subject');
         
         // Start with base query for approved challenges
+        // Update to only show published challenges (status = 'approved')
         $challengesQuery = Set::where('type', 'challenge')
-                      ->where('status', 'approved')
-                      ->with(['challengeDetail', 'challengeDetail.prerequisites']);
+                    ->where('status', 'approved') // Only fetch published challenges
+                    ->with(['challengeDetail', 'challengeDetail.prerequisites']);
         
         // Apply search if provided
         if ($search) {
@@ -42,12 +43,12 @@ class ChallengeController extends Controller
         }
         
         $challenges = $challengesQuery->get();
-                      
+                    
         $user = auth()->user();
         $attemptedChallengeIds = $user->quizAttempts()
-                                     ->where('completed', true)
-                                     ->pluck('set_id')
-                                     ->toArray();
+                                    ->where('completed', true)
+                                    ->pluck('set_id')
+                                    ->toArray();
         
         // Check if user has met prerequisites for each challenge
         foreach ($challenges as $challenge) {

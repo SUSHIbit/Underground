@@ -21,9 +21,10 @@ class QuizController extends Controller
         $subjectId = $request->input('subject');
         
         // Start with base query for approved quizzes
+        // Update to only show published sets (status = 'approved')
         $quizzesQuery = Set::where('type', 'quiz')
-                   ->where('status', 'approved')
-                   ->with(['quizDetail.subject', 'quizDetail.topic']);
+                ->where('status', 'approved') // Only fetch published quizzes
+                ->with(['quizDetail.subject', 'quizDetail.topic']);
         
         // Apply search if provided
         if ($search) {
@@ -43,12 +44,12 @@ class QuizController extends Controller
         
         // Get the quizzes
         $quizzes = $quizzesQuery->get();
-                   
+                
         $user = auth()->user();
         $attemptedQuizIds = $user->quizAttempts()
-                               ->where('completed', true)
-                               ->pluck('set_id')
-                               ->toArray();
+                            ->where('completed', true)
+                            ->pluck('set_id')
+                            ->toArray();
         
         return view('quizzes.index', compact('quizzes', 'attemptedQuizIds', 'subjects', 'search', 'subjectId'));
     }
