@@ -280,10 +280,19 @@ class QuizController extends Controller
             return $this->autoSubmitExpiredQuiz($attempt, $set);
         }
         
-        $validated = $request->validate([
-            'answers' => 'required|array',
-            'answers.*' => 'required|string|size:1',
-        ]);
+        // Check if this is an auto-submit situation (user left the page)
+        $isAutoSubmit = $request->has('auto_submit');
+        
+        // If auto-submit, we use whatever answers are provided
+        if ($isAutoSubmit) {
+            $validated = $request->all();
+        } else {
+            // Otherwise, regular validation
+            $validated = $request->validate([
+                'answers' => 'required|array',
+                'answers.*' => 'required|string|size:1',
+            ]);
+        }
         
         $score = 0;
         $set->load('questions');
@@ -293,7 +302,7 @@ class QuizController extends Controller
         
         // Get all questions to make sure we're tracking all answers
         $allQuestionIds = $set->questions->pluck('id')->toArray();
-        $answeredQuestionIds = array_keys($validated['answers']);
+        $answeredQuestionIds = isset($validated['answers']) ? array_keys($validated['answers']) : [];
         
         // Log for debugging
         \Log::info('Quiz submission - All question IDs: ' . json_encode($allQuestionIds));
@@ -341,6 +350,15 @@ class QuizController extends Controller
             $user->addPoints(5);
         } 
         // No UEPoints rewards for retakes
+        
+        if ($isAutoSubmit) {
+            // If it's an auto-submit, we return a JSON response
+            return response()->json([
+                'success' => true,
+                'message' => 'Quiz auto-submitted successfully',
+                'redirect' => route('results.show', $attempt)
+            ]);
+        }
         
         return redirect()->route('results.show', $attempt);
     }

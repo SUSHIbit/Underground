@@ -1,11 +1,10 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Taking Challenge') }}: {{ $set->challengeDetail->name }}
-        </h2>
+
+<x-attempt-layout>
+    <x-slot name="title">
+        {{ __('Taking Challenge') }}: {{ $set->challengeDetail->name }}
     </x-slot>
 
-    <div class="py-12">
+    <div class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
@@ -69,21 +68,23 @@
                         </div>
                         @endif
                         
-                        <div class="flex justify-between items-center">
+                        <div class="flex justify-between items-center mt-6">
                             <div>
                                 @if($currentPage > 1)
                                     <a href="{{ route('challenges.attempt', ['set' => $set, 'page' => $currentPage - 1]) }}" 
-                                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                                       onclick="savePage({{ $currentPage - 1 }})">
                                         Previous
                                     </a>
                                 @endif
                             </div>
                             
-                            <div class="flex space-x-1">
+                            <div class="flex space-x-2">
                                 @for($i = 1; $i <= $totalPages; $i++)
                                     <a href="{{ route('challenges.attempt', ['set' => $set, 'page' => $i]) }}" 
-                                       class="inline-flex justify-center items-center w-8 h-8 {{ $i == $currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700' }} rounded question-nav-link">
-                                        {{ $i }}
+                                       class="question-nav-link inline-flex justify-center items-center w-8 h-8 {{ $i == $currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700' }} rounded-md"
+                                       onclick="savePage({{ $i }})">
+                                        <span class="question-number">{{ $i }}</span>
                                     </a>
                                 @endfor
                             </div>
@@ -91,7 +92,8 @@
                             <div>
                                 @if($currentPage < $totalPages)
                                     <a href="{{ route('challenges.attempt', ['set' => $set, 'page' => $currentPage + 1]) }}" 
-                                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                                       onclick="savePage({{ $currentPage + 1 }})">
                                         Next
                                     </a>
                                 @else
@@ -109,9 +111,42 @@
         </div>
     </div>
     
+    @push('scripts')
     <script>
         // Store answers in localStorage
         document.addEventListener('DOMContentLoaded', function() {
+            // Flag to track intentional navigation within the challenge
+            let internalNavigation = false;
+            
+            // Set up beforeunload event
+            window.addEventListener('beforeunload', function(e) {
+                // Skip this check if we're navigating within the challenge
+                if (internalNavigation) {
+                    return;
+                }
+                
+                // Cancel the event and show confirmation dialog
+                e.preventDefault();
+                // Set a confirmation message
+                e.returnValue = 'Are you sure you want to leave? Your challenge progress will be submitted automatically.';
+                
+                // Try to submit the form - this will happen after the confirmation if user confirms
+                submitForm(true);
+                
+                // This message might not be displayed in some browsers due to security reasons
+                return 'Are you sure you want to leave? Your challenge progress will be submitted automatically.';
+            });
+            
+            // Add click event listeners to all navigation links
+            document.querySelectorAll('.question-nav-link, a[href*="attempt"]').forEach(link => {
+                link.addEventListener('click', function() {
+                    // Flag that we're doing internal navigation
+                    internalNavigation = true;
+                    // Set a timeout to reset the flag in case navigation fails
+                    setTimeout(() => { internalNavigation = false; }, 500);
+                });
+            });
+            
             const form = document.getElementById('challenge-form');
             const radios = form.querySelectorAll('input[type="radio"]');
             
@@ -131,6 +166,9 @@
                 radio.addEventListener('change', function() {
                     if (this.checked) {
                         localStorage.setItem(`challenge_{{ $set->id }}_answer_${questionId}`, this.value);
+                        
+                        // Mark this question as answered in the navigation
+                        markQuestionAsAnswered({{ $currentPage }});
                     }
                 });
             });
@@ -141,22 +179,18 @@
             // Add class to style the navigation links
             const styleElement = document.createElement('style');
             styleElement.innerHTML = `
-                .answered {
+                .question-nav-link.answered {
                     background-color: #d1fae5 !important; /* Light green */
+                    color: #10b981 !important;
                 }
-                .answer-indicator {
+                .question-nav-link.answered::after {
+                    content: '✓';
                     display: inline-block;
-                    margin-left: 4px;
-                    color: #10b981; /* Green color */
+                    font-size: 12px;
+                    margin-left: 1px;
                 }
             `;
             document.head.appendChild(styleElement);
-            
-            // Add classes to the navigation links
-            const navLinks = document.querySelectorAll('.inline-flex.justify-center.items-center');
-            navLinks.forEach(link => {
-                link.classList.add('question-nav-link');
-            });
             
             // Set up the timer if it exists
             @if(isset($timer_minutes) && $timer_minutes > 0 && isset($remaining_seconds))
@@ -211,6 +245,29 @@
             @endif
         });
         
+        // Save current page to restore if user comes back
+        function savePage(pageNum) {
+            localStorage.setItem(`challenge_{{ $set->id }}_current_page`, pageNum);
+        }
+        
+        // Mark a question as answered in the UI
+        function markQuestionAsAnswered(questionNumber) {
+            // Update the tracking in localStorage
+            const setId = {{ $set->id }};
+            let answeredQuestions = JSON.parse(localStorage.getItem(`challenge_${setId}_answered_all`)) || {};
+            answeredQuestions[questionNumber] = true;
+            localStorage.setItem(`challenge_${setId}_answered_all`, JSON.stringify(answeredQuestions));
+            
+            // Update the UI
+            const navLinks = document.querySelectorAll('.question-nav-link');
+            navLinks.forEach(link => {
+                const linkNum = parseInt(link.querySelector('.question-number').textContent.trim());
+                if (linkNum === questionNumber) {
+                    link.classList.add('answered');
+                }
+            });
+        }
+        
         // Track all answered questions
         function trackAnsweredQuestions() {
             const setId = {{ $set->id }};
@@ -244,29 +301,16 @@
                     // Also make sure the answer is saved
                     localStorage.setItem(`challenge_${setId}_answer_${currentQuestion}`, radio.value);
                 }
-                
-                // Add event listener to track when an answer is selected
-                radio.addEventListener('change', function() {
-                    if (this.checked) {
-                        // Update tracking
-                        let answeredQuestions = JSON.parse(localStorage.getItem(`challenge_${setId}_answered_all`));
-                        answeredQuestions[questionNumber] = true;
-                        localStorage.setItem(`challenge_${setId}_answered_all`, JSON.stringify(answeredQuestions));
-                        
-                        // Save the answer
-                        localStorage.setItem(`challenge_${setId}_answer_${currentQuestion}`, this.value);
-                    }
-                });
             });
             
             // Check if this question was previously answered
             const answeredQuestions = JSON.parse(localStorage.getItem(`challenge_${setId}_answered_all`));
-            if (answeredQuestions[questionNumber]) {
+            if (answeredQuestions && answeredQuestions[questionNumber]) {
                 isAnswered = true;
             }
             
             // Update navigation to show which questions are answered
-            updateNavigationStatus(answeredQuestions);
+            updateNavigationStatus(answeredQuestions || {});
             
             return isAnswered;
         }
@@ -275,16 +319,11 @@
         function updateNavigationStatus(answeredQuestions) {
             const navLinks = document.querySelectorAll('.question-nav-link');
             navLinks.forEach(link => {
-                const questionNum = parseInt(link.textContent.trim());
+                const questionNum = parseInt(link.querySelector('.question-number').textContent.trim());
                 if (answeredQuestions[questionNum]) {
                     link.classList.add('answered');
-                    // Add a visual indicator
-                    if (!link.querySelector('.answer-indicator')) {
-                        const indicator = document.createElement('span');
-                        indicator.className = 'answer-indicator';
-                        indicator.innerHTML = '✓';
-                        link.appendChild(indicator);
-                    }
+                } else {
+                    link.classList.remove('answered');
                 }
             });
         }
@@ -314,7 +353,7 @@
             return true;
         }
         
-        function submitForm(isTimeExpired = false) {
+        function submitForm(isAutoSubmit = false) {
             const setId = {{ $set->id }};
             const totalQuestions = {{ $totalPages }};
             const questionIds = {!! json_encode($set->questions->pluck('id', 'question_number')->toArray()) !!};
@@ -339,7 +378,10 @@
                 }
             }
             
-            if (isTimeExpired || confirmSubmit()) {
+            if (isAutoSubmit || confirmSubmit()) {
+                // Remove the beforeunload event handler to prevent the confirmation dialog
+                window.removeEventListener('beforeunload', function(){});
+                
                 // Log what we're submitting
                 console.log("Submitting challenge with answers:", 
                     Array.from(document.querySelectorAll('input[name^="answers["]'))
@@ -359,4 +401,48 @@
             }
         }
     </script>
-</x-app-layout>
+    @endpush
+</x-attempt-layout>
+```
+
+### 2. Apply similar fixes to the Quiz attempt view
+
+Make similar updates to `resources/views/quizzes/attempt.blade.php` for consistency:
+
+```php
+<!-- Update the pagination section -->
+<div class="flex space-x-2">
+    @for($i = 1; $i <= $totalPages; $i++)
+        <a href="{{ route('quizzes.attempt', ['set' => $set, 'page' => $i]) }}" 
+           class="question-nav-link inline-flex justify-center items-center w-8 h-8 {{ $i == $currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700' }} rounded-md"
+           onclick="savePage({{ $i }})">
+            <span class="question-number">{{ $i }}</span>
+        </a>
+    @endfor
+</div>
+
+<!-- And update the JavaScript functions in a similar way -->
+```
+
+### What These Changes Do:
+
+1. **Fixes the pagination display**:
+   - Uses a cleaner, more readable format for question numbers
+   - Adds proper spacing between pagination items
+   - Updates the styling to match your UI
+
+2. **Fixes the answered question indicators**:
+   - Completely rewrites the logic for tracking answered questions
+   - Adds a new function `markQuestionAsAnswered()` to update the UI
+   - Uses a more reliable way to check which questions are answered
+   - Shows checkmarks only on actually answered questions
+
+3. **Makes the answer indicators clearer**:
+   - Uses a more visible checkmark
+   - Ensures consistent styling across all questions
+
+4. **Improves reliability**:
+   - Better handles localStorage to prevent tracking errors
+   - More accurate tracking of which questions are answered
+
+These changes will ensure that when you start a new challenge, all questions appear as unanswered (no green checkmarks), and only questions you've actually answered will be marked.

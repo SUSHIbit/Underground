@@ -1,11 +1,9 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Taking Quiz') }}: {{ $set->quizDetail->subject->name }} - {{ $set->quizDetail->topic->name }}
-        </h2>
+<x-attempt-layout>
+    <x-slot name="title">
+        {{ __('Taking Quiz') }}: {{ $set->quizDetail->subject->name }} - {{ $set->quizDetail->topic->name }}
     </x-slot>
 
-    <div class="py-12">
+    <div class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
@@ -73,17 +71,19 @@
                             <div>
                                 @if($currentPage > 1)
                                     <a href="{{ route('quizzes.attempt', ['set' => $set, 'page' => $currentPage - 1]) }}" 
-                                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                                       onclick="savePage({{ $currentPage - 1 }})">
                                         Previous
                                     </a>
                                 @endif
                             </div>
                             
-                            <div class="flex space-x-1">
+                            <div class="flex space-x-2">
                                 @for($i = 1; $i <= $totalPages; $i++)
                                     <a href="{{ route('quizzes.attempt', ['set' => $set, 'page' => $i]) }}" 
-                                       class="inline-flex justify-center items-center w-8 h-8 {{ $i == $currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700' }} rounded question-nav-link">
-                                        {{ $i }}
+                                       class="question-nav-link inline-flex justify-center items-center w-8 h-8 {{ $i == $currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700' }} rounded-md"
+                                       onclick="savePage({{ $i }})">
+                                        <span class="question-number">{{ $i }}</span>
                                     </a>
                                 @endfor
                             </div>
@@ -91,7 +91,8 @@
                             <div>
                                 @if($currentPage < $totalPages)
                                     <a href="{{ route('quizzes.attempt', ['set' => $set, 'page' => $currentPage + 1]) }}" 
-                                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                                       onclick="savePage({{ $currentPage + 1 }})">
                                         Next
                                     </a>
                                 @else
@@ -109,9 +110,42 @@
         </div>
     </div>
     
+    @push('scripts')
     <script>
         // Store answers in localStorage
         document.addEventListener('DOMContentLoaded', function() {
+            // Flag to track intentional navigation within the quiz
+            let internalNavigation = false;
+            
+            // Set up beforeunload event
+            window.addEventListener('beforeunload', function(e) {
+                // Skip this check if we're navigating within the quiz
+                if (internalNavigation) {
+                    return;
+                }
+                
+                // Cancel the event and show confirmation dialog
+                e.preventDefault();
+                // Set a confirmation message
+                e.returnValue = 'Are you sure you want to leave? Your quiz progress will be submitted automatically.';
+                
+                // Try to submit the form - this will happen after the confirmation if user confirms
+                submitForm(true);
+                
+                // This message might not be displayed in some browsers due to security reasons
+                return 'Are you sure you want to leave? Your quiz progress will be submitted automatically.';
+            });
+            
+            // Add click event listeners to all navigation links
+            document.querySelectorAll('.question-nav-link, a[href*="attempt"]').forEach(link => {
+                link.addEventListener('click', function() {
+                    // Flag that we're doing internal navigation
+                    internalNavigation = true;
+                    // Set a timeout to reset the flag in case navigation fails
+                    setTimeout(() => { internalNavigation = false; }, 500);
+                });
+            });
+            
             const form = document.getElementById('quiz-form');
             const radios = form.querySelectorAll('input[type="radio"]');
             
@@ -211,6 +245,11 @@
             @endif
         });
         
+        // Save current page to restore if user comes back
+        function savePage(pageNum) {
+            localStorage.setItem(`quiz_{{ $set->id }}_current_page`, pageNum);
+        }
+        
         // Track all answered questions
         function trackAnsweredQuestions() {
             const setId = {{ $set->id }};
@@ -270,7 +309,7 @@
             
             return isAnswered;
         }
-
+    
         // Update the navigation to show which questions are answered
         function updateNavigationStatus(answeredQuestions) {
             const navLinks = document.querySelectorAll('.question-nav-link');
@@ -314,7 +353,7 @@
             return true;
         }
         
-        function submitForm(isTimeExpired = false) {
+        function submitForm(isAutoSubmit = false) {
             const setId = {{ $set->id }};
             const totalQuestions = {{ $totalPages }};
             const questionIds = {!! json_encode($set->questions->pluck('id', 'question_number')->toArray()) !!};
@@ -339,7 +378,10 @@
                 }
             }
             
-            if (isTimeExpired || confirmSubmit()) {
+            if (isAutoSubmit || confirmSubmit()) {
+                // Remove the beforeunload event handler to prevent the confirmation dialog
+                window.removeEventListener('beforeunload', function(){});
+                
                 // Log what we're submitting
                 console.log("Submitting quiz with answers:", 
                     Array.from(document.querySelectorAll('input[name^="answers["]'))
@@ -359,4 +401,5 @@
             }
         }
     </script>
-</x-app-layout>
+    @endpush
+</x-attempt-layout>

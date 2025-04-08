@@ -321,10 +321,19 @@ class ChallengeController extends Controller
             return $this->autoSubmitExpiredChallenge($attempt, $set);
         }
         
-        $validated = $request->validate([
-            'answers' => 'required|array',
-            'answers.*' => 'required|string|size:1',
-        ]);
+        // Check if this is an auto-submit situation (user left the page)
+        $isAutoSubmit = $request->has('auto_submit');
+        
+        // If auto-submit, we use whatever answers are provided
+        if ($isAutoSubmit) {
+            $validated = $request->all();
+        } else {
+            // Otherwise, regular validation
+            $validated = $request->validate([
+                'answers' => 'required|array',
+                'answers.*' => 'required|string|size:1',
+            ]);
+        }
         
         $score = 0;
         $set->load('questions');
@@ -334,7 +343,7 @@ class ChallengeController extends Controller
         
         // Get all questions to ensure we're tracking all answers
         $allQuestionIds = $set->questions->pluck('id')->toArray();
-        $answeredQuestionIds = array_keys($validated['answers']);
+        $answeredQuestionIds = isset($validated['answers']) ? array_keys($validated['answers']) : [];
         
         // Log for debugging
         \Log::info('Challenge submission - All question IDs: ' . json_encode($allQuestionIds));
@@ -401,6 +410,15 @@ class ChallengeController extends Controller
             $user->addPoints($pointsToAward);
         }
         // No UEPoints rewards for retakes
+        
+        if ($isAutoSubmit) {
+            // If it's an auto-submit, we return a JSON response
+            return response()->json([
+                'success' => true,
+                'message' => 'Challenge auto-submitted successfully',
+                'redirect' => route('results.show', $attempt)
+            ]);
+        }
         
         return redirect()->route('results.show', $attempt);
     }
