@@ -73,6 +73,20 @@
                         </div>
                     </div>
 
+                    <!-- Tournament Skills Card -->
+                    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border hover:shadow-md transition-shadow duration-300">
+                        <div class="p-5">
+                            <h3 class="font-semibold text-lg text-gray-800 mb-2">Tournament Skills</h3>
+                            <p class="text-gray-600 text-sm mb-4">View your performance across different tournament types</p>
+                            <a href="{{ route('skills.index') }}" class="inline-flex items-center px-4 py-2 bg-blue-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-600 active:bg-blue-700 focus:outline-none focus:border-blue-700 focus:shadow-outline-blue transition ease-in-out duration-150">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                                View Skills
+                            </a>
+                        </div>
+                    </div>
+
                     <!-- Leaderboard Card -->
                     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border hover:shadow-md transition-shadow duration-300">
                         <div class="p-5">

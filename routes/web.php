@@ -12,6 +12,7 @@ use App\Http\Controllers\UEPointsController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ChallengeController; 
 use App\Http\Controllers\TournamentController;
+use App\Http\Controllers\SkillsController;
 
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\SetApprovalController; 
@@ -118,6 +119,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/ranks', [RankController::class, 'index'])->name('ranks.index');
+    Route::get('/skills', [SkillsController::class, 'index'])->name('skills.index');
 });
 
 // Legion Routes
