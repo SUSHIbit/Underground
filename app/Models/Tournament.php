@@ -46,9 +46,12 @@ class Tournament extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
+    // Updated to use tournament_judge_users table
     public function judges()
     {
-        return $this->hasMany(TournamentJudge::class);
+        return $this->belongsToMany(User::class, 'tournament_judge_users')
+                   ->withPivot('role')
+                   ->withTimestamps();
     }
 
     public function participants()

@@ -239,8 +239,9 @@ class LecturerDashboardController extends Controller
             'judging_criteria' => 'required|string',
             'project_submission' => 'required|string',
             'judges' => 'required|array',
-            'judges.*.name' => 'required|string|max:255',
-            'judges.*.role' => 'nullable|string|max:255',
+            'judges.*' => 'required|exists:users,id',
+            'judge_roles' => 'nullable|array',
+            'judge_roles.*' => 'nullable|string|max:255',
         ]);
         
         $tournament->update([
@@ -257,16 +258,15 @@ class LecturerDashboardController extends Controller
             'project_submission' => $validated['project_submission'],
         ]);
         
-        // Update judges (delete old ones and add new ones)
-        $tournament->judges()->delete();
-        
-        foreach ($validated['judges'] as $judge) {
-            TournamentJudge::create([
-                'tournament_id' => $tournament->id,
-                'name' => $judge['name'],
-                'role' => $judge['role'] ?? null,
-            ]);
+        // Update judges by syncing the pivot table (tournament_judge_users)
+        $judgeData = [];
+        foreach ($validated['judges'] as $index => $judgeId) {
+            $judgeData[$judgeId] = [
+                'role' => $validated['judge_roles'][$index] ?? null
+            ];
         }
+        
+        $tournament->judges()->sync($judgeData);
         
         return redirect()->route('lecturer.tournaments')
                     ->with('success', 'Tournament updated successfully.');

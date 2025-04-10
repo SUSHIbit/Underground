@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tournament;
-use App\Models\TournamentJudge;
 use App\Models\TournamentParticipant;
 use Illuminate\Http\Request;
 
@@ -11,8 +10,9 @@ class TournamentController extends Controller
 {
     public function index()
     {
+        // Update this query to use tournament_judge_users instead of tournament_judges
         $tournaments = Tournament::where('status', 'approved')
-                      ->with(['judges'])
+                      ->with(['judges']) // This relationship needs to be updated in the Tournament model
                       ->latest('date_time')
                       ->get();
                       
@@ -30,6 +30,7 @@ class TournamentController extends Controller
     
     public function show(Tournament $tournament)
     {
+        // Update this to use tournament_judge_users instead of tournament_judges
         $tournament->load(['judges', 'creator']);
         $user = auth()->user();
         
