@@ -5,15 +5,16 @@ use App\Http\Controllers\RankController;
 use App\Http\Controllers\HomeController; 
 use App\Http\Controllers\QuizController; 
 use App\Http\Controllers\AdminController; 
+use App\Http\Controllers\ExtrasController;
 use App\Http\Controllers\LegionController;
+use App\Http\Controllers\SkillsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ResultController; 
-use App\Http\Controllers\UEPointsController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\UEPointsController;
 use App\Http\Controllers\ChallengeController; 
-use App\Http\Controllers\TournamentController;
-use App\Http\Controllers\SkillsController;
 
+use App\Http\Controllers\TournamentController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\SetApprovalController; 
 use App\Http\Controllers\AccessorDashboardController; 
@@ -53,11 +54,12 @@ Route::middleware(['auth'])->group(function () {
     // Results Routes
     Route::get('/results/{attempt}', [ResultController::class, 'show'])->name('results.show');
 
-    // Leaderboard Route (kept for backward compatibility)
+    // Leaderboard Route
     Route::get('/leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard');
     
-    // Settings Route
+    // Settings and Extras Routes
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+    Route::get('/extras', [ExtrasController::class, 'index'])->name('extras'); // Add this line
 });
 
 Route::middleware('auth')->group(function () {

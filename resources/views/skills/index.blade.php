@@ -106,10 +106,26 @@
         </div>
     </div>
     
-    @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Make sure we load Chart.js properly first
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js is not loaded. Please check your script includes.');
+                return;
+            }
+            
+            // Chart data
+            const types = @json(array_values($tournamentTypes));
+            const averages = [];
+            const counts = [];
+            
+            // Populate data arrays from PHP stats
+            @foreach($tournamentTypes as $type => $label)
+                averages.push({{ isset($stats[$type]) ? $stats[$type]['average'] : 0 }});
+                counts.push({{ isset($stats[$type]) ? $stats[$type]['count'] : 0 }});
+            @endforeach
+            
             // Chart colors
             const colors = {
                 amber: 'rgb(245, 158, 11)',
@@ -120,152 +136,156 @@
                 greenTransparent: 'rgba(16, 185, 129, 0.5)'
             };
             
-            // Chart data
-            const types = @json($chartData['types']);
-            const averages = @json($chartData['averages']);
-            const counts = @json($chartData['counts']);
+            // Common chart options
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.7)'
+                        }
+                    }
+                }
+            };
             
             // Average Points Chart
-            const averageCtx = document.getElementById('averagePointsChart').getContext('2d');
-            const averageChart = new Chart(averageCtx, {
-                type: 'bar',
-                data: {
-                    labels: types,
-                    datasets: [{
-                        label: 'Average Points',
-                        data: averages,
-                        backgroundColor: colors.amberTransparent,
-                        borderColor: colors.amber,
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 20,
-                            ticks: {
-                                color: 'rgba(255, 255, 255, 0.7)'
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
-                            }
-                        },
-                        x: {
-                            ticks: {
-                                color: 'rgba(255, 255, 255, 0.7)'
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
-                            }
-                        }
+            const averagePointsElement = document.getElementById('averagePointsChart');
+            if (averagePointsElement) {
+                const averageChart = new Chart(averagePointsElement, {
+                    type: 'bar',
+                    data: {
+                        labels: types,
+                        datasets: [{
+                            label: 'Average Points',
+                            data: averages,
+                            backgroundColor: colors.amberTransparent,
+                            borderColor: colors.amber,
+                            borderWidth: 1
+                        }]
                     },
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: 'rgba(255, 255, 255, 0.7)'
+                    options: {
+                        ...commonOptions,
+                        scales: {
+                            ...commonOptions.scales,
+                            y: {
+                                ...commonOptions.scales.y,
+                                max: 20
                             }
                         }
                     }
-                }
-            });
+                });
+            } else {
+                console.error('Average Points Chart canvas element not found');
+            }
             
             // Tournament Count Chart
-            const countCtx = document.getElementById('tournamentCountChart').getContext('2d');
-            const countChart = new Chart(countCtx, {
-                type: 'bar',
-                data: {
-                    labels: types,
-                    datasets: [{
-                        label: 'Tournaments Participated',
-                        data: counts,
-                        backgroundColor: colors.blueTransparent,
-                        borderColor: colors.blue,
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1,
-                                color: 'rgba(255, 255, 255, 0.7)'
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
-                            }
-                        },
-                        x: {
-                            ticks: {
-                                color: 'rgba(255, 255, 255, 0.7)'
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
-                            }
-                        }
+            const countChartElement = document.getElementById('tournamentCountChart');
+            if (countChartElement) {
+                const countChart = new Chart(countChartElement, {
+                    type: 'bar',
+                    data: {
+                        labels: types,
+                        datasets: [{
+                            label: 'Tournaments Participated',
+                            data: counts,
+                            backgroundColor: colors.blueTransparent,
+                            borderColor: colors.blue,
+                            borderWidth: 1
+                        }]
                     },
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: 'rgba(255, 255, 255, 0.7)'
+                    options: {
+                        ...commonOptions,
+                        scales: {
+                            ...commonOptions.scales,
+                            y: {
+                                ...commonOptions.scales.y,
+                                ticks: {
+                                    ...commonOptions.scales.y.ticks,
+                                    stepSize: 1
+                                }
                             }
                         }
                     }
-                }
-            });
+                });
+            } else {
+                console.error('Tournament Count Chart canvas element not found');
+            }
             
             // Skills Radar Chart
-            const radarCtx = document.getElementById('skillsRadarChart').getContext('2d');
-            const radarChart = new Chart(radarCtx, {
-                type: 'radar',
-                data: {
-                    labels: types,
-                    datasets: [{
-                        label: 'Average Points',
-                        data: averages,
-                        backgroundColor: colors.greenTransparent,
-                        borderColor: colors.green,
-                        pointBackgroundColor: colors.green,
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: colors.green,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            angleLines: {
-                                color: 'rgba(255, 255, 255, 0.2)'
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.2)'
-                            },
-                            pointLabels: {
-                                color: 'rgba(255, 255, 255, 0.7)'
-                            },
-                            ticks: {
-                                backdropColor: 'transparent',
-                                color: 'rgba(255, 255, 255, 0.7)'
-                            }
-                        }
+            const radarChartElement = document.getElementById('skillsRadarChart');
+            if (radarChartElement) {
+                const radarChart = new Chart(radarChartElement, {
+                    type: 'radar',
+                    data: {
+                        labels: types,
+                        datasets: [{
+                            label: 'Average Points',
+                            data: averages,
+                            backgroundColor: colors.greenTransparent,
+                            borderColor: colors.green,
+                            pointBackgroundColor: colors.green,
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: colors.green,
+                        }]
                     },
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: 'rgba(255, 255, 255, 0.7)'
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        elements: {
+                            line: {
+                                borderWidth: 3
+                            }
+                        },
+                        scales: {
+                            r: {
+                                angleLines: {
+                                    color: 'rgba(255, 255, 255, 0.2)'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.2)'
+                                },
+                                pointLabels: {
+                                    color: 'rgba(255, 255, 255, 0.7)'
+                                },
+                                ticks: {
+                                    backdropColor: 'transparent',
+                                    color: 'rgba(255, 255, 255, 0.7)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: 'rgba(255, 255, 255, 0.7)'
+                                }
                             }
                         }
                     }
-                }
-            });
+                });
+            } else {
+                console.error('Skills Radar Chart canvas element not found');
+            }
         });
     </script>
-    @endpush
 </x-app-layout>
