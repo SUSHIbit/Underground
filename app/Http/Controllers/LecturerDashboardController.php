@@ -323,4 +323,24 @@ class LecturerDashboardController extends Controller
         return redirect()->route('lecturer.dashboard')
                         ->with('success', 'Set published successfully. It is now available to students.');
     }
+
+    public function publishTournament(Tournament $tournament)
+    {
+        // Ensure the lecturer owns this tournament
+        if ($tournament->created_by !== auth()->id()) {
+            abort(403);
+        }
+        
+        // Ensure the tournament is in the approved_unpublished state
+        if (!$tournament->isApprovedUnpublished()) {
+            return redirect()->route('lecturer.tournaments')
+                            ->with('error', 'Only tournaments that have been approved by an accessor can be published.');
+        }
+        
+        // Publish the tournament
+        $tournament->publish();
+        
+        return redirect()->route('lecturer.tournaments')
+                        ->with('success', 'Tournament published successfully. It is now available to students.');
+    }
 }

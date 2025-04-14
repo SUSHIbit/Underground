@@ -83,6 +83,7 @@ Route::middleware(['auth', 'lecturer'])->prefix('lecturer')->name('lecturer.')->
     Route::put('/tournaments/{tournament}', [LecturerDashboardController::class, 'updateTournament'])->name('tournaments.update');
     Route::post('/tournaments/{tournament}/submit', [LecturerDashboardController::class, 'submitTournamentForApproval'])->name('tournaments.submit');
     Route::get('/tournaments/{tournament}/submissions', [LecturerDashboardController::class, 'tournamentSubmissions'])->name('tournaments.submissions');
+    Route::post('/tournaments/{tournament}/publish', [LecturerDashboardController::class, 'publishTournament'])->name('tournaments.publish');
     Route::post('/sets/{set}/publish', [LecturerDashboardController::class, 'publishSet'])->name('sets.publish');
 });
 

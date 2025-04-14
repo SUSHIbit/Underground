@@ -26,7 +26,9 @@ class Tournament extends Model
         'submitted_at',
         'reviewed_at',
         'reviewed_by',
-        'review_notes'
+        'review_notes',
+        'published_at',
+        'tournament_type'
     ];
 
     protected $casts = [
@@ -34,6 +36,7 @@ class Tournament extends Model
         'deadline' => 'datetime',
         'submitted_at' => 'datetime',
         'reviewed_at' => 'datetime',
+        'published_at' => 'datetime',
     ];
 
     public function creator()
@@ -46,7 +49,6 @@ class Tournament extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
-    // Updated to use tournament_judge_users table
     public function judges()
     {
         return $this->belongsToMany(User::class, 'tournament_judge_users')
@@ -78,6 +80,14 @@ class Tournament extends Model
     {
         return $this->status === 'approved';
     }
+    
+    /**
+     * Check if this tournament is approved but not published.
+     */
+    public function isApprovedUnpublished()
+    {
+        return $this->status === 'approved_unpublished';
+    }
 
     public function isRejected()
     {
@@ -95,11 +105,26 @@ class Tournament extends Model
 
     public function approve(User $accessor, $notes = null)
     {
-        $this->status = 'approved';
+        // Changed to approved_unpublished instead of approved
+        $this->status = 'approved_unpublished';
         $this->reviewed_at = now();
         $this->reviewed_by = $accessor->id;
         $this->review_notes = $notes;
         $this->save();
+        
+        return $this;
+    }
+    
+    /**
+     * Publish this tournament.
+     */
+    public function publish()
+    {
+        if ($this->status === 'approved_unpublished') {
+            $this->status = 'approved';
+            $this->published_at = now();
+            $this->save();
+        }
         
         return $this;
     }

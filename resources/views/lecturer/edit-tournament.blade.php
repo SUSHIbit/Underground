@@ -23,6 +23,7 @@
                         <div class="text-sm px-3 py-1 rounded-full 
                             {{ $tournament->status == 'draft' ? 'bg-gray-100 text-gray-800' : '' }}
                             {{ $tournament->status == 'pending_approval' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                            {{ $tournament->status == 'approved_unpublished' ? 'bg-blue-100 text-blue-800' : '' }}
                             {{ $tournament->status == 'approved' ? 'bg-green-100 text-green-800' : '' }}
                             {{ $tournament->status == 'rejected' ? 'bg-red-100 text-red-800' : '' }}">
                             {{ ucfirst(str_replace('_', ' ', $tournament->status)) }}
@@ -49,6 +50,24 @@
                                         <p>{{ $comment->comment }}</p>
                                     </div>
                                 @endforeach
+                            </div>
+                        </div>
+                    @endif
+                    
+                    @if($tournament->isApprovedUnpublished())
+                        <div class="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <h4 class="font-medium text-yellow-800 mb-2">This tournament has been approved by an accessor</h4>
+                            <p class="text-yellow-700">
+                                It is ready to be published. Once published, it will be available to students.
+                                You cannot make further edits to this content.
+                            </p>
+                            <div class="mt-4">
+                                <form action="{{ route('lecturer.tournaments.publish', $tournament) }}" method="POST" class="inline">
+                                    @csrf
+                                    <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                                        Publish Now
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     @endif

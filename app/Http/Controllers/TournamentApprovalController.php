@@ -30,10 +30,12 @@ class TournamentApprovalController extends Controller
             'review_notes' => 'nullable|string'
         ]);
         
+        // Changed to set status to 'approved_unpublished' instead of 'approved'
+        // Using the model's method which we updated
         $tournament->approve(auth()->user(), $validated['review_notes'] ?? null);
         
         return redirect()->route('accessor.tournaments')
-                        ->with('success', 'Tournament approved successfully.');
+                        ->with('success', 'Tournament approved successfully. It is now ready for the lecturer to publish.');
     }
     
     public function reject(Request $request, Tournament $tournament)
