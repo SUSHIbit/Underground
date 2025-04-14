@@ -15,8 +15,16 @@
                         </a>
                     </div>
                     
-                    <h3 class="text-xl font-bold mb-2">{{ $tournament->title }}</h3>
-                    <p class="text-gray-600 mb-6">Created by: {{ $tournament->creator->name }}</p>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="text-xl font-bold mb-2">{{ $tournament->title }}</h3>
+                            <p class="text-gray-600 mb-2">Created by: {{ $tournament->creator->name }}</p>
+                        </div>
+                        
+                        @if($hasEnded)
+                            <span class="px-3 py-1 bg-gray-200 text-gray-700 rounded-full text-sm">Completed</span>
+                        @endif
+                    </div>
                     
                     @if(session('error'))
                         <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
@@ -119,34 +127,56 @@
                                     @endif
                                 </div>
                                 
-                                <!-- Project submission form -->
-                                <form action="{{ route('tournaments.submit', $tournament) }}" method="POST" class="border-t pt-4 mt-4">
-                                    @csrf
-                                    <h5 class="font-medium text-lg mb-3">
-                                        {{ $participant->submission_url ? 'Update Your Submission' : 'Submit Your Project' }}
-                                    </h5>
-                                    <div class="mb-4">
-                                        <label for="submission_url" class="block mb-2 text-sm font-medium text-gray-700">
-                                            Project URL (GitHub, Vercel, etc.)
-                                        </label>
-                                        <input 
-                                            type="url" 
-                                            name="submission_url" 
-                                            id="submission_url" 
-                                            value="{{ $participant->submission_url ?? '' }}"
-                                            class="w-full p-2 border border-gray-300 rounded-md"
-                                            placeholder="https://github.com/yourusername/project"
-                                            required
-                                        >
+                                @if(!$hasEnded && !$deadlinePassed)
+                                    <!-- Project submission form (only show if tournament hasn't ended and deadline hasn't passed) -->
+                                    <form action="{{ route('tournaments.submit', $tournament) }}" method="POST" class="border-t pt-4 mt-4">
+                                        @csrf
+                                        <h5 class="font-medium text-lg mb-3">
+                                            {{ $participant->submission_url ? 'Update Your Submission' : 'Submit Your Project' }}
+                                        </h5>
+                                        <div class="mb-4">
+                                            <label for="submission_url" class="block mb-2 text-sm font-medium text-gray-700">
+                                                Project URL (GitHub, Vercel, etc.)
+                                            </label>
+                                            <input 
+                                                type="url" 
+                                                name="submission_url" 
+                                                id="submission_url" 
+                                                value="{{ $participant->submission_url ?? '' }}"
+                                                class="w-full p-2 border border-gray-300 rounded-md"
+                                                placeholder="https://github.com/yourusername/project"
+                                                required
+                                            >
+                                        </div>
+                                        
+                                        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                            {{ $participant->submission_url ? 'Update Submission' : 'Submit Project' }}
+                                        </button>
+                                    </form>
+                                @elseif($hasEnded)
+                                    <div class="border-t pt-4 mt-4">
+                                        <div class="bg-gray-100 p-4 rounded-lg">
+                                            <p class="text-gray-700">This tournament has ended. No further submissions or modifications are allowed.</p>
+                                            
+                                            @if(!$participant->submission_url)
+                                                <p class="mt-2 text-red-600">You did not submit a project for this tournament.</p>
+                                            @endif
+                                        </div>
                                     </div>
-                                    
-                                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                                        {{ $participant->submission_url ? 'Update Submission' : 'Submit Project' }}
-                                    </button>
-                                </form>
+                                @elseif($deadlinePassed)
+                                    <div class="border-t pt-4 mt-4">
+                                        <div class="bg-gray-100 p-4 rounded-lg">
+                                            <p class="text-gray-700">The submission deadline for this tournament has passed. No further submissions or modifications are allowed.</p>
+                                            
+                                            @if(!$participant->submission_url)
+                                                <p class="mt-2 text-red-600">You did not submit a project for this tournament.</p>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endif
                                 
-                                @if($tournament->team_size > 1 && now() < \Carbon\Carbon::parse($tournament->date_time))
-                                    <!-- Team members update form -->
+                                @if(!$hasEnded && $tournament->team_size > 1)
+                                    <!-- Team members update form (only if tournament hasn't ended) -->
                                     <form action="{{ route('tournaments.update-team', $tournament) }}" method="POST" class="border-t pt-4 mt-4">
                                         @csrf
                                         @method('PUT')
@@ -202,19 +232,23 @@
                                         {{ \Carbon\Carbon::parse($tournament->date_time)->format('F j, Y, g:i a') }}
                                     </p>
                                     
-                                    @php
-                                        $timeLeft = \Carbon\Carbon::parse($tournament->deadline)->diffForHumans(['parts' => 2]);
-                                    @endphp
-                                    <p class="mt-2 {{ \Carbon\Carbon::parse($tournament->deadline)->isPast() ? 'text-red-600' : 'text-blue-600' }} font-medium">
-                                        {{ \Carbon\Carbon::parse($tournament->deadline)->isPast() 
-                                            ? 'Submission deadline has passed' 
-                                            : "Time remaining for submission: {$timeLeft}" }}
-                                    </p>
+                                    @if(!$deadlinePassed)
+                                        @php
+                                            $timeLeft = \Carbon\Carbon::parse($tournament->deadline)->diffForHumans(['parts' => 2]);
+                                        @endphp
+                                        <p class="mt-2 text-blue-600 font-medium">
+                                            Time remaining for submission: {{ $timeLeft }}
+                                        </p>
+                                    @else
+                                        <p class="mt-2 text-red-600 font-medium">
+                                            Submission deadline has passed
+                                        </p>
+                                    @endif
                                 </div>
                             @endif
                         </div>
-                    @elseif($canParticipate)
-                        <!-- Show registration form -->
+                    @elseif($canParticipate && !$hasEnded)
+                        <!-- Show registration form, only if tournament hasn't ended -->
                         <div class="bg-blue-50 p-6 rounded-lg mb-6">
                             <h4 class="font-semibold text-lg mb-4">Join This Tournament</h4>
                             
@@ -259,7 +293,13 @@
                                 </button>
                             </form>
                         </div>
-                        @else
+                    @elseif($hasEnded)
+                        <!-- Show tournament ended message -->
+                        <div class="bg-gray-50 p-6 rounded-lg mb-6">
+                            <h4 class="font-semibold text-lg mb-2 text-gray-700">Tournament Has Ended</h4>
+                            <p>This tournament was held on {{ \Carbon\Carbon::parse($tournament->date_time)->format('F j, Y') }} and is now complete.</p>
+                        </div>
+                    @else
                         <!-- Show eligibility requirements -->
                         <div class="bg-yellow-50 p-6 rounded-lg mb-6">
                             <h4 class="font-semibold text-lg mb-2 text-yellow-800">Eligibility Requirements</h4>
