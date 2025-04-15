@@ -182,6 +182,12 @@ class LecturerDashboardController extends Controller
             return $tournament->isPendingApproval();
         });
         
+        // Make sure we also get tournaments that are ready to be published
+        $approvedUnpublishedTournaments = $tournaments->filter(function ($tournament) {
+            return $tournament->isApprovedUnpublished();
+        });
+        
+        // Get the published tournaments
         $approvedTournaments = $tournaments->filter(function ($tournament) {
             return $tournament->isApproved();
         });
@@ -192,7 +198,8 @@ class LecturerDashboardController extends Controller
         
         return view('lecturer.tournaments', compact(
             'draftTournaments', 
-            'pendingTournaments', 
+            'pendingTournaments',
+            'approvedUnpublishedTournaments',
             'approvedTournaments', 
             'rejectedTournaments'
         ));

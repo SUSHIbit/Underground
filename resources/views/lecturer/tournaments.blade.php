@@ -63,6 +63,58 @@
                 </div>
             </div>
 
+            <!-- Ready to Publish -->
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
+                <div class="p-6 text-gray-900">
+                    <h3 class="text-lg font-medium mb-4">Ready to Publish</h3>
+                    
+                    @if(isset($approvedUnpublishedTournaments) && $approvedUnpublishedTournaments->count() > 0)
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-white">
+                                <thead>
+                                    <tr>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Title</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Date & Time</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Approved</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Reviewer</th>
+                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($approvedUnpublishedTournaments as $tournament)
+                                        <tr>
+                                            <td class="py-2 px-4 border-b border-gray-200">{{ $tournament->title }}</td>
+                                            <td class="py-2 px-4 border-b border-gray-200">
+                                                {{ \Carbon\Carbon::parse($tournament->date_time)->format('M d, Y g:i a') }}
+                                            </td>
+                                            <td class="py-2 px-4 border-b border-gray-200">
+                                                {{ $tournament->reviewed_at ? $tournament->reviewed_at->format('M d, Y') : 'Not reviewed' }}
+                                            </td>
+                                            <td class="py-2 px-4 border-b border-gray-200">
+                                                {{ $tournament->reviewer ? $tournament->reviewer->name : 'Not reviewed' }}
+                                            </td>
+                                            <td class="py-2 px-4 border-b border-gray-200">
+                                                <a href="{{ route('lecturer.tournaments.edit', $tournament) }}" class="text-blue-500 hover:text-blue-700 mr-2">
+                                                    View
+                                                </a>
+                                                <form action="{{ route('lecturer.tournaments.publish', $tournament) }}" method="POST" class="inline">
+                                                    @csrf
+                                                    <button type="submit" class="text-green-500 hover:text-green-700">
+                                                        Publish
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <p class="text-gray-500">No tournaments ready to publish.</p>
+                    @endif
+                </div>
+            </div>
+
             <!-- Pending Approval -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
                 <div class="p-6 text-gray-900">
@@ -207,63 +259,6 @@
                         </div>
                     @else
                         <p class="text-gray-500">No approved tournaments.</p>
-                    @endif
-                </div>
-            </div>
-
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
-                <div class="p-6 text-gray-900">
-                    <h3 class="text-lg font-medium mb-4">Ready to Publish</h3>
-                    
-                    @php
-                        $readyToPublishTournaments = $approvedTournaments->filter(function ($tournament) {
-                            return $tournament->isApprovedUnpublished();
-                        });
-                    @endphp
-                    
-                    @if($readyToPublishTournaments->count() > 0)
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full bg-white">
-                                <thead>
-                                    <tr>
-                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Title</th>
-                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Date & Time</th>
-                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Approved</th>
-                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Reviewer</th>
-                                        <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($readyToPublishTournaments as $tournament)
-                                        <tr>
-                                            <td class="py-2 px-4 border-b border-gray-200">{{ $tournament->title }}</td>
-                                            <td class="py-2 px-4 border-b border-gray-200">
-                                                {{ \Carbon\Carbon::parse($tournament->date_time)->format('M d, Y g:i a') }}
-                                            </td>
-                                            <td class="py-2 px-4 border-b border-gray-200">
-                                                {{ $tournament->reviewed_at ? $tournament->reviewed_at->format('M d, Y') : 'Not reviewed' }}
-                                            </td>
-                                            <td class="py-2 px-4 border-b border-gray-200">
-                                                {{ $tournament->reviewer ? $tournament->reviewer->name : 'Not reviewed' }}
-                                            </td>
-                                            <td class="py-2 px-4 border-b border-gray-200">
-                                                <a href="{{ route('lecturer.tournaments.edit', $tournament) }}" class="text-blue-500 hover:text-blue-700 mr-2">
-                                                    View
-                                                </a>
-                                                <form action="{{ route('lecturer.tournaments.publish', $tournament) }}" method="POST" class="inline">
-                                                    @csrf
-                                                    <button type="submit" class="text-green-500 hover:text-green-700">
-                                                        Publish
-                                                    </button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    @else
-                        <p class="text-gray-500">No tournaments ready to publish.</p>
                     @endif
                 </div>
             </div>

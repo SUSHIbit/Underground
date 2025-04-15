@@ -105,7 +105,7 @@ class Tournament extends Model
 
     public function approve(User $accessor, $notes = null)
     {
-        // Changed to approved_unpublished instead of approved
+        // Set status to approved_unpublished instead of approved
         $this->status = 'approved_unpublished';
         $this->reviewed_at = now();
         $this->reviewed_by = $accessor->id;

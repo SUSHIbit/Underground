@@ -23,7 +23,7 @@ class TournamentController extends Controller
             'mobile' => 'Mobile Development'
         ];
         
-        // Get all approved tournaments - changed to only show status='approved' (published)
+        // Get all approved tournaments - FIXED to only show status='approved' (published)
         // not 'approved_unpublished' which are still waiting for lecturer to publish
         $allTournaments = Tournament::where('status', 'approved')
                           ->with(['judges'])
