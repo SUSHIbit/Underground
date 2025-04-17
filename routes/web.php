@@ -125,35 +125,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/skills', [SkillsController::class, 'index'])->name('skills.index');
 });
 
-// Legion Routes
-Route::middleware(['auth'])->group(function () {
-    // Basic Legion CRUD routes
-    Route::get('/legions', [LegionController::class, 'index'])->name('legions.index');
-    Route::get('/legions/create', [LegionController::class, 'create'])->name('legions.create');
-    Route::post('/legions', [LegionController::class, 'store'])->name('legions.store');
-    Route::get('/legions/{legion}', [LegionController::class, 'show'])->name('legions.show');
-    Route::get('/legions/{legion}/edit', [LegionController::class, 'edit'])->name('legions.edit');
-    Route::put('/legions/{legion}', [LegionController::class, 'update'])->name('legions.update');
-    
-    // Legion membership actions
-    Route::post('/legions/{legion}/apply', [LegionController::class, 'apply'])->name('legions.apply');
-    Route::post('/legions/{legion}/invite', [LegionController::class, 'invite'])->name('legions.invite');
-    Route::post('/legions/{legion}/accept-application/{user}', [LegionController::class, 'acceptApplication'])->name('legions.accept-application');
-    Route::post('/legions/{legion}/reject-application/{user}', [LegionController::class, 'rejectApplication'])->name('legions.reject-application');
-    Route::post('/legions/{legion}/accept-invitation', [LegionController::class, 'acceptInvitation'])->name('legions.accept-invitation');
-    Route::post('/legions/{legion}/reject-invitation', [LegionController::class, 'rejectInvitation'])->name('legions.reject-invitation');
-    Route::post('/legions/{legion}/leave', [LegionController::class, 'leave'])->name('legions.leave');
-    
-    // Legion management routes
-    Route::post('/legions/{legion}/promote/{user}', [LegionController::class, 'promote'])->name('legions.promote');
-    Route::post('/legions/{legion}/demote/{user}', [LegionController::class, 'demote'])->name('legions.demote');
-    Route::post('/legions/{legion}/transfer-leadership/{user}', [LegionController::class, 'transferLeadership'])->name('legions.transfer-leadership');
-    Route::post('/legions/{legion}/remove-member/{user}', [LegionController::class, 'removeMember'])->name('legions.remove-member');
-    
-    // Legion leaderboard
-    Route::get('/legion-leaderboard', [LegionController::class, 'leaderboard'])->name('legions.leaderboard');
-});
-
 Route::middleware(['auth'])->group(function () {
     // Quiz retake routes
     Route::post('/quizzes/{set}/retake', [QuizController::class, 'retake'])->name('quizzes.retake');

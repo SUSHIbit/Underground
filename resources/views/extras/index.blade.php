@@ -116,19 +116,6 @@
                         </div>
                     </div>
                     
-                    <!-- Legions Card -->
-                    <div class="bg-gray-900 overflow-hidden shadow-sm sm:rounded-lg border border-amber-800/20 hover:shadow-md transition-shadow duration-300">
-                        <div class="p-5">
-                            <h3 class="font-semibold text-lg text-amber-400 mb-2">Legions</h3>
-                            <p class="text-gray-400 text-sm mb-4">Manage your legion membership and view leaderboards</p>
-                            <a href="{{ route('legions.index') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition ease-in-out duration-150">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                                </svg>
-                                Manage Legions
-                            </a>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
