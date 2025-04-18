@@ -71,7 +71,8 @@
                                 <h4 class="font-medium mb-2">Quiz Timer Settings</h4>
                                 
                                 <div class="flex items-center mb-2">
-                                    <input type="checkbox" id="enable_timer" name="enable_timer" class="h-4 w-4 text-blue-600" 
+                                    <input type="hidden" name="enable_timer" value="0">
+                                    <input type="checkbox" id="enable_timer" name="enable_timer" value="1" class="h-4 w-4 text-blue-600" 
                                         {{ isset($set->quizDetail->timer_minutes) && $set->quizDetail->timer_minutes > 0 ? 'checked' : '' }}>
                                     <label for="enable_timer" class="ml-2 text-gray-700">Enable Timer</label>
                                 </div>

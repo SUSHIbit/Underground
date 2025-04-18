@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Set;
 use App\Models\SetComment;
+use App\Models\Question;
 use App\Models\Tournament; 
 use App\Models\TournamentJudge; 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class LecturerDashboardController extends Controller
 {
@@ -85,64 +88,89 @@ class LecturerDashboardController extends Controller
             abort(403);
         }
         
-        $validated = $request->validate([
-            'questions' => 'required|array',
-            'questions.*.id' => 'required|exists:questions,id',
-            'questions.*.question_text' => 'required|string',
-            'questions.*.options' => 'required|array',
-            'questions.*.correct_answer' => 'required|string|size:1',
-            'questions.*.reason' => 'required|string',
-            'enable_timer' => 'sometimes|boolean',
-            'timer_minutes' => 'nullable|integer|min:1|max:180',
-        ]);
-        
-        \Log::info('Updating questions with data: ', $validated);
-        
-        // Update each question
-        foreach ($validated['questions'] as $questionId => $questionData) {
-            $question = $set->questions->firstWhere('id', $questionData['id']);
+        try {
+            // Enable query logging
+            DB::enableQueryLog();
             
-            if ($question) {
-                \Log::info('Updating question ID: ' . $question->id);
+            $validated = $request->validate([
+                'questions' => 'required|array',
+                'questions.*.id' => 'required|exists:questions,id',
+                'questions.*.question_text' => 'required|string',
+                'questions.*.options' => 'required|array',
+                'questions.*.correct_answer' => 'required|string|size:1',
+                'questions.*.reason' => 'required|string',
+                'enable_timer' => 'sometimes|nullable|boolean',
+                'timer_minutes' => 'nullable|integer|min:1|max:180',
+            ]);
+            
+            Log::info('Starting question updates with data', ['count' => count($validated['questions'])]);
+            
+            DB::beginTransaction();
+            
+            // Update each question
+            foreach ($validated['questions'] as $questionData) {
+                $questionId = $questionData['id'];
                 
-                $question->update([
-                    'question_text' => $questionData['question_text'],
-                    'options' => $questionData['options'],
-                    'correct_answer' => $questionData['correct_answer'],
-                    'reason' => $questionData['reason'],
+                // Find question directly using query builder for more reliable results
+                $question = Question::where('id', $questionId)
+                                   ->where('set_id', $set->id)
+                                   ->first();
+                
+                if ($question) {
+                    Log::info('Found question to update', [
+                        'id' => $question->id,
+                        'old_text' => $question->question_text,
+                        'new_text' => $questionData['question_text']
+                    ]);
+                    
+                    $result = $question->update([
+                        'question_text' => $questionData['question_text'],
+                        'options' => $questionData['options'],
+                        'correct_answer' => $questionData['correct_answer'],
+                        'reason' => $questionData['reason'],
+                    ]);
+                    
+                    Log::info('Question update result', ['success' => $result]);
+                    
+                    // Mark any comments on this question as resolved
+                    SetComment::where('question_id', $question->id)
+                              ->update(['is_resolved' => true]);
+                } else {
+                    Log::warning('Question not found', ['id' => $questionId, 'set_id' => $set->id]);
+                }
+            }
+            
+            // Update timer settings
+            if ($set->type === 'quiz' && $set->quizDetail) {
+                $timerMinutes = null;
+                if ($request->has('enable_timer')) {
+                    $timerMinutes = $request->input('timer_minutes');
+                }
+                
+                $set->quizDetail->update([
+                    'timer_minutes' => $timerMinutes,
                 ]);
-                
-                // Mark any comments on this question as resolved
-                SetComment::where('question_id', $question->id)
-                          ->update(['is_resolved' => true]);
-            } else {
-                \Log::warning('Question not found with ID: ' . $questionData['id']);
-            }
-        }
-        
-        // Update timer settings
-        if ($set->type === 'quiz' && $set->quizDetail) {
-            $timerMinutes = null;
-            if ($request->has('enable_timer') && $request->input('enable_timer')) {
-                $timerMinutes = $request->input('timer_minutes');
             }
             
-            $set->quizDetail->update([
-                'timer_minutes' => $timerMinutes,
-            ]);
-        } elseif ($set->type === 'challenge' && $set->challengeDetail) {
-            $timerMinutes = null;
-            if ($request->has('enable_timer') && $request->input('enable_timer')) {
-                $timerMinutes = $request->input('timer_minutes');
-            }
+            DB::commit();
             
-            $set->challengeDetail->update([
-                'timer_minutes' => $timerMinutes,
+            // Log the executed queries for debugging
+            Log::info('Executed queries:', ['queries' => DB::getQueryLog()]);
+            
+            return redirect()->route('lecturer.dashboard')
+                            ->with('success', 'Set updated successfully.');
+                            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to update questions', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
+            
+            return redirect()->back()
+                           ->with('error', 'Failed to update questions: ' . $e->getMessage())
+                           ->withInput();
         }
-        
-        return redirect()->route('lecturer.dashboard')
-                        ->with('success', 'Set updated successfully.');
     }
 
     /**
