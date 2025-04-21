@@ -217,4 +217,14 @@ class User extends Authenticatable
     {
         return $this->ue_points >= $points;
     }
+
+    /**
+     * Get all tournaments where user is assigned as a judge.
+     */
+    public function judgedTournaments()
+    {
+        return $this->belongsToMany(Tournament::class, 'tournament_judge_users')
+                ->withPivot('role')
+                ->withTimestamps();
+    }
 }

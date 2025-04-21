@@ -16,7 +16,8 @@ class TournamentParticipant extends Model
         'team_members', 
         'submission_url', 
         'score', 
-        'feedback'
+        'feedback',
+        'points_awarded'
     ];
     
     protected $casts = [

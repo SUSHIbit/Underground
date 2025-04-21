@@ -1,0 +1,137 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Tournament;
+use App\Models\TournamentParticipant;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class JudgeDashboardController extends Controller
+{
+    /**
+     * Display the judge's dashboard with tournaments they are judging.
+     */
+    public function index()
+    {
+        $user = Auth::user();
+        
+        // Get tournaments where the user is assigned as a judge
+        $tournaments = $user->judgedTournaments()
+                          ->orderBy('date_time', 'desc')
+                          ->get();
+        
+        // Separate upcoming and past tournaments
+        $upcomingTournaments = $tournaments->filter(function($tournament) {
+            return now()->lessThan($tournament->date_time);
+        });
+        
+        $pastTournaments = $tournaments->filter(function($tournament) {
+            return now()->greaterThan($tournament->date_time);
+        });
+        
+        return view('judge.dashboard', compact('upcomingTournaments', 'pastTournaments'));
+    }
+    
+    /**
+     * Display the tournament's details and submissions.
+     */
+    public function tournament(Tournament $tournament)
+    {
+        // Make sure the authenticated user is a judge for this tournament
+        if (!$this->isJudgeForTournament($tournament)) {
+            return redirect()->route('judge.dashboard')->with('error', 'You are not assigned as a judge for this tournament.');
+        }
+        
+        // Get all participants with their submissions
+        $participants = $tournament->participants()
+                                 ->with('user')
+                                 ->orderBy('created_at')
+                                 ->get();
+        
+        // Get counts for different submission statuses
+        $totalParticipants = $participants->count();
+        $submittedCount = $participants->where('submission_url', '!=', null)->count();
+        $gradedCount = $participants->where('score', '!=', null)->count();
+        
+        return view('judge.tournament', compact('tournament', 'participants', 'totalParticipants', 'submittedCount', 'gradedCount'));
+    }
+    
+    /**
+     * Display submission details for grading.
+     */
+    public function submission(Tournament $tournament, TournamentParticipant $participant)
+    {
+        // Make sure the authenticated user is a judge for this tournament
+        if (!$this->isJudgeForTournament($tournament)) {
+            return redirect()->route('judge.dashboard')->with('error', 'You are not assigned as a judge for this tournament.');
+        }
+        
+        // Make sure the participant belongs to this tournament
+        if ($participant->tournament_id !== $tournament->id) {
+            return redirect()->route('judge.tournament', $tournament)->with('error', 'Invalid participant for this tournament.');
+        }
+        
+        // Load related user data
+        $participant->load('user');
+        
+        return view('judge.submission', compact('tournament', 'participant'));
+    }
+    
+    /**
+     * Submit score for a tournament participant.
+     */
+    public function submitScore(Request $request, Tournament $tournament, TournamentParticipant $participant)
+    {
+        // Make sure the authenticated user is a judge for this tournament
+        if (!$this->isJudgeForTournament($tournament)) {
+            return redirect()->route('judge.dashboard')->with('error', 'You are not assigned as a judge for this tournament.');
+        }
+        
+        // Validate the request
+        $validated = $request->validate([
+            'score' => 'required|integer|min:0|max:10',
+            'feedback' => 'required|string|max:1000',
+        ]);
+        
+        // Update the participant's score and feedback
+        $participant->update([
+            'score' => $validated['score'],
+            'feedback' => $validated['feedback'],
+        ]);
+        
+        // Add points to the user based on their score
+        // This awards points based on score out of 10
+        $pointsToAward = 0;
+        if ($validated['score'] >= 9) {
+            $pointsToAward = 20; // Excellent submission
+        } elseif ($validated['score'] >= 7) {
+            $pointsToAward = 15; // Great submission
+        } elseif ($validated['score'] >= 5) {
+            $pointsToAward = 10; // Good submission
+        } elseif ($validated['score'] >= 3) {
+            $pointsToAward = 5;  // Average submission
+        } else {
+            $pointsToAward = 2;  // Participation points
+        }
+        
+        // Only award points if they haven't already been awarded
+        if ($participant->points_awarded === null || $participant->points_awarded === 0) {
+            $participant->user->addPoints($pointsToAward);
+            $participant->update(['points_awarded' => $pointsToAward]);
+        }
+        
+        return redirect()->route('judge.tournament', $tournament)
+                       ->with('success', 'Score and feedback submitted successfully.');
+    }
+    
+    /**
+     * Check if the authenticated user is a judge for the given tournament.
+     */
+    private function isJudgeForTournament(Tournament $tournament)
+    {
+        $user = Auth::user();
+        
+        return $tournament->judges()->where('user_id', $user->id)->exists();
+    }
+}

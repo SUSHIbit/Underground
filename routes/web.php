@@ -13,13 +13,13 @@ use App\Http\Controllers\ResultController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\UEPointsController;
 use App\Http\Controllers\ChallengeController; 
-
 use App\Http\Controllers\TournamentController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\SetApprovalController; 
 use App\Http\Controllers\AccessorDashboardController; 
 use App\Http\Controllers\LecturerDashboardController; 
 use App\Http\Controllers\TournamentApprovalController;
+use App\Http\Controllers\JudgeDashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -136,6 +136,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/uepoints', [UEPointsController::class, 'index'])->name('uepoints.index');
 
     Route::put('/tournaments/{tournament}/update-team', [TournamentController::class, 'updateTeam'])->name('tournaments.update-team');
+});
+
+Route::middleware(['auth', 'judge'])->prefix('judge')->name('judge.')->group(function () {
+    Route::get('/dashboard', [JudgeDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/tournaments/{tournament}', [JudgeDashboardController::class, 'tournament'])->name('tournament');
+    Route::get('/tournaments/{tournament}/submissions/{participant}', [JudgeDashboardController::class, 'submission'])->name('submission');
+    Route::post('/tournaments/{tournament}/submissions/{participant}/grade', [JudgeDashboardController::class, 'submitScore'])->name('submit-score');
 });
 
 require __DIR__.'/auth.php';
