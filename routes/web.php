@@ -60,6 +60,7 @@ Route::middleware(['auth'])->group(function () {
     // Settings and Extras Routes
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
     Route::get('/extras', [ExtrasController::class, 'index'])->name('extras'); // Add this line
+    Route::post('/settings/update-theme', [SettingsController::class, 'updateTheme'])->name('settings.update-theme');
 });
 
 Route::middleware('auth')->group(function () {

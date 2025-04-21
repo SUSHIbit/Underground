@@ -28,7 +28,8 @@ class User extends Authenticatable
         'role',
         'profile_picture',
         'points',
-        'ue_points', // Add UEPoints to fillable
+        'ue_points',
+        'theme_preference', // Add this line
     ];
 
     /**

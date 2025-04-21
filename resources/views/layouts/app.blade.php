@@ -1,6 +1,5 @@
-<!-- resources/views/layouts/app.blade.php -->
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="theme-{{ auth()->check() ? auth()->user()->theme_preference : 'dark' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,7 +14,7 @@
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="antialiased font-sans bg-gray-900 text-white">
+<body class="antialiased font-sans bg-background text-foreground">
     <div class="flex min-h-screen" x-data="{ sidebarOpen: true }">
         <!-- Sidebar -->
         <div class="relative flex-shrink-0" :class="sidebarOpen ? 'w-64' : 'w-20'" 

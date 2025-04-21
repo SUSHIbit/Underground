@@ -18,4 +18,20 @@ class SettingsController extends Controller
         
         return view('settings.index', compact('user'));
     }
+
+    /**
+     * Update the user's theme preference.
+     */
+    public function updateTheme(Request $request)
+    {
+        $validated = $request->validate([
+            'theme' => 'required|in:dark,rose,darker,custom',
+        ]);
+        
+        $user = auth()->user();
+        $user->theme_preference = $validated['theme'];
+        $user->save();
+        
+        return back()->with('success', 'Theme updated successfully.');
+    }
 }

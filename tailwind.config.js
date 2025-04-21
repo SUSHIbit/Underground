@@ -57,6 +57,7 @@ export default {
                     foreground: "hsl(var(--card-foreground))",
                 },
                 amber: colors.amber,
+                rose: colors.rose,
             },
             borderRadius: {
                 lg: "var(--radius)",

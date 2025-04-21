@@ -40,12 +40,17 @@
                     <div class="mt-6">
                         <!-- Theme Settings -->
                         <div class="mb-4">
-                            <label for="theme" class="block text-sm font-medium text-gray-300">Theme</label>
-                            <select id="theme" name="theme" class="mt-1 block w-full bg-gray-700 border-amber-800/20 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm text-white">
-                                <option value="dark" selected>Dark (Default)</option>
-                                <option value="darker" disabled>Darker (Coming Soon)</option>
-                                <option value="custom" disabled>Custom (Coming Soon)</option>
-                            </select>
+                            <label for="theme" class="block text-sm font-medium text-foreground">Theme</label>
+                            <form action="{{ route('settings.update-theme') }}" method="POST">
+                                @csrf
+                                <select id="theme" name="theme" class="mt-1 block w-full bg-card border-input rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-foreground"
+                                        onchange="this.form.submit()">
+                                    <option value="dark" {{ auth()->user()->theme_preference === 'dark' ? 'selected' : '' }}>Dark (Default)</option>
+                                    <option value="rose" {{ auth()->user()->theme_preference === 'rose' ? 'selected' : '' }}>Rose</option>
+                                    <option value="darker" disabled>Darker (Coming Soon)</option>
+                                    <option value="custom" disabled>Custom (Coming Soon)</option>
+                                </select>
+                            </form>
                         </div>
                         
                         <!-- Accent Color -->
