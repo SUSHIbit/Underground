@@ -26,6 +26,8 @@ class RouteServiceProvider extends ServiceProvider
                 return '/accessor/dashboard';
             } elseif (auth()->user()->role === 'admin') {
                 return '/admin/dashboard';
+            } elseif (auth()->user()->role === 'judge') {
+                return '/judge/dashboard';  // Added judge redirect
             }
         }
         

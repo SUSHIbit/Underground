@@ -21,8 +21,99 @@
                         </div>
                     @endif
 
+                    <!-- Ready to Judge Tournaments Section -->
                     <div class="mb-8">
-                        <h3 class="text-lg font-medium mb-4 text-amber-400">Upcoming Tournaments to Judge</h3>
+                        <h3 class="text-lg font-medium mb-4 text-amber-400">Ready to Judge</h3>
+                        
+                        @if($readyToJudgeTournaments->count() > 0)
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-amber-800/20">
+                                    <thead class="bg-gray-900">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Title</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date & Time</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Location</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Your Role</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-gray-800 divide-y divide-amber-800/20">
+                                        @foreach($readyToJudgeTournaments as $tournament)
+                                            <tr>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-300">{{ $tournament->title }}</td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                                                    {{ \Carbon\Carbon::parse($tournament->date_time)->format('M d, Y g:i a') }}
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{{ $tournament->location }}</td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                                                    {{ $tournament->pivot->role ?? 'Judge' }}
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                    <a href="{{ route('judge.tournament', $tournament) }}" class="text-amber-400 hover:text-amber-300">
+                                                        Start Judging
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <div class="bg-gray-900/50 rounded-lg border border-amber-800/20 p-6 text-center">
+                                <p class="text-gray-400">You have no tournaments that are ready for judging.</p>
+                            </div>
+                        @endif
+                    </div>
+
+                    <!-- Waiting Period Tournaments Section -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-medium mb-4 text-amber-400">In Waiting Period</h3>
+                        
+                        @if($waitingPeriodTournaments->count() > 0)
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-amber-800/20">
+                                    <thead class="bg-gray-900">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Title</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date & Time</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Location</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Your Role</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Judging Available</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-gray-800 divide-y divide-amber-800/20">
+                                        @foreach($waitingPeriodTournaments as $tournament)
+                                            <tr>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-300">{{ $tournament->title }}</td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                                                    {{ \Carbon\Carbon::parse($tournament->date_time)->format('M d, Y g:i a') }}
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{{ $tournament->location }}</td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                                                    {{ $tournament->pivot->role ?? 'Judge' }}
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-yellow-400">
+                                                    @php
+                                                        $waitingPeriodDays = 2;
+                                                        $waitingPeriodEnd = \Carbon\Carbon::parse($tournament->date_time)->addDays($waitingPeriodDays);
+                                                    @endphp
+                                                    Available {{ $waitingPeriodEnd->diffForHumans() }}
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <div class="bg-gray-900/50 rounded-lg border border-amber-800/20 p-6 text-center">
+                                <p class="text-gray-400">You have no tournaments in waiting period.</p>
+                            </div>
+                        @endif
+                    </div>
+
+                    <!-- Upcoming Tournaments Section -->
+                    <div>
+                        <h3 class="text-lg font-medium mb-4 text-amber-400">Upcoming Tournaments</h3>
                         
                         @if($upcomingTournaments->count() > 0)
                             <div class="overflow-x-auto">
@@ -33,7 +124,7 @@
                                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date & Time</th>
                                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Location</th>
                                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Your Role</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Action</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
                                         </tr>
                                     </thead>
                                     <tbody class="bg-gray-800 divide-y divide-amber-800/20">
@@ -47,10 +138,8 @@
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                                                     {{ $tournament->pivot->role ?? 'Judge' }}
                                                 </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                    <a href="{{ route('judge.tournament', $tournament) }}" class="text-amber-400 hover:text-amber-300">
-                                                        View Details
-                                                    </a>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                                                    Starts {{ \Carbon\Carbon::parse($tournament->date_time)->diffForHumans() }}
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -60,49 +149,6 @@
                         @else
                             <div class="bg-gray-900/50 rounded-lg border border-amber-800/20 p-6 text-center">
                                 <p class="text-gray-400">You have no upcoming tournaments to judge.</p>
-                            </div>
-                        @endif
-                    </div>
-
-                    <div>
-                        <h3 class="text-lg font-medium mb-4 text-amber-400">Past Tournaments</h3>
-                        
-                        @if($pastTournaments->count() > 0)
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-amber-800/20">
-                                    <thead class="bg-gray-900">
-                                        <tr>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Title</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date & Time</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Location</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Your Role</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="bg-gray-800 divide-y divide-amber-800/20">
-                                        @foreach($pastTournaments as $tournament)
-                                            <tr>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-300">{{ $tournament->title }}</td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                                                    {{ \Carbon\Carbon::parse($tournament->date_time)->format('M d, Y g:i a') }}
-                                                </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{{ $tournament->location }}</td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                                                    {{ $tournament->pivot->role ?? 'Judge' }}
-                                                </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                    <a href="{{ route('judge.tournament', $tournament) }}" class="text-amber-400 hover:text-amber-300">
-                                                        View Results
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        @else
-                            <div class="bg-gray-900/50 rounded-lg border border-amber-800/20 p-6 text-center">
-                                <p class="text-gray-400">You have no past tournaments.</p>
                             </div>
                         @endif
                     </div>

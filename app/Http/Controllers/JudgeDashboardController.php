@@ -6,6 +6,7 @@ use App\Models\Tournament;
 use App\Models\TournamentParticipant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class JudgeDashboardController extends Controller
 {
@@ -30,7 +31,20 @@ class JudgeDashboardController extends Controller
             return now()->greaterThan($tournament->date_time);
         });
         
-        return view('judge.dashboard', compact('upcomingTournaments', 'pastTournaments'));
+        // Separate past tournaments further into "waiting period" and "ready to judge"
+        $waitingPeriodDays = 2; // Define a 2-day waiting period
+        
+        $waitingPeriodTournaments = $pastTournaments->filter(function($tournament) use ($waitingPeriodDays) {
+            // Tournament has ended but is still in waiting period
+            return now()->lessThan(Carbon::parse($tournament->date_time)->addDays($waitingPeriodDays));
+        });
+        
+        $readyToJudgeTournaments = $pastTournaments->filter(function($tournament) use ($waitingPeriodDays) {
+            // Tournament has ended and waiting period has passed
+            return now()->greaterThanOrEqualTo(Carbon::parse($tournament->date_time)->addDays($waitingPeriodDays));
+        });
+        
+        return view('judge.dashboard', compact('upcomingTournaments', 'waitingPeriodTournaments', 'readyToJudgeTournaments'));
     }
     
     /**
@@ -43,6 +57,12 @@ class JudgeDashboardController extends Controller
             return redirect()->route('judge.dashboard')->with('error', 'You are not assigned as a judge for this tournament.');
         }
         
+        // Check if tournament has ended and waiting period has passed
+        $waitingPeriodDays = 2; // Define a 2-day waiting period
+        $tournamentDate = Carbon::parse($tournament->date_time);
+        $waitingPeriodEnd = $tournamentDate->copy()->addDays($waitingPeriodDays);
+        $canJudge = now()->greaterThanOrEqualTo($waitingPeriodEnd);
+        
         // Get all participants with their submissions
         $participants = $tournament->participants()
                                  ->with('user')
@@ -54,7 +74,15 @@ class JudgeDashboardController extends Controller
         $submittedCount = $participants->where('submission_url', '!=', null)->count();
         $gradedCount = $participants->where('score', '!=', null)->count();
         
-        return view('judge.tournament', compact('tournament', 'participants', 'totalParticipants', 'submittedCount', 'gradedCount'));
+        return view('judge.tournament', compact(
+            'tournament', 
+            'participants', 
+            'totalParticipants', 
+            'submittedCount', 
+            'gradedCount',
+            'canJudge',
+            'waitingPeriodEnd'
+        ));
     }
     
     /**
@@ -65,6 +93,17 @@ class JudgeDashboardController extends Controller
         // Make sure the authenticated user is a judge for this tournament
         if (!$this->isJudgeForTournament($tournament)) {
             return redirect()->route('judge.dashboard')->with('error', 'You are not assigned as a judge for this tournament.');
+        }
+        
+        // Check if tournament has ended and waiting period has passed
+        $waitingPeriodDays = 2; // Define a 2-day waiting period
+        $tournamentDate = Carbon::parse($tournament->date_time);
+        $waitingPeriodEnd = $tournamentDate->copy()->addDays($waitingPeriodDays);
+        $canJudge = now()->greaterThanOrEqualTo($waitingPeriodEnd);
+        
+        if (!$canJudge) {
+            return redirect()->route('judge.tournament', $tournament)
+                           ->with('error', 'Judging is not yet available for this tournament. The waiting period has not ended.');
         }
         
         // Make sure the participant belongs to this tournament
@@ -86,6 +125,17 @@ class JudgeDashboardController extends Controller
         // Make sure the authenticated user is a judge for this tournament
         if (!$this->isJudgeForTournament($tournament)) {
             return redirect()->route('judge.dashboard')->with('error', 'You are not assigned as a judge for this tournament.');
+        }
+        
+        // Check if tournament has ended and waiting period has passed
+        $waitingPeriodDays = 2; // Define a 2-day waiting period
+        $tournamentDate = Carbon::parse($tournament->date_time);
+        $waitingPeriodEnd = $tournamentDate->copy()->addDays($waitingPeriodDays);
+        $canJudge = now()->greaterThanOrEqualTo($waitingPeriodEnd);
+        
+        if (!$canJudge) {
+            return redirect()->route('judge.tournament', $tournament)
+                           ->with('error', 'Judging is not yet available for this tournament. The waiting period has not ended.');
         }
         
         // Validate the request

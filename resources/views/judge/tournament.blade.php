@@ -50,6 +50,19 @@
                         </div>
                     </div>
 
+                    @if(!$canJudge)
+                        <div class="mb-8 bg-yellow-900/20 p-4 rounded-lg border border-yellow-800/20">
+                            <h4 class="font-medium text-lg mb-2 text-yellow-400">Judging in Waiting Period</h4>
+                            <p class="text-gray-300">
+                                To ensure fair judging, there is a waiting period after the tournament has ended before judging begins.
+                                This allows all participants to finalize their submissions.
+                            </p>
+                            <p class="mt-4 text-yellow-400 font-medium">
+                                Judging will be available on {{ $waitingPeriodEnd->format('F j, Y, g:i a') }} ({{ $waitingPeriodEnd->diffForHumans() }})
+                            </p>
+                        </div>
+                    @endif
+
                     <!-- Tournament Criteria -->
                     <div class="bg-gray-900/40 p-4 rounded-lg mb-8">
                         <h4 class="font-medium text-lg mb-2 text-amber-400">Judging Criteria</h4>
@@ -129,9 +142,13 @@
                                             
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                 @if($participant->submission_url)
-                                                    <a href="{{ route('judge.submission', ['tournament' => $tournament, 'participant' => $participant]) }}" class="text-amber-400 hover:text-amber-300">
-                                                        {{ $participant->score !== null ? 'Review' : 'Grade' }}
-                                                    </a>
+                                                    @if($canJudge)
+                                                        <a href="{{ route('judge.submission', ['tournament' => $tournament, 'participant' => $participant]) }}" class="text-amber-400 hover:text-amber-300">
+                                                            {{ $participant->score !== null ? 'Review' : 'Grade' }}
+                                                        </a>
+                                                    @else
+                                                        <span class="text-gray-500">Waiting period</span>
+                                                    @endif
                                                 @else
                                                     <span class="text-gray-500">Cannot grade</span>
                                                 @endif
