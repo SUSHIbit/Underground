@@ -270,9 +270,15 @@ class TournamentController extends Controller
     
     /**
      * Search for users by username for team invitations
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function searchUsers(Request $request)
     {
+        // Log search queries for debugging
+        \Log::info('User search request', ['query' => $request->input('query')]);
+        
         $query = $request->input('query');
         
         if (empty($query) || strlen($query) < 3) {
@@ -281,22 +287,33 @@ class TournamentController extends Controller
             ]);
         }
         
-        $users = User::where('username', 'like', "%{$query}%")
-                    ->where('id', '!=', auth()->id()) // Exclude current user
-                    ->where('role', 'student') // Only search for students
-                    ->select('id', 'username', 'name', 'profile_picture')
-                    ->limit(5)
-                    ->get();
-        
-        // Add rank to each user
-        $users->transform(function ($user) {
-            $user->rank = $user->getRank();
-            return $user;
-        });
-        
-        return response()->json([
-            'users' => $users
-        ]);
+        try {
+            $users = User::where('username', 'like', "%{$query}%")
+                        ->where('id', '!=', auth()->id()) // Exclude current user
+                        ->where('role', 'student') // Only search for students
+                        ->select('id', 'username', 'name', 'profile_picture', 'points')
+                        ->limit(5)
+                        ->get();
+            
+            // Add rank to each user
+            $users->transform(function ($user) {
+                $user->rank = $user->getRank();
+                return $user;
+            });
+            
+            \Log::info('User search results', ['count' => $users->count()]);
+            
+            return response()->json([
+                'users' => $users
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in searchUsers', ['error' => $e->getMessage()]);
+            
+            return response()->json([
+                'error' => 'Failed to search users',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
     
     /**
@@ -470,4 +487,37 @@ class TournamentController extends Controller
         
         return view('tournaments.team', compact('tournament', 'team', 'isLeader', 'pendingInvitations'));
     }
+
+    /**
+     * Show the form for creating a new team.
+     * 
+     * @param Tournament $tournament
+     * @return \Illuminate\View\View
+     */
+    public function createTeamForm(Tournament $tournament)
+    {
+        $user = auth()->user();
+        
+        // Check if tournament has already ended
+        if (Carbon::parse($tournament->date_time)->isPast()) {
+            return redirect()->route('tournaments.show', $tournament)
+                        ->with('error', 'This tournament has already ended.');
+        }
+        
+        // Check eligibility
+        if (!$tournament->isEligible($user)) {
+            return redirect()->route('tournaments.show', $tournament)
+                        ->with('error', 'You do not meet the eligibility criteria for this tournament.');
+        }
+        
+        // Check if already participating
+        if ($user->isInTournamentTeam($tournament->id)) {
+            return redirect()->route('tournaments.show', $tournament)
+                        ->with('error', 'You are already part of a team in this tournament.');
+        }
+        
+        return view('tournaments.create-team', compact('tournament'));
+    }
+
+    
 }

@@ -177,6 +177,10 @@ Route::middleware(['auth'])->group(function () {
     
     Route::post('/tournament-invitations/{invitation}/decline', [TournamentController::class, 'declineInvitation'])
         ->name('tournaments.invitations.decline');
+
+    // New dedicated team creation route
+    Route::get('/tournaments/{tournament}/create-team', [TournamentController::class, 'createTeamForm'])
+        ->name('tournaments.create-team-form');
 });
 
 require __DIR__.'/auth.php';
