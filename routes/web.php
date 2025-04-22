@@ -146,4 +146,12 @@ Route::middleware(['auth', 'judge'])->prefix('judge')->name('judge.')->group(fun
     Route::post('/tournaments/{tournament}/submissions/{participant}/grade', [JudgeDashboardController::class, 'submitScore'])->name('submit-score');
 });
 
+Route::middleware(['auth'])->group(function () {
+    Route::get('/tournaments', [TournamentController::class, 'index'])->name('tournaments.index');
+    Route::get('/tournaments/{tournament}', [TournamentController::class, 'show'])->name('tournaments.show');
+    Route::get('/tournaments/{tournament}/participants', [TournamentController::class, 'participants'])->name('tournaments.participants');  // Add this line
+    Route::post('/tournaments/{tournament}/join', [TournamentController::class, 'join'])->name('tournaments.join');
+    Route::post('/tournaments/{tournament}/submit', [TournamentController::class, 'submit'])->name('tournaments.submit');
+});
+
 require __DIR__.'/auth.php';

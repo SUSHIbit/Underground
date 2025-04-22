@@ -236,4 +236,31 @@ class TournamentController extends Controller
         return redirect()->route('tournaments.show', $tournament)
                     ->with('success', 'Team information updated successfully.');
     }
+
+    /**
+     * Display all participants for a tournament.
+     *
+     * @param  \App\Models\Tournament  $tournament
+     * @return \Illuminate\View\View
+     */
+    public function participants(Tournament $tournament)
+    {
+        // Load all participants with their users
+        $participants = $tournament->participants()
+                    ->with('user')
+                    ->get();
+        
+        // Get the current user's participant record if they're participating
+        $userParticipant = $participants->where('user_id', auth()->id())->first();
+        
+        // Determine if tournament has ended
+        $hasEnded = Carbon::parse($tournament->date_time)->isPast();
+        
+        return view('tournaments.participants', compact(
+            'tournament', 
+            'participants', 
+            'userParticipant', 
+            'hasEnded'
+        ));
+    }
 }
