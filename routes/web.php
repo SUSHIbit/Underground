@@ -154,4 +154,29 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/tournaments/{tournament}/submit', [TournamentController::class, 'submit'])->name('tournaments.submit');
 });
 
+// Tournament Team Routes
+Route::middleware(['auth'])->group(function () {
+    // Search for users by username (AJAX endpoint)
+    Route::get('/tournaments/search-users', [TournamentController::class, 'searchUsers'])
+        ->name('tournaments.search-users');
+    
+    // Team creation and invitation routes
+    Route::post('/tournaments/{tournament}/teams', [TournamentController::class, 'createTeam'])
+        ->name('tournaments.teams.create');
+    
+    // View user's team for a tournament
+    Route::get('/tournaments/{tournament}/team', [TournamentController::class, 'team'])
+        ->name('tournaments.team');
+    
+    // Invitations management
+    Route::get('/tournament-invitations', [TournamentController::class, 'invitations'])
+        ->name('tournaments.invitations');
+    
+    Route::post('/tournament-invitations/{invitation}/accept', [TournamentController::class, 'acceptInvitation'])
+        ->name('tournaments.invitations.accept');
+    
+    Route::post('/tournament-invitations/{invitation}/decline', [TournamentController::class, 'declineInvitation'])
+        ->name('tournaments.invitations.decline');
+});
+
 require __DIR__.'/auth.php';

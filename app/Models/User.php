@@ -228,4 +228,56 @@ class User extends Authenticatable
                 ->withPivot('role')
                 ->withTimestamps();
     }
+
+    /**
+     * Get all team invitations for this user
+     */
+    public function teamInvitations()
+    {
+        return $this->hasMany(TeamInvitation::class);
+    }
+
+    /**
+     * Get pending team invitations for this user
+     */
+    public function pendingTeamInvitations()
+    {
+        return $this->teamInvitations()
+                    ->where('status', 'pending')
+                    ->where(function ($query) {
+                        $query->whereNull('expires_at')
+                            ->orWhere('expires_at', '>', now());
+                    });
+    }
+
+    /**
+     * Get tournament teams led by this user
+     */
+    public function ledTeams()
+    {
+        return $this->hasMany(TournamentTeam::class, 'leader_id');
+    }
+
+    /**
+     * Check if user has any pending invitations for a specific tournament
+     */
+    public function hasPendingInvitationForTournament($tournamentId)
+    {
+        return $this->pendingTeamInvitations()
+                    ->whereHas('team', function ($query) use ($tournamentId) {
+                        $query->where('tournament_id', $tournamentId);
+                    })
+                    ->exists();
+    }
+
+    /**
+     * Check if user is already part of a team for a specific tournament
+     */
+    public function isInTournamentTeam($tournamentId)
+    {
+        return $this->tournamentParticipants()
+                    ->where('tournament_id', $tournamentId)
+                    ->whereNotNull('team_id')
+                    ->exists();
+    }
 }

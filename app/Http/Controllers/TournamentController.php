@@ -4,11 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\Tournament;
 use App\Models\TournamentParticipant;
+use App\Models\TournamentTeam;
+use App\Models\TeamInvitation;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class TournamentController extends Controller
 {
+    /**
+     * Display a listing of the tournaments.
+     */
     public function index()
     {
         $user = auth()->user();
@@ -23,8 +32,7 @@ class TournamentController extends Controller
             'mobile' => 'Mobile Development'
         ];
         
-        // Get all approved tournaments - FIXED to only show status='approved' (published)
-        // not 'approved_unpublished' which are still waiting for lecturer to publish
+        // Get all approved tournaments (published only)
         $allTournaments = Tournament::where('status', 'approved')
                           ->with(['judges'])
                           ->latest('date_time')
@@ -99,9 +107,12 @@ class TournamentController extends Controller
         return view('tournaments.index', compact('upcomingGrouped', 'completedGrouped'));
     }
     
+    /**
+     * Display the specified tournament.
+     */
     public function show(Tournament $tournament)
     {
-        // Update this to use tournament_judge_users instead of tournament_judges
+        // Load relationships
         $tournament->load(['judges', 'creator']);
         $user = auth()->user();
         
@@ -131,6 +142,9 @@ class TournamentController extends Controller
         ));
     }
     
+    /**
+     * Register for a tournament (solo tournaments only).
+     */
     public function join(Request $request, Tournament $tournament)
     {
         $user = auth()->user();
@@ -140,13 +154,6 @@ class TournamentController extends Controller
             return redirect()->route('tournaments.show', $tournament)
                            ->with('error', 'This tournament has already ended.');
         }
-        
-        // Validate request
-        $validated = $request->validate([
-            'team_name' => 'required_if:team_size,>,1|nullable|string|max:255',
-            'team_members' => 'required_if:team_size,>,1|nullable|array',
-            'team_members.*' => 'nullable|string|max:255',
-        ]);
         
         // Check eligibility
         if (!$tournament->isEligible($user)) {
@@ -164,18 +171,39 @@ class TournamentController extends Controller
                            ->with('error', 'You are already participating in this tournament.');
         }
         
-        // Create participation record
-        TournamentParticipant::create([
-            'tournament_id' => $tournament->id,
-            'user_id' => $user->id,
-            'team_name' => $validated['team_name'] ?? null,
-            'team_members' => $validated['team_members'] ?? null,
-        ]);
-        
-        return redirect()->route('tournaments.show', $tournament)
-                       ->with('success', 'You have successfully joined the tournament.');
+        try {
+            DB::beginTransaction();
+            
+            if ($tournament->team_size == 1) {
+                // Solo tournament - just create participant record
+                TournamentParticipant::create([
+                    'tournament_id' => $tournament->id,
+                    'user_id' => $user->id,
+                    'team_id' => null,
+                    'role' => 'member'
+                ]);
+            } else {
+                // This route should not be used for team tournaments
+                return redirect()->route('tournaments.show', $tournament)
+                    ->with('error', 'This tournament requires a team. Please use the team formation form.');
+            }
+            
+            DB::commit();
+            
+            return redirect()->route('tournaments.show', $tournament)
+                ->with('success', 'You have successfully registered for the tournament.');
+                
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->route('tournaments.show', $tournament)
+                ->with('error', 'Failed to register for the tournament: ' . $e->getMessage());
+        }
     }
     
+    /**
+     * Submit a project for a tournament.
+     */
     public function submit(Request $request, Tournament $tournament)
     {
         $user = auth()->user();
@@ -189,7 +217,12 @@ class TournamentController extends Controller
         // Find participant record
         $participant = TournamentParticipant::where('tournament_id', $tournament->id)
                       ->where('user_id', $user->id)
-                      ->firstOrFail();
+                      ->first();
+                      
+        if (!$participant) {
+            return redirect()->route('tournaments.show', $tournament)
+                           ->with('error', 'You are not registered for this tournament.');
+        }
         
         // Validate request
         $validated = $request->validate([
@@ -201,47 +234,18 @@ class TournamentController extends Controller
             'submission_url' => $validated['submission_url'],
         ]);
         
-        return redirect()->route('tournaments.show', $tournament)
-                       ->with('success', 'Your project has been submitted successfully.');
-    }
-
-    public function updateTeam(Request $request, Tournament $tournament)
-    {
-        $user = auth()->user();
-        
-        // Check if tournament has already ended
-        if (Carbon::parse($tournament->date_time)->isPast()) {
+        // Redirect based on whether it's a team or solo tournament
+        if ($tournament->team_size > 1 && $participant->team_id) {
+            return redirect()->route('tournaments.team', $tournament)
+                           ->with('success', 'Your project has been submitted successfully.');
+        } else {
             return redirect()->route('tournaments.show', $tournament)
-                           ->with('error', 'This tournament has already ended. Team cannot be updated.');
+                           ->with('success', 'Your project has been submitted successfully.');
         }
-        
-        // Find participant record
-        $participant = TournamentParticipant::where('tournament_id', $tournament->id)
-                    ->where('user_id', $user->id)
-                    ->firstOrFail();
-        
-        // Validate request
-        $validated = $request->validate([
-            'team_name' => 'required_if:team_size,>,1|nullable|string|max:255',
-            'team_members' => 'required_if:team_size,>,1|nullable|array',
-            'team_members.*' => 'nullable|string|max:255',
-        ]);
-        
-        // Update team information
-        $participant->update([
-            'team_name' => $validated['team_name'] ?? null,
-            'team_members' => $validated['team_members'] ?? null,
-        ]);
-        
-        return redirect()->route('tournaments.show', $tournament)
-                    ->with('success', 'Team information updated successfully.');
     }
-
+    
     /**
-     * Display all participants for a tournament.
-     *
-     * @param  \App\Models\Tournament  $tournament
-     * @return \Illuminate\View\View
+     * Display participants for a tournament.
      */
     public function participants(Tournament $tournament)
     {
@@ -262,5 +266,208 @@ class TournamentController extends Controller
             'userParticipant', 
             'hasEnded'
         ));
+    }
+    
+    /**
+     * Search for users by username for team invitations
+     */
+    public function searchUsers(Request $request)
+    {
+        $query = $request->input('query');
+        
+        if (empty($query) || strlen($query) < 3) {
+            return response()->json([
+                'users' => []
+            ]);
+        }
+        
+        $users = User::where('username', 'like', "%{$query}%")
+                    ->where('id', '!=', auth()->id()) // Exclude current user
+                    ->where('role', 'student') // Only search for students
+                    ->select('id', 'username', 'name', 'profile_picture')
+                    ->limit(5)
+                    ->get();
+        
+        // Add rank to each user
+        $users->transform(function ($user) {
+            $user->rank = $user->getRank();
+            return $user;
+        });
+        
+        return response()->json([
+            'users' => $users
+        ]);
+    }
+    
+    /**
+     * Create team and send invitations for a tournament
+     */
+    public function createTeam(Request $request, Tournament $tournament)
+    {
+        $user = auth()->user();
+        
+        // Check if tournament has already ended
+        if (Carbon::parse($tournament->date_time)->isPast()) {
+            return redirect()->route('tournaments.show', $tournament)
+                           ->with('error', 'This tournament has already ended.');
+        }
+        
+        // Check eligibility
+        if (!$tournament->isEligible($user)) {
+            return redirect()->route('tournaments.show', $tournament)
+                           ->with('error', 'You do not meet the eligibility criteria for this tournament.');
+        }
+        
+        // Check if already participating
+        if ($user->isInTournamentTeam($tournament->id)) {
+            return redirect()->route('tournaments.show', $tournament)
+                           ->with('error', 'You are already part of a team in this tournament.');
+        }
+        
+        // Validate request
+        $validated = $request->validate([
+            'team_name' => [
+                'required', 
+                'string', 
+                'max:255',
+                Rule::unique('tournament_teams', 'name')->where(function ($query) use ($tournament) {
+                    return $query->where('tournament_id', $tournament->id);
+                })
+            ],
+            'invited_user_ids' => [
+                'required',
+                'array',
+                'size:' . ($tournament->team_size - 1) // Must match required team size
+            ],
+            'invited_user_ids.*' => 'exists:users,id'
+        ]);
+        
+        try {
+            DB::beginTransaction();
+            
+            // Create the team
+            $team = TournamentTeam::create([
+                'tournament_id' => $tournament->id,
+                'name' => $validated['team_name'],
+                'leader_id' => $user->id
+            ]);
+            
+            // Create participant record for team leader
+            TournamentParticipant::create([
+                'tournament_id' => $tournament->id,
+                'user_id' => $user->id,
+                'team_id' => $team->id,
+                'role' => 'leader'
+            ]);
+            
+            // Create invitations for team members
+            foreach ($validated['invited_user_ids'] as $userId) {
+                TeamInvitation::createWithExpiry($team->id, $userId);
+                
+                // Here you would send notifications to invited users
+                // This would use Laravel's notification system
+                // User::find($userId)->notify(new TeamInvitationNotification($team));
+            }
+            
+            DB::commit();
+            
+            return redirect()->route('tournaments.show', $tournament)
+                           ->with('success', 'Team created and invitations sent successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->route('tournaments.show', $tournament)
+                           ->with('error', 'Failed to create team. ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Display user's pending team invitations
+     */
+    public function invitations()
+    {
+        $user = auth()->user();
+        
+        $pendingInvitations = $user->pendingTeamInvitations()
+                                  ->with(['team.tournament', 'team.leader'])
+                                  ->get();
+        
+        return view('tournaments.invitations', compact('pendingInvitations'));
+    }
+    
+    /**
+     * Accept a team invitation
+     */
+    public function acceptInvitation(Request $request, TeamInvitation $invitation)
+    {
+        $user = auth()->user();
+        
+        // Make sure the invitation belongs to this user
+        if ($invitation->user_id !== $user->id) {
+            return redirect()->route('tournaments.invitations')
+                           ->with('error', 'Invalid invitation.');
+        }
+        
+        // Accept the invitation
+        $result = $invitation->accept();
+        
+        if ($result) {
+            return redirect()->route('tournaments.invitations')
+                           ->with('success', 'You have successfully joined the team.');
+        } else {
+            return redirect()->route('tournaments.invitations')
+                           ->with('error', 'Unable to accept invitation. It may have expired or the team is full.');
+        }
+    }
+    
+    /**
+     * Decline a team invitation
+     */
+    public function declineInvitation(Request $request, TeamInvitation $invitation)
+    {
+        $user = auth()->user();
+        
+        // Make sure the invitation belongs to this user
+        if ($invitation->user_id !== $user->id) {
+            return redirect()->route('tournaments.invitations')
+                           ->with('error', 'Invalid invitation.');
+        }
+        
+        // Decline the invitation
+        $result = $invitation->decline();
+        
+        if ($result) {
+            return redirect()->route('tournaments.invitations')
+                           ->with('success', 'Invitation declined successfully.');
+        } else {
+            return redirect()->route('tournaments.invitations')
+                           ->with('error', 'Unable to decline invitation. It may have already expired.');
+        }
+    }
+    
+    /**
+     * View team details for a tournament
+     */
+    public function team(Tournament $tournament)
+    {
+        $user = auth()->user();
+        
+        // Find the user's team for this tournament
+        $participant = TournamentParticipant::where('tournament_id', $tournament->id)
+                                         ->where('user_id', $user->id)
+                                         ->whereNotNull('team_id')
+                                         ->with('team.leader', 'team.participants.user')
+                                         ->first();
+        
+        if (!$participant || !$participant->team) {
+            return redirect()->route('tournaments.show', $tournament)
+                           ->with('error', 'You are not part of a team in this tournament.');
+        }
+        
+        $team = $participant->team;
+        $isLeader = $team->leader_id === $user->id;
+        $pendingInvitations = $isLeader ? $team->pendingInvitations()->with('user')->get() : null;
+        
+        return view('tournaments.team', compact('tournament', 'team', 'isLeader', 'pendingInvitations'));
     }
 }
