@@ -84,4 +84,30 @@ class TournamentTeam extends Model
         
         return max(0, $teamSize - $currentMemberCount);
     }
+    
+    /**
+     * Check if the team is complete (all members have accepted)
+     */
+    public function isComplete()
+    {
+        $teamSize = $this->tournament->team_size;
+        $acceptedMemberCount = $this->participants()->count();
+        
+        return $acceptedMemberCount >= $teamSize;
+    }
+    
+    /**
+     * Get pending invitations count
+     */
+    public function pendingInvitationsCount()
+    {
+        return $this->invitations()
+            ->where('status', 'pending')
+            ->whereNull('responded_at')
+            ->where(function($query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->count();
+    }
 }

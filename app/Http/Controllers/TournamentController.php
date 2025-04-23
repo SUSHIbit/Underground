@@ -521,12 +521,12 @@ class TournamentController extends Controller
         }
     }
     
-    /**
+/**
      * View team details for a tournament
      */
     public function team(Tournament $tournament)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         // Find the user's team for this tournament
         $participant = TournamentParticipant::where('tournament_id', $tournament->id)
@@ -543,42 +543,52 @@ class TournamentController extends Controller
         $team = $participant->team;
         $isLeader = $team->leader_id === $user->id;
         
-        // Get all team members (who have accepted invitations)
+        // Get all team members (who have already accepted invitations)
         $teamMembers = TournamentParticipant::where('team_id', $team->id)
                                         ->with('user')
                                         ->get();
         
-        // Get all pending invitations for the team
-        $pendingInvitations = TeamInvitation::where('team_id', $team->id)
-                                        ->where('status', 'pending')
-                                        ->with('user')
-                                        ->get();
+        // Get all invitations for the team (pending, accepted, declined)
+        $invitations = TeamInvitation::where('team_id', $team->id)
+                                   ->with('user')
+                                   ->get();
         
-        // Check if all invitations have been accepted (team is complete)
+        // Check if team is complete (all required members have accepted)
         $isTeamComplete = $teamMembers->count() >= $tournament->team_size;
         
         // Combine the data for display
         $allTeamMembers = collect();
         
-        // Add the accepted members
-        foreach ($teamMembers as $member) {
+        // First add the team leader (always accepted)
+        $leaderParticipant = $teamMembers->where('user_id', $team->leader_id)->first();
+        if ($leaderParticipant) {
+            $allTeamMembers->push([
+                'user' => $leaderParticipant->user,
+                'status' => 'accepted',
+                'is_leader' => true,
+                'is_current_user' => $leaderParticipant->user_id === $user->id
+            ]);
+        }
+        
+        // Add other accepted members (non-leaders)
+        foreach ($teamMembers->where('user_id', '!=', $team->leader_id) as $member) {
             $allTeamMembers->push([
                 'user' => $member->user,
                 'status' => 'accepted',
-                'is_leader' => $member->user_id === $team->leader_id,
+                'is_leader' => false,
                 'is_current_user' => $member->user_id === $user->id
             ]);
         }
         
-        // Add the pending invitations
-        foreach ($pendingInvitations as $invitation) {
-            // Make sure this user isn't already in the team (avoid duplicates)
+        // Add pending and declined invitations
+        foreach ($invitations as $invitation) {
+            // Skip users who are already added as team members to avoid duplicates
             if (!$teamMembers->contains('user_id', $invitation->user_id)) {
                 $allTeamMembers->push([
                     'user' => $invitation->user,
-                    'status' => 'pending',
+                    'status' => $invitation->status, // 'pending', 'declined', etc.
                     'is_leader' => false,
-                    'is_current_user' => false,
+                    'is_current_user' => $invitation->user_id === $user->id,
                     'invitation' => $invitation
                 ]);
             }

@@ -44,7 +44,12 @@ class TeamInvitation extends Model
      */
     public function isPending()
     {
-        return $this->status === 'pending';
+        if ($this->status !== 'pending') {
+            return false;
+        }
+
+        // Check expiration
+        return !$this->isExpired();
     }
 
     /**
@@ -58,6 +63,7 @@ class TeamInvitation extends Model
 
         // Check if the invitation has expired based on the expiration date
         if ($this->expires_at && Carbon::now()->greaterThan($this->expires_at)) {
+            // Update status to expired
             $this->update(['status' => 'expired']);
             return true;
         }
@@ -70,7 +76,7 @@ class TeamInvitation extends Model
      */
     public function accept()
     {
-        if (!$this->isPending() || $this->isExpired()) {
+        if (!$this->isPending()) {
             return false;
         }
 
@@ -106,7 +112,7 @@ class TeamInvitation extends Model
      */
     public function decline()
     {
-        if (!$this->isPending() || $this->isExpired()) {
+        if (!$this->isPending()) {
             return false;
         }
 
