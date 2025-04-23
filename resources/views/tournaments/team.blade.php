@@ -37,70 +37,58 @@
                         <h4 class="font-semibold text-lg mb-4 text-amber-400">Team Members</h4>
                         
                         <div class="space-y-4">
-                            <!-- Team Leader -->
-                            <div class="flex items-center p-3 bg-amber-900/10 rounded-lg">
-                                <div class="w-12 h-12 rounded-full bg-amber-600 flex items-center justify-center text-white font-bold mr-4">
-                                    {{ substr($team->leader->name, 0, 1) }}
-                                </div>
-                                <div>
-                                    <p class="font-medium text-amber-400">{{ $team->leader->name }} (@{{ $team->leader->username }})</p>
-                                    <p class="text-sm text-gray-400">Team Leader • {{ $team->leader->getRank() }}</p>
-                                </div>
-                                @if($isLeader)
-                                    <span class="ml-4 px-2 py-1 bg-amber-900/20 text-amber-400 text-xs rounded-full">You</span>
-                                @endif
-                            </div>
-                            
-                            <!-- Team Members -->
-                            @foreach($team->participants as $participant)
-                                @if($participant->user_id !== $team->leader_id)
-                                    <div class="flex items-center p-3 bg-gray-800 rounded-lg">
-                                        <div class="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center text-white font-bold mr-4">
-                                            {{ substr($participant->user->name, 0, 1) }}
+                            @foreach($allTeamMembers as $memberData)
+                                <div class="flex items-center justify-between p-3 rounded-lg {{ $memberData['is_leader'] ? 'bg-amber-900/10' : 'bg-gray-800' }}">
+                                    <div class="flex items-center">
+                                        <div class="w-12 h-12 rounded-full {{ $memberData['is_leader'] ? 'bg-amber-600' : 'bg-gray-700' }} flex items-center justify-center text-white font-bold mr-4">
+                                            {{ substr($memberData['user']->name, 0, 1) }}
                                         </div>
                                         <div>
-                                            <p class="font-medium text-white">{{ $participant->user->name }} (@{{ $participant->user->username }})</p>
-                                            <p class="text-sm text-gray-400">Team Member • {{ $participant->user->getRank() }}</p>
+                                            <p class="font-medium {{ $memberData['is_leader'] ? 'text-amber-400' : 'text-white' }}">
+                                                {{ $memberData['user']->name }} (@{{ $memberData['user']->username }})
+                                            </p>
+                                            <div class="flex items-center">
+                                                <p class="text-sm text-gray-400">
+                                                    {{ $memberData['is_leader'] ? 'Team Leader' : 'Team Member' }} • {{ $memberData['user']->getRank() }}
+                                                </p>
+                                                
+                                                @if($memberData['status'] === 'pending')
+                                                    <span class="ml-2 px-2 py-1 bg-amber-900/20 text-amber-400 text-xs rounded-full">
+                                                        Invitation Pending
+                                                    </span>
+                                                @endif
+                                            </div>
                                         </div>
-                                        @if($participant->user_id === auth()->id())
-                                            <span class="ml-4 px-2 py-1 bg-gray-700/50 text-gray-300 text-xs rounded-full">You</span>
-                                        @endif
                                     </div>
-                                @endif
+                                    
+                                    @if($memberData['is_current_user'])
+                                        <span class="ml-4 px-2 py-1 bg-gray-700/50 text-gray-300 text-xs rounded-full">You</span>
+                                    @endif
+                                </div>
                             @endforeach
+                        </div>
+                        
+                        <div class="mt-4 {{ $isTeamComplete ? 'text-green-400' : 'text-amber-400' }} text-sm">
+                            @if($isTeamComplete)
+                                <div class="flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                    </svg>
+                                    Team is complete! All members have accepted their invitations.
+                                </div>
+                            @else
+                                <div class="flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                    Waiting for all team members to accept their invitations.
+                                </div>
+                            @endif
                         </div>
                     </div>
                     
-                    @if($isLeader && $pendingInvitations && $pendingInvitations->count() > 0)
-                        <!-- Pending Invitations (Only shown to team leader) -->
-                        <div class="bg-gray-700/20 rounded-lg p-6 mb-8 border border-amber-800/20">
-                            <h4 class="font-semibold text-lg mb-4 text-amber-400">Pending Invitations</h4>
-                            
-                            <div class="space-y-3">
-                                @foreach($pendingInvitations as $invitation)
-                                    <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                                        <div class="flex items-center">
-                                            <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white font-bold mr-3">
-                                                {{ substr($invitation->user->name, 0, 1) }}
-                                            </div>
-                                            <div>
-                                                <p class="font-medium text-white">{{ $invitation->user->name }} (@{{ $invitation->user->username }})</p>
-                                                <p class="text-xs text-gray-400">Invited {{ $invitation->created_at->diffForHumans() }}</p>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <span class="px-2 py-1 bg-amber-900/20 text-amber-400 text-xs rounded-full">
-                                                Expires {{ $invitation->expires_at->diffForHumans() }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-                    
-                    <!-- Project Submission Form -->
-                    @if(!$tournament->hasEnded())
+                    <!-- Project Submission Form (only show if team is complete) -->
+                    @if($isTeamComplete && !$tournament->hasEnded())
                         <div class="bg-amber-900/10 rounded-lg p-6 mb-8 border border-amber-800/20">
                             <h4 class="font-semibold text-lg mb-4 text-amber-400">Project Submission</h4>
                             
@@ -159,7 +147,21 @@
                                 </form>
                             @endif
                         </div>
-                    @else
+                    @elseif(!$isTeamComplete && !$tournament->hasEnded())
+                        <!-- Message when team is not complete -->
+                        <div class="bg-gray-700/30 p-6 rounded-lg mb-6 border border-amber-800/20">
+                            <h4 class="font-semibold text-lg mb-2 text-amber-400">Project Submission</h4>
+                            <p class="text-gray-400">
+                                You'll be able to submit your project once all team members have accepted their invitations.
+                            </p>
+                            <div class="mt-4 flex items-center text-amber-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                                </svg>
+                                Waiting for pending invitations...
+                            </div>
+                        </div>
+                    @elseif($tournament->hasEnded())
                         <!-- Tournament has ended -->
                         <div class="bg-gray-700/20 rounded-lg p-6 mb-8 border border-amber-800/20">
                             <h4 class="font-semibold text-lg mb-4 text-amber-400">Tournament Results</h4>

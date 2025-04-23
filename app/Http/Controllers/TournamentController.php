@@ -269,53 +269,106 @@ class TournamentController extends Controller
     }
     
     /**
-     * Search for users by username for team invitations
+     * Show the form for creating a new team with the option to select members from a list.
      * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @param Tournament $tournament
+     * @return \Illuminate\View\View
      */
-    public function searchUsers(Request $request)
+    public function createTeamForm(Tournament $tournament, Request $request)
     {
-        // Log search queries for debugging
-        \Log::info('User search request', ['query' => $request->input('query')]);
+        $user = auth()->user();
         
-        $query = $request->input('query');
-        
-        if (empty($query) || strlen($query) < 3) {
-            return response()->json([
-                'users' => []
-            ]);
+        // Check if tournament has already ended
+        if (Carbon::parse($tournament->date_time)->isPast()) {
+            return redirect()->route('tournaments.show', $tournament)
+                        ->with('error', 'This tournament has already ended.');
         }
         
-        try {
-            $users = User::where('username', 'like', "%{$query}%")
-                        ->where('id', '!=', auth()->id()) // Exclude current user
-                        ->where('role', 'student') // Only search for students
-                        ->select('id', 'username', 'name', 'profile_picture', 'points')
-                        ->limit(5)
-                        ->get();
+        // Check eligibility
+        if (!$tournament->isEligible($user)) {
+            return redirect()->route('tournaments.show', $tournament)
+                        ->with('error', 'You do not meet the eligibility criteria for this tournament.');
+        }
+        
+        // Check if already participating
+        if ($user->isInTournamentTeam($tournament->id)) {
+            return redirect()->route('tournaments.show', $tournament)
+                        ->with('error', 'You are already part of a team in this tournament.');
+        }
+        
+        // Get a filtered list of eligible users for team members
+        // We'll get users that:
+        // 1. Are not the current user
+        // 2. Have the 'student' role ONLY
+        // 3. Meet the minimum rank requirement
+        // 4. Are not already in a team for this tournament
+        
+        $searchQuery = $request->input('search', '');
+        $selectedUserIds = $request->session()->get('selected_team_members', []);
+        
+        // Add user to selected list if requested
+        if ($request->has('add_user_id')) {
+            $userIdToAdd = $request->input('add_user_id');
             
-            // Add rank to each user
-            $users->transform(function ($user) {
-                $user->rank = $user->getRank();
-                return $user;
+            // Make sure we don't exceed the team size limit
+            if (count($selectedUserIds) < ($tournament->team_size - 1)) {
+                // Only add if not already in the list
+                if (!in_array($userIdToAdd, $selectedUserIds)) {
+                    $selectedUserIds[] = $userIdToAdd;
+                    $request->session()->put('selected_team_members', $selectedUserIds);
+                }
+            }
+        }
+        
+        // Remove user from selected list if requested
+        if ($request->has('remove_user_id')) {
+            $userIdToRemove = $request->input('remove_user_id');
+            $selectedUserIds = array_diff($selectedUserIds, [$userIdToRemove]);
+            $request->session()->put('selected_team_members', $selectedUserIds);
+        }
+        
+        // Clear selection if requested
+        if ($request->has('clear_selection')) {
+            $selectedUserIds = [];
+            $request->session()->put('selected_team_members', $selectedUserIds);
+        }
+        
+        // Query for eligible student users
+        $eligibleUsersQuery = User::where('id', '!=', $user->id)
+            ->where('role', 'student')  // Only student role
+            ->whereNotIn('id', $selectedUserIds); // Exclude already selected users
+        
+        // Apply search filter if provided
+        if (!empty($searchQuery)) {
+            $eligibleUsersQuery->where(function($query) use ($searchQuery) {
+                $query->where('username', 'like', "%{$searchQuery}%")
+                    ->orWhere('name', 'like', "%{$searchQuery}%");
             });
-            
-            \Log::info('User search results', ['count' => $users->count()]);
-            
-            return response()->json([
-                'users' => $users
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Error in searchUsers', ['error' => $e->getMessage()]);
-            
-            return response()->json([
-                'error' => 'Failed to search users',
-                'message' => $e->getMessage()
-            ], 500);
         }
+        
+        // Get the eligible users and limit to 5 max
+        $eligibleUsers = $eligibleUsersQuery->limit(5)->get()
+            ->filter(function($potentialMember) use ($tournament) {
+                // Check if user meets rank requirement and is not already in a team
+                return $tournament->isEligible($potentialMember) && 
+                       !$potentialMember->isInTournamentTeam($tournament->id);
+            });
+        
+        // Get the selected users' details
+        $selectedUsers = [];
+        if (!empty($selectedUserIds)) {
+            $selectedUsers = User::whereIn('id', $selectedUserIds)->get();
+        }
+        
+        return view('tournaments.create-team', compact(
+            'tournament', 
+            'eligibleUsers', 
+            'searchQuery', 
+            'selectedUsers',
+            'selectedUserIds'
+        ));
     }
-    
+
     /**
      * Create team and send invitations for a tournament
      */
@@ -341,6 +394,9 @@ class TournamentController extends Controller
                            ->with('error', 'You are already part of a team in this tournament.');
         }
         
+        // Get selected team members from session
+        $selectedUserIds = $request->session()->get('selected_team_members', []);
+        
         // Validate request
         $validated = $request->validate([
             'team_name' => [
@@ -350,14 +406,14 @@ class TournamentController extends Controller
                 Rule::unique('tournament_teams', 'name')->where(function ($query) use ($tournament) {
                     return $query->where('tournament_id', $tournament->id);
                 })
-            ],
-            'invited_user_ids' => [
-                'required',
-                'array',
-                'size:' . ($tournament->team_size - 1) // Must match required team size
-            ],
-            'invited_user_ids.*' => 'exists:users,id'
+            ]
         ]);
+        
+        // Validate that we have the right number of team members
+        if (count($selectedUserIds) != ($tournament->team_size - 1)) {
+            return redirect()->route('tournaments.create-team-form', $tournament)
+                ->with('error', 'You need to select exactly ' . ($tournament->team_size - 1) . ' team members.');
+        }
         
         try {
             DB::beginTransaction();
@@ -378,7 +434,7 @@ class TournamentController extends Controller
             ]);
             
             // Create invitations for team members
-            foreach ($validated['invited_user_ids'] as $userId) {
+            foreach ($selectedUserIds as $userId) {
                 TeamInvitation::createWithExpiry($team->id, $userId);
                 
                 // Here you would send notifications to invited users
@@ -387,6 +443,9 @@ class TournamentController extends Controller
             }
             
             DB::commit();
+            
+            // Clear the session data after successful creation
+            $request->session()->forget('selected_team_members');
             
             return redirect()->route('tournaments.show', $tournament)
                            ->with('success', 'Team created and invitations sent successfully.');
@@ -471,53 +530,66 @@ class TournamentController extends Controller
         
         // Find the user's team for this tournament
         $participant = TournamentParticipant::where('tournament_id', $tournament->id)
-                                         ->where('user_id', $user->id)
-                                         ->whereNotNull('team_id')
-                                         ->with('team.leader', 'team.participants.user')
-                                         ->first();
+                                        ->where('user_id', $user->id)
+                                        ->whereNotNull('team_id')
+                                        ->with('team.leader')
+                                        ->first();
         
         if (!$participant || !$participant->team) {
             return redirect()->route('tournaments.show', $tournament)
-                           ->with('error', 'You are not part of a team in this tournament.');
+                        ->with('error', 'You are not part of a team in this tournament.');
         }
         
         $team = $participant->team;
         $isLeader = $team->leader_id === $user->id;
-        $pendingInvitations = $isLeader ? $team->pendingInvitations()->with('user')->get() : null;
         
-        return view('tournaments.team', compact('tournament', 'team', 'isLeader', 'pendingInvitations'));
+        // Get all team members (who have accepted invitations)
+        $teamMembers = TournamentParticipant::where('team_id', $team->id)
+                                        ->with('user')
+                                        ->get();
+        
+        // Get all pending invitations for the team
+        $pendingInvitations = TeamInvitation::where('team_id', $team->id)
+                                        ->where('status', 'pending')
+                                        ->with('user')
+                                        ->get();
+        
+        // Check if all invitations have been accepted (team is complete)
+        $isTeamComplete = $teamMembers->count() >= $tournament->team_size;
+        
+        // Combine the data for display
+        $allTeamMembers = collect();
+        
+        // Add the accepted members
+        foreach ($teamMembers as $member) {
+            $allTeamMembers->push([
+                'user' => $member->user,
+                'status' => 'accepted',
+                'is_leader' => $member->user_id === $team->leader_id,
+                'is_current_user' => $member->user_id === $user->id
+            ]);
+        }
+        
+        // Add the pending invitations
+        foreach ($pendingInvitations as $invitation) {
+            // Make sure this user isn't already in the team (avoid duplicates)
+            if (!$teamMembers->contains('user_id', $invitation->user_id)) {
+                $allTeamMembers->push([
+                    'user' => $invitation->user,
+                    'status' => 'pending',
+                    'is_leader' => false,
+                    'is_current_user' => false,
+                    'invitation' => $invitation
+                ]);
+            }
+        }
+        
+        return view('tournaments.team', compact(
+            'tournament', 
+            'team', 
+            'isLeader', 
+            'allTeamMembers', 
+            'isTeamComplete'
+        ));
     }
-
-    /**
-     * Show the form for creating a new team.
-     * 
-     * @param Tournament $tournament
-     * @return \Illuminate\View\View
-     */
-    public function createTeamForm(Tournament $tournament)
-    {
-        $user = auth()->user();
-        
-        // Check if tournament has already ended
-        if (Carbon::parse($tournament->date_time)->isPast()) {
-            return redirect()->route('tournaments.show', $tournament)
-                        ->with('error', 'This tournament has already ended.');
-        }
-        
-        // Check eligibility
-        if (!$tournament->isEligible($user)) {
-            return redirect()->route('tournaments.show', $tournament)
-                        ->with('error', 'You do not meet the eligibility criteria for this tournament.');
-        }
-        
-        // Check if already participating
-        if ($user->isInTournamentTeam($tournament->id)) {
-            return redirect()->route('tournaments.show', $tournament)
-                        ->with('error', 'You are already part of a team in this tournament.');
-        }
-        
-        return view('tournaments.create-team', compact('tournament'));
-    }
-
-    
 }

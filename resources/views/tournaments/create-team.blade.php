@@ -26,8 +26,137 @@
                             <p>{{ session('error') }}</p>
                         </div>
                     @endif
+
+                    <!-- Search form to filter eligible users -->
+                    <div class="mb-4">
+                        <form action="{{ route('tournaments.create-team-form', $tournament) }}" method="GET" class="flex">
+                            <input 
+                                type="text" 
+                                name="search" 
+                                placeholder="Search users by username or name" 
+                                class="flex-1 p-2 border border-gray-600 rounded-l-md bg-gray-700 text-white"
+                                value="{{ $searchQuery }}"
+                            >
+                            <button 
+                                type="submit"
+                                class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-r-md"
+                            >
+                                Search
+                            </button>
+                        </form>
+                    </div>
                     
-                    <form id="teamForm" action="{{ route('tournaments.teams.create', $tournament) }}" method="POST">
+                    <!-- Display eligible users -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-medium text-gray-300 mb-2">Select Team Members ({{ $tournament->team_size - 1 }} required)</h4>
+                        
+                        @if($eligibleUsers->count() > 0)
+                            <div class="bg-gray-700 rounded-md border border-amber-800/20 mb-4">
+                                @foreach($eligibleUsers as $eligibleUser)
+                                    <div class="flex items-center justify-between p-3 border-b border-amber-800/10 last:border-b-0">
+                                        <div class="flex items-center">
+                                            <div class="mr-3 bg-amber-900/50 w-8 h-8 rounded-full flex items-center justify-center text-amber-400 font-bold">
+                                                {{ substr($eligibleUser->name, 0, 1) }}
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-white">{{ $eligibleUser->username }}</p>
+                                                <p class="text-sm text-gray-400">{{ $eligibleUser->name }} • {{ $eligibleUser->getRank() }}</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <form action="{{ route('tournaments.create-team-form', $tournament) }}" method="GET">
+                                            <input type="hidden" name="add_user_id" value="{{ $eligibleUser->id }}">
+                                            <!-- Preserve search query if it exists -->
+                                            @if($searchQuery)
+                                                <input type="hidden" name="search" value="{{ $searchQuery }}">
+                                            @endif
+                                            <button 
+                                                type="submit" 
+                                                class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold py-1 px-3 rounded"
+                                                {{ count($selectedUserIds) >= ($tournament->team_size - 1) ? 'disabled' : '' }}
+                                            >
+                                                Add
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="bg-gray-700 rounded-md border border-amber-800/20 p-4 text-center">
+                                <p class="text-gray-400">
+                                    @if(empty($searchQuery))
+                                        No eligible users found. Try inviting different users.
+                                    @else
+                                        No users match your search "{{ $searchQuery }}". Try a different search term.
+                                    @endif
+                                </p>
+                            </div>
+                        @endif
+                    </div>
+                    
+                    <!-- Display selected users -->
+                    <div class="mb-6">
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="text-sm font-medium text-gray-300">Selected Team Members</h4>
+                            
+                            @if(count($selectedUserIds) > 0)
+                                <form action="{{ route('tournaments.create-team-form', $tournament) }}" method="GET">
+                                    <input type="hidden" name="clear_selection" value="1">
+                                    <button 
+                                        type="submit" 
+                                        class="text-red-400 hover:text-red-300 text-sm underline"
+                                    >
+                                        Clear All
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
+                        
+                        @if(count($selectedUsers) > 0)
+                            <div class="bg-gray-700 rounded-md border border-amber-800/20">
+                                @foreach($selectedUsers as $selectedUser)
+                                    <div class="flex items-center justify-between p-3 border-b border-amber-800/10 last:border-b-0">
+                                        <div class="flex items-center">
+                                            <div class="mr-3 bg-amber-900/50 w-8 h-8 rounded-full flex items-center justify-center text-amber-400 font-bold">
+                                                {{ substr($selectedUser->name, 0, 1) }}
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-white">{{ $selectedUser->username }}</p>
+                                                <p class="text-sm text-gray-400">{{ $selectedUser->name }} • {{ $selectedUser->getRank() }}</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <form action="{{ route('tournaments.create-team-form', $tournament) }}" method="GET">
+                                            <input type="hidden" name="remove_user_id" value="{{ $selectedUser->id }}">
+                                            <!-- Preserve search query if it exists -->
+                                            @if($searchQuery)
+                                                <input type="hidden" name="search" value="{{ $searchQuery }}">
+                                            @endif
+                                            <button 
+                                                type="submit" 
+                                                class="text-red-400 hover:text-red-300"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endforeach
+                            </div>
+                            
+                            <div class="mt-2 text-amber-400 text-sm">
+                                {{ count($selectedUsers) }} of {{ $tournament->team_size - 1 }} users selected
+                            </div>
+                        @else
+                            <div class="bg-gray-700 rounded-md border border-amber-800/20 p-4 text-center">
+                                <p class="text-gray-400">No users selected yet.</p>
+                            </div>
+                        @endif
+                    </div>
+                    
+                    <!-- Team Name and Submit Form -->
+                    <form action="{{ route('tournaments.teams.create', $tournament) }}" method="POST">
                         @csrf
                         <div class="mb-6">
                             <label for="team_name" class="block mb-2 text-sm font-medium text-gray-300">
@@ -42,212 +171,22 @@
                             >
                         </div>
                         
-                        <div class="mb-6">
-                            <label for="user_search" class="block mb-2 text-sm font-medium text-gray-300">
-                                Team Members ({{ $tournament->team_size - 1 }} needed)
-                            </label>
-                            
-                            <div class="relative mb-4">
-                                <input 
-                                    type="text" 
-                                    id="user_search" 
-                                    class="w-full p-2 border border-gray-600 rounded-md bg-gray-700 text-white"
-                                    placeholder="Search for users by username (type at least 3 characters)..."
-                                >
-                                <div id="search_results" class="absolute z-10 mt-1 w-full bg-gray-800 border border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto hidden">
-                                    <!-- Search results will appear here -->
-                                </div>
-                            </div>
-                            
-                            <div id="selected_users" class="space-y-2 mb-4">
-                                <p class="text-gray-400 italic">No users selected yet.</p>
-                            </div>
-                            
-                            <div id="user_ids_container">
-                                <!-- Hidden inputs will be placed here -->
-                            </div>
-                        </div>
-                        
                         <button 
                             type="submit" 
-                            id="submit_button"
                             class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled
+                            {{ count($selectedUserIds) !== ($tournament->team_size - 1) ? 'disabled' : '' }}
                         >
                             Create Team & Send Invitations
                         </button>
+                        
+                        @if(count($selectedUserIds) !== ($tournament->team_size - 1))
+                            <p class="mt-2 text-sm text-amber-400">
+                                Please select exactly {{ $tournament->team_size - 1 }} team members to create a team.
+                            </p>
+                        @endif
                     </form>
                 </div>
             </div>
         </div>
     </div>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchInput = document.getElementById('user_search');
-            const searchResults = document.getElementById('search_results');
-            const selectedUsersContainer = document.getElementById('selected_users');
-            const userIdsContainer = document.getElementById('user_ids_container');
-            const submitButton = document.getElementById('submit_button');
-            const teamSizeNeeded = {{ $tournament->team_size - 1 }};
-            let selectedUsers = [];
-            
-            // Function to update the submit button state
-            function updateSubmitButton() {
-                submitButton.disabled = selectedUsers.length !== teamSizeNeeded;
-            }
-            
-            // Function to update hidden inputs for selected users
-            function updateHiddenInputs() {
-                userIdsContainer.innerHTML = '';
-                selectedUsers.forEach(userId => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'invited_user_ids[]';
-                    input.value = userId;
-                    userIdsContainer.appendChild(input);
-                });
-            }
-            
-            // Function to select a user
-            function selectUser(userId, username, name, role) {
-                // Check if already selected
-                if (selectedUsers.includes(userId)) {
-                    return;
-                }
-                
-                selectedUsers.push(userId);
-                
-                // Clear placeholder if this is the first user
-                if (selectedUsers.length === 1) {
-                    selectedUsersContainer.innerHTML = '';
-                }
-                
-                // Create user element
-                const userElement = document.createElement('div');
-                userElement.className = 'flex items-center justify-between p-2 bg-gray-700 rounded-md';
-                userElement.innerHTML = `
-                    <div class="flex items-center">
-                        <div class="mr-3 bg-amber-700 w-8 h-8 rounded-full flex items-center justify-center">
-                            ${name.charAt(0)}
-                        </div>
-                        <div>
-                            <p class="text-white font-medium">${username}</p>
-                            <p class="text-sm text-gray-400">${name} • ${role}</p>
-                        </div>
-                    </div>
-                    <button 
-                        type="button" 
-                        class="p-1 text-red-400 hover:text-red-300"
-                        data-user-id="${userId}"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                    </button>
-                `;
-                
-                // Add remove button handler
-                userElement.querySelector('button').addEventListener('click', function() {
-                    const userId = this.getAttribute('data-user-id');
-                    selectedUsers = selectedUsers.filter(id => id != userId);
-                    userElement.remove();
-                    
-                    // Show placeholder if no users left
-                    if (selectedUsers.length === 0) {
-                        selectedUsersContainer.innerHTML = '<p class="text-gray-400 italic">No users selected yet.</p>';
-                    }
-                    
-                    updateHiddenInputs();
-                    updateSubmitButton();
-                });
-                
-                selectedUsersContainer.appendChild(userElement);
-                updateHiddenInputs();
-                updateSubmitButton();
-                
-                // Clear search and hide results
-                searchInput.value = '';
-                searchResults.classList.add('hidden');
-            }
-            
-            // Handle user search input
-            let searchTimeout;
-            searchInput.addEventListener('input', function() {
-                clearTimeout(searchTimeout);
-                
-                const query = this.value.trim();
-                
-                // Only search if at least 3 characters
-                if (query.length < 3) {
-                    searchResults.classList.add('hidden');
-                    return;
-                }
-                
-                searchTimeout = setTimeout(() => {
-                    // Make AJAX request to search users
-                    fetch(`/tournaments/search-users?query=${encodeURIComponent(query)}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            searchResults.innerHTML = '';
-                            
-                            if (!data.users || data.users.length === 0) {
-                                searchResults.innerHTML = '<div class="p-3 text-gray-400">No users found</div>';
-                            } else {
-                                data.users.forEach(user => {
-                                    // Skip if already selected
-                                    if (selectedUsers.includes(user.id.toString())) {
-                                        return;
-                                    }
-                                    
-                                    const userItem = document.createElement('div');
-                                    userItem.className = 'p-3 hover:bg-gray-700 cursor-pointer';
-                                    userItem.innerHTML = `
-                                        <div class="flex justify-between items-center">
-                                            <div>
-                                                <p class="font-medium text-white">${user.username}</p>
-                                                <p class="text-sm text-gray-400">${user.name} • ${user.rank}</p>
-                                            </div>
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                            </svg>
-                                        </div>
-                                    `;
-                                    
-                                    userItem.addEventListener('click', function() {
-                                        selectUser(user.id, user.username, user.name, user.rank);
-                                    });
-                                    
-                                    searchResults.appendChild(userItem);
-                                });
-                            }
-                            
-                            searchResults.classList.remove('hidden');
-                        })
-                        .catch(error => {
-                            console.error('Error searching for users:', error);
-                            searchResults.innerHTML = '<div class="p-3 text-red-400">Error searching for users</div>';
-                            searchResults.classList.remove('hidden');
-                        });
-                }, 300);
-            });
-            
-            // Hide search results when clicking outside
-            document.addEventListener('click', function(event) {
-                if (!searchInput.contains(event.target) && !searchResults.contains(event.target)) {
-                    searchResults.classList.add('hidden');
-                }
-            });
-            
-            // Add form submission validation
-            document.getElementById('teamForm').addEventListener('submit', function(event) {
-                if (selectedUsers.length !== teamSizeNeeded) {
-                    event.preventDefault();
-                    alert(`Please select exactly ${teamSizeNeeded} team members.`);
-                }
-            });
-        });
-    </script>
 </x-app-layout>

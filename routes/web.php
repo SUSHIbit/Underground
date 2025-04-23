@@ -156,10 +156,6 @@ Route::middleware(['auth'])->group(function () {
 
 // Tournament Team Routes
 Route::middleware(['auth'])->group(function () {
-    // Search for users by username (AJAX endpoint)
-    Route::get('/tournaments/search-users', [TournamentController::class, 'searchUsers'])
-        ->name('tournaments.search-users');
-    
     // Team creation and invitation routes
     Route::post('/tournaments/{tournament}/teams', [TournamentController::class, 'createTeam'])
         ->name('tournaments.teams.create');
@@ -178,9 +174,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/tournament-invitations/{invitation}/decline', [TournamentController::class, 'declineInvitation'])
         ->name('tournaments.invitations.decline');
 
-    // New dedicated team creation route
+    // Updated team creation route with improved user selection process
     Route::get('/tournaments/{tournament}/create-team', [TournamentController::class, 'createTeamForm'])
         ->name('tournaments.create-team-form');
 });
-
 require __DIR__.'/auth.php';
