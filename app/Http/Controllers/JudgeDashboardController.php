@@ -119,6 +119,7 @@ class JudgeDashboardController extends Controller
     
     /**
      * Submit score for a tournament participant.
+     * Modified to synchronize scores for team members.
      */
     public function submitScore(Request $request, Tournament $tournament, TournamentParticipant $participant)
     {
@@ -135,7 +136,12 @@ class JudgeDashboardController extends Controller
         
         if (!$canJudge) {
             return redirect()->route('judge.tournament', $tournament)
-                           ->with('error', 'Judging is not yet available for this tournament. The waiting period has not ended.');
+                        ->with('error', 'Judging is not yet available for this tournament. The waiting period has not ended.');
+        }
+        
+        // Make sure the participant belongs to this tournament
+        if ($participant->tournament_id !== $tournament->id) {
+            return redirect()->route('judge.tournament', $tournament)->with('error', 'Invalid participant for this tournament.');
         }
         
         // Validate the request
@@ -144,35 +150,65 @@ class JudgeDashboardController extends Controller
             'feedback' => 'required|string|max:1000',
         ]);
         
-        // Update the participant's score and feedback
-        $participant->update([
-            'score' => $validated['score'],
-            'feedback' => $validated['feedback'],
-        ]);
-        
-        // Add points to the user based on their score
-        // This awards points based on score out of 10
-        $pointsToAward = 0;
-        if ($validated['score'] >= 9) {
-            $pointsToAward = 20; // Excellent submission
-        } elseif ($validated['score'] >= 7) {
-            $pointsToAward = 15; // Great submission
-        } elseif ($validated['score'] >= 5) {
-            $pointsToAward = 10; // Good submission
-        } elseif ($validated['score'] >= 3) {
-            $pointsToAward = 5;  // Average submission
-        } else {
-            $pointsToAward = 2;  // Participation points
+        try {
+            DB::beginTransaction();
+            
+            // Update the participant's score and feedback
+            $participant->update([
+                'score' => $validated['score'],
+                'feedback' => $validated['feedback'],
+            ]);
+            
+            // Award points to the user based on their score
+            // Calculate points based on score out of 10
+            $pointsToAward = 0;
+            if ($validated['score'] >= 9) {
+                $pointsToAward = 20; // Excellent submission
+            } elseif ($validated['score'] >= 7) {
+                $pointsToAward = 15; // Great submission
+            } elseif ($validated['score'] >= 5) {
+                $pointsToAward = 10; // Good submission
+            } elseif ($validated['score'] >= 3) {
+                $pointsToAward = 5;  // Average submission
+            } else {
+                $pointsToAward = 2;  // Participation points
+            }
+            
+            // Only award points if they haven't already been awarded
+            if ($participant->points_awarded === null || $participant->points_awarded === 0) {
+                $participant->user->addPoints($pointsToAward);
+                $participant->update(['points_awarded' => $pointsToAward]);
+                
+                // For team tournaments, synchronize the score, feedback, and points for all team members
+                if ($participant->team_id) {
+                    $teamMembers = TournamentParticipant::where('team_id', $participant->team_id)
+                                                    ->where('id', '!=', $participant->id)
+                                                    ->get();
+                    
+                    foreach ($teamMembers as $member) {
+                        // Update score and feedback
+                        $member->update([
+                            'score' => $validated['score'],
+                            'feedback' => $validated['feedback'],
+                        ]);
+                        
+                        // Award the same points
+                        if ($member->points_awarded === null || $member->points_awarded === 0) {
+                            $member->user->addPoints($pointsToAward);
+                            $member->update(['points_awarded' => $pointsToAward]);
+                        }
+                    }
+                }
+            }
+            
+            DB::commit();
+            
+            return redirect()->route('judge.tournament', $tournament)
+                        ->with('success', 'Score and feedback submitted successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'An error occurred: ' . $e->getMessage());
         }
-        
-        // Only award points if they haven't already been awarded
-        if ($participant->points_awarded === null || $participant->points_awarded === 0) {
-            $participant->user->addPoints($pointsToAward);
-            $participant->update(['points_awarded' => $pointsToAward]);
-        }
-        
-        return redirect()->route('judge.tournament', $tournament)
-                       ->with('success', 'Score and feedback submitted successfully.');
     }
     
     /**

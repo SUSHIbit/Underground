@@ -93,77 +93,76 @@
                         </div>
                     </div>
                     
-                    <!-- Your Team Section -->
+                    <!-- Your Participation Section -->
                     @if($isParticipating)
                         <div class="bg-amber-900/10 p-6 rounded-lg mb-6 border border-amber-800/20">
                             <h4 class="font-semibold text-lg mb-4 text-amber-400">Your Participation</h4>
                             
                             @if($tournament->team_size > 1)
                                 <!-- For team tournaments -->
-                                <p class="text-white mb-4">You are part of a team for this tournament.</p>
+                                <p class="text-white mb-4">You are part of a team for this tournament. You can view your team details, manage members, and submit your project through the team page.</p>
                                 <a href="{{ route('tournaments.team', $tournament) }}" class="inline-block bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded mb-4">
                                     View Team
                                 </a>
                             @else
-                                <!-- For solo tournaments -->
-                                <p class="text-white mb-4">You are registered for this tournament.</p>
-                            @endif
-                            
-                            <!-- Submission form (always show for registered participants if deadline hasn't passed) -->
-                            @if(!$deadlinePassed)
-                                <div class="mt-6 border-t border-amber-800/20 pt-6">
-                                    <h5 class="font-medium text-lg mb-3 text-amber-400">
-                                        @if(isset($participant) && $participant->submission_url)
-                                            Update Your Submission
-                                        @else
-                                            Submit Your Project
-                                        @endif
-                                    </h5>
-                                    <form action="{{ route('tournaments.submit', $tournament) }}" method="POST">
-                                        @csrf
-                                        <div class="mb-4">
-                                            <label for="submission_url" class="block mb-2 text-sm font-medium text-gray-300">
-                                                Project URL (GitHub, Vercel, etc.)
-                                            </label>
-                                            <input 
-                                                type="url" 
-                                                name="submission_url" 
-                                                id="submission_url" 
-                                                value="{{ isset($participant) ? $participant->submission_url : '' }}"
-                                                class="w-full p-2 border border-gray-600 rounded-md bg-gray-700 text-white"
-                                                placeholder="https://github.com/yourusername/project"
-                                                required
-                                            >
-                                        </div>
-                                        
-                                        <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded">
+                                <!-- For solo tournaments - include submission form here -->
+                                <p class="text-white mb-4">You are registered for this tournament as an individual participant.</p>
+                                
+                                @if(!$deadlinePassed)
+                                    <div class="mt-6 border-t border-amber-800/20 pt-6">
+                                        <h5 class="font-medium text-lg mb-3 text-amber-400">
                                             @if(isset($participant) && $participant->submission_url)
-                                                Update Submission
+                                                Update Your Submission
                                             @else
-                                                Submit Project
+                                                Submit Your Project
                                             @endif
-                                        </button>
-                                    </form>
-                                </div>
-                            @elseif(isset($participant) && $participant->submission_url)
-                                <!-- Show submission details if deadline passed -->
-                                <div class="mt-6 border-t border-amber-800/20 pt-6">
-                                    <h5 class="font-medium text-lg mb-3 text-amber-400">Your Submission</h5>
-                                    <p class="text-gray-300 mb-2">You have submitted your project for this tournament:</p>
-                                    <a href="{{ $participant->submission_url }}" target="_blank" class="text-blue-400 hover:underline break-all">
-                                        {{ $participant->submission_url }}
-                                    </a>
-                                    <p class="mt-4 text-orange-400">
-                                        <span class="font-medium">Note:</span> The submission deadline has passed. No further changes can be made.
-                                    </p>
-                                </div>
-                            @else
-                                <!-- Show missed deadline message -->
-                                <div class="mt-6 border-t border-amber-800/20 pt-6">
-                                    <div class="bg-red-900/20 p-4 rounded-lg border border-red-800/20 text-red-400">
-                                        <p>The submission deadline has passed. You did not submit a project for this tournament.</p>
+                                        </h5>
+                                        <form action="{{ route('tournaments.submit', $tournament) }}" method="POST">
+                                            @csrf
+                                            <div class="mb-4">
+                                                <label for="submission_url" class="block mb-2 text-sm font-medium text-gray-300">
+                                                    Project URL (GitHub, Vercel, etc.)
+                                                </label>
+                                                <input 
+                                                    type="url" 
+                                                    name="submission_url" 
+                                                    id="submission_url" 
+                                                    value="{{ isset($participant) ? $participant->submission_url : '' }}"
+                                                    class="w-full p-2 border border-gray-600 rounded-md bg-gray-700 text-white"
+                                                    placeholder="https://github.com/yourusername/project"
+                                                    required
+                                                >
+                                            </div>
+                                            
+                                            <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded">
+                                                @if(isset($participant) && $participant->submission_url)
+                                                    Update Submission
+                                                @else
+                                                    Submit Project
+                                                @endif
+                                            </button>
+                                        </form>
                                     </div>
-                                </div>
+                                @elseif(isset($participant) && $participant->submission_url)
+                                    <!-- Show submission details if deadline passed -->
+                                    <div class="mt-6 border-t border-amber-800/20 pt-6">
+                                        <h5 class="font-medium text-lg mb-3 text-amber-400">Your Submission</h5>
+                                        <p class="text-gray-300 mb-2">You have submitted your project for this tournament:</p>
+                                        <a href="{{ $participant->submission_url }}" target="_blank" class="text-blue-400 hover:underline break-all">
+                                            {{ $participant->submission_url }}
+                                        </a>
+                                        <p class="mt-4 text-orange-400">
+                                            <span class="font-medium">Note:</span> The submission deadline has passed. No further changes can be made.
+                                        </p>
+                                    </div>
+                                @else
+                                    <!-- Show missed deadline message -->
+                                    <div class="mt-6 border-t border-amber-800/20 pt-6">
+                                        <div class="bg-red-900/20 p-4 rounded-lg border border-red-800/20 text-red-400">
+                                            <p>The submission deadline has passed. You did not submit a project for this tournament.</p>
+                                        </div>
+                                    </div>
+                                @endif
                             @endif
                         </div>
                     @endif
@@ -174,7 +173,7 @@
                             <!-- Button to go to team creation page -->
                             <div class="bg-amber-900/10 p-6 rounded-lg mb-6 border border-amber-800/20">
                                 <h4 class="font-semibold text-lg mb-4 text-amber-400">Join This Tournament as a Team</h4>
-                                <p class="text-gray-300 mb-4">This tournament requires a team of {{ $tournament->team_size }} members. Create a team and invite other participants.</p>
+                                <p class="text-gray-300 mb-4">This tournament requires a team of {{ $tournament->team_size }} members. Create a team and add other participants.</p>
                                 <a href="{{ route('tournaments.create-team-form', $tournament) }}" class="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                                     Create a Team
                                 </a>
@@ -208,23 +207,13 @@
                         </div>
                     @endif
                     
-                    <!-- Participants and Invitations Section -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 border-t border-amber-800/20 pt-6">
-                        <!-- View Participants Button -->
+                    <!-- Participants Section -->
+                    <div class="mt-8 border-t border-amber-800/20 pt-6">
                         <div class="bg-gray-700/30 p-4 rounded-lg border border-amber-800/20">
                             <h4 class="font-semibold text-lg mb-4 text-amber-400">View Participants</h4>
                             <p class="text-gray-300 mb-4">See who else is participating in this tournament.</p>
                             <a href="{{ route('tournaments.participants', $tournament) }}" class="inline-block bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded transition-colors">
                                 View All Participants
-                            </a>
-                        </div>
-                        
-                        <!-- View Invitations Button -->
-                        <div class="bg-gray-700/30 p-4 rounded-lg border border-amber-800/20">
-                            <h4 class="font-semibold text-lg mb-4 text-amber-400">Your Invitations</h4>
-                            <p class="text-gray-300 mb-4">Check if you have any pending team invitations.</p>
-                            <a href="{{ route('tournaments.invitations') }}" class="inline-block bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded transition-colors">
-                                View Your Invitations
                             </a>
                         </div>
                     </div>

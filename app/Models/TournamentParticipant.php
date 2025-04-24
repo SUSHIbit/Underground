@@ -12,16 +12,12 @@ class TournamentParticipant extends Model
     protected $fillable = [
         'tournament_id', 
         'user_id', 
-        'team_name', 
-        'team_members', 
+        'team_id',
+        'role',
         'submission_url', 
         'score', 
         'feedback',
         'points_awarded'
-    ];
-    
-    protected $casts = [
-        'team_members' => 'array',
     ];
     
     public function tournament()
@@ -32,5 +28,27 @@ class TournamentParticipant extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+    
+    public function team()
+    {
+        return $this->belongsTo(TournamentTeam::class);
+    }
+    
+    /**
+     * Override the score attribute setter to synchronize scores for team members
+     * 
+     * @param int|null $value
+     * @return void
+     */
+    public function setScoreAttribute($value)
+    {
+        $this->attributes['score'] = $value;
+        
+        // When updating the score, synchronize with team members if this is a team tournament
+        if ($this->team_id && $value !== null) {
+            // We'll handle the actual synchronization in the JudgeDashboardController
+            // This is just a placeholder to show the concept
+        }
     }
 }

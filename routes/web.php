@@ -178,4 +178,18 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/tournaments/{tournament}/create-team', [TournamentController::class, 'createTeamForm'])
         ->name('tournaments.create-team-form');
 });
+
+
+Route::middleware(['auth'])->group(function () {
+    // Team management routes
+    Route::delete('/tournaments/{tournament}/team/members/{participant}', [TournamentController::class, 'removeMember'])
+        ->name('tournaments.team.remove-member');
+    
+    Route::post('/tournaments/{tournament}/team/leave', [TournamentController::class, 'leaveTeam'])
+        ->name('tournaments.team.leave');
+    
+    Route::post('/tournaments/{tournament}/team/disband', [TournamentController::class, 'disbandTeam'])
+        ->name('tournaments.team.disband');
+});
+
 require __DIR__.'/auth.php';

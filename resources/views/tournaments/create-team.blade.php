@@ -18,7 +18,7 @@
                     <div class="bg-gray-700/50 p-4 rounded-lg mb-6">
                         <p class="mb-2">You are creating a team for this tournament. You will be the team leader.</p>
                         <p class="mb-2">Team size: <span class="text-amber-400 font-medium">{{ $tournament->team_size }} members</span> (including you)</p>
-                        <p class="mb-2">You need to invite <span class="text-amber-400 font-medium">{{ $tournament->team_size - 1 }}</span> more team members.</p>
+                        <p class="mb-2">You need to select <span class="text-amber-400 font-medium">{{ $tournament->team_size - 1 }}</span> team members.</p>
                     </div>
                     
                     @if(session('error'))
@@ -176,7 +176,7 @@
                             class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             {{ count($selectedUserIds) !== ($tournament->team_size - 1) ? 'disabled' : '' }}
                         >
-                            Create Team & Send Invitations
+                            Create Team
                         </button>
                         
                         @if(count($selectedUserIds) !== ($tournament->team_size - 1))

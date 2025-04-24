@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class Tournament extends Model
 {
@@ -38,6 +39,16 @@ class Tournament extends Model
         'reviewed_at' => 'datetime',
         'published_at' => 'datetime',
     ];
+
+    /**
+     * Check if the tournament has ended
+     * 
+     * @return bool
+     */
+    public function hasEnded()
+    {
+        return Carbon::parse($this->date_time)->isPast();
+    }
 
     public function creator()
     {
