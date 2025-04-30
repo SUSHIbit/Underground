@@ -45,7 +45,7 @@
                                         </div>
                                         <div>
                                             <p class="font-medium {{ $memberData['is_leader'] ? 'text-amber-400' : 'text-white' }}">
-                                                {{ $memberData['user']->name }} (@{{ $memberData['user']->username }})
+                                                {{ $memberData['user']->name }} ({{ $memberData['user']->username }})
                                             </p>
                                             <div class="flex items-center">
                                                 <p class="text-sm text-gray-400">
