@@ -67,43 +67,148 @@
                         </div>
                         @endif
                         
-                        <div class="flex justify-between items-center">
-                            <div>
-                                @if($currentPage > 1)
-                                    <a href="{{ route('quizzes.attempt', ['set' => $set, 'page' => $currentPage - 1]) }}" 
-                                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
-                                       onclick="savePage({{ $currentPage - 1 }})">
-                                        Previous
-                                    </a>
-                                @endif
+                        <!-- IMPROVED NAVIGATION SECTION START -->
+                        <div class="flex flex-col space-y-4 mt-6">
+                            <!-- Question progress bar -->
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                                <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ ($currentPage / $totalPages) * 100 }}%"></div>
                             </div>
-                            
-                            <div class="flex space-x-2">
-                                @for($i = 1; $i <= $totalPages; $i++)
-                                    <a href="{{ route('quizzes.attempt', ['set' => $set, 'page' => $i]) }}" 
-                                       class="question-nav-link inline-flex justify-center items-center w-8 h-8 {{ $i == $currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700' }} rounded-md"
-                                       onclick="savePage({{ $i }})">
-                                        <span class="question-number">{{ $i }}</span>
-                                    </a>
-                                @endfor
+
+                            <!-- Question counter -->
+                            <div class="text-center mb-2">
+                                <span class="text-sm text-gray-600">Question {{ $currentPage }} of {{ $totalPages }}</span>
                             </div>
-                            
-                            <div>
-                                @if($currentPage < $totalPages)
-                                    <a href="{{ route('quizzes.attempt', ['set' => $set, 'page' => $currentPage + 1]) }}" 
-                                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
-                                       onclick="savePage({{ $currentPage + 1 }})">
-                                        Next
-                                    </a>
-                                @else
-                                    <button type="button" 
-                                            onclick="submitForm()" 
-                                            class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                                        Submit Quiz
-                                    </button>
-                                @endif
+
+                            <!-- Main pagination options -->
+                            <div class="flex items-center justify-between navigation-container">
+                                <!-- Previous button -->
+                                <div class="nav-buttons">
+                                    @if($currentPage > 1)
+                                        <a href="{{ route('quizzes.attempt', ['set' => $set, 'page' => $currentPage - 1]) }}" 
+                                           class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                                           onclick="savePage({{ $currentPage - 1 }})">
+                                            Previous
+                                        </a>
+                                    @else
+                                        <button disabled class="bg-gray-200 text-gray-500 font-bold py-2 px-4 rounded cursor-not-allowed">
+                                            Previous
+                                        </button>
+                                    @endif
+                                </div>
+
+                                <!-- Pagination batches with dynamic calculation -->
+                                <div x-data="{ showAllQuestions: false, currentBatch: {{ ceil($currentPage / 10) }} }" class="pagination-batch">
+                                    <!-- Current batch pagination (shows 10 at a time) -->
+                                    <div class="flex space-x-1 items-center">
+                                        @php
+                                            $batchStart = (ceil($currentPage / 10) - 1) * 10 + 1;
+                                            $batchEnd = min($batchStart + 9, $totalPages);
+                                        @endphp
+
+                                        <!-- Batch navigation -->
+                                        @if($batchStart > 1)
+                                            <button @click="currentBatch--" 
+                                                    onclick="navigateToBatch({{ ceil($currentPage / 10) - 1 }})"
+                                                    class="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-md batch-nav-btn"
+                                                    title="Previous batch">
+                                                &laquo;
+                                            </button>
+                                        @endif
+
+                                        <!-- Question numbers in current batch -->
+                                        <div class="flex space-x-1">
+                                            <template x-for="pageNum in {{ $batchEnd - $batchStart + 1 }}" :key="pageNum">
+                                                <div x-data="{ page: {{ $batchStart }} - 1 + pageNum }">
+                                                    <a :href="'{{ route('quizzes.attempt', ['set' => $set, 'page' => '']) }}' + page"
+                                                       :class="page == {{ $currentPage }} ? 
+                                                               'bg-blue-500 text-white' : 
+                                                               'bg-gray-200 text-gray-700 hover:bg-gray-300'"
+                                                       class="question-nav-link inline-flex justify-center items-center w-8 h-8 rounded-md relative"
+                                                       @click="savePage(page)">
+                                                        <span class="question-number" x-text="page"></span>
+                                                    </a>
+                                                </div>
+                                            </template>
+                                        </div>
+
+                                        <!-- Next batch button -->
+                                        @if($batchEnd < $totalPages)
+                                            <button @click="currentBatch++" 
+                                                    onclick="navigateToBatch({{ ceil($currentPage / 10) + 1 }})"
+                                                    class="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-md batch-nav-btn"
+                                                    title="Next batch">
+                                                &raquo;
+                                            </button>
+                                        @endif
+
+                                        <!-- Toggle button for all questions -->
+                                        <button @click="showAllQuestions = !showAllQuestions" 
+                                                class="ml-2 px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded-md flex items-center"
+                                                title="Show all questions">
+                                            <span>All</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path x-show="!showAllQuestions" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                <path x-show="showAllQuestions" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <!-- All questions panel (hidden by default) -->
+                                    <div x-show="showAllQuestions" 
+                                         x-transition:enter="transition ease-out duration-200"
+                                         x-transition:enter-start="opacity-0 scale-95"
+                                         x-transition:enter-end="opacity-100 scale-100"
+                                         x-transition:leave="transition ease-in duration-100"
+                                         x-transition:leave-start="opacity-100 scale-100"
+                                         x-transition:leave-end="opacity-0 scale-95"
+                                         class="absolute z-10 mt-2 p-3 bg-white rounded-md shadow-lg border border-gray-200 all-questions-panel"
+                                         style="display: none;">
+                                        
+                                        <h4 class="text-sm font-medium text-gray-700 mb-2">All Questions</h4>
+                                        <div class="grid grid-cols-5 gap-2 max-h-60 overflow-y-auto p-1">
+                                            @for($i = 1; $i <= $totalPages; $i++)
+                                                <a href="{{ route('quizzes.attempt', ['set' => $set, 'page' => $i]) }}" 
+                                                   class="question-nav-link inline-flex justify-center items-center w-8 h-8 {{ $i == $currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }} rounded-md relative"
+                                                   onclick="savePage({{ $i }})">
+                                                    <span class="question-number">{{ $i }}</span>
+                                                </a>
+                                            @endfor
+                                        </div>
+                                        
+                                        <div class="mt-2 text-center">
+                                            <button @click="showAllQuestions = false" class="text-xs text-gray-600 hover:text-gray-800">
+                                                Close
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Next button and submit -->
+                                <div class="nav-buttons">
+                                    @if($currentPage < $totalPages)
+                                        <a href="{{ route('quizzes.attempt', ['set' => $set, 'page' => $currentPage + 1]) }}" 
+                                           class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                                           onclick="savePage({{ $currentPage + 1 }})">
+                                            Next
+                                        </a>
+                                    @else
+                                        <button type="button" 
+                                                onclick="submitForm()" 
+                                                class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                                            Submit Quiz
+                                        </button>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <!-- Visual answered status -->
+                            <div class="mt-1 text-center">
+                                <span class="text-xs text-gray-500">
+                                    <span id="answered-count">0</span> of {{ $totalPages }} questions answered
+                                </span>
                             </div>
                         </div>
+                        <!-- IMPROVED NAVIGATION SECTION END -->
                     </form>
                 </div>
             </div>
@@ -111,6 +216,64 @@
     </div>
     
     @push('scripts')
+    <style>
+        /* Style for question navigation links */
+        .question-nav-link {
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .question-nav-link:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Style for answered questions */
+        .answered {
+            background-color: #d1fae5 !important; /* Light green background */
+        }
+
+        .answer-indicator {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            font-size: 10px;
+            background-color: #10b981;
+            color: white;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 640px) {
+            .navigation-container {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            
+            .pagination-batch {
+                order: 2;
+            }
+            
+            .nav-buttons {
+                width: 100%;
+                display: flex;
+                justify-content: space-between;
+            }
+            
+            /* Adjust the all questions panel on mobile */
+            .all-questions-panel {
+                width: 90vw;
+                left: 5vw;
+                right: 5vw;
+            }
+        }
+    </style>
+    
     <script>
         // Store answers in localStorage
         document.addEventListener('DOMContentLoaded', function() {
@@ -243,6 +406,12 @@
                 }
             }
             @endif
+            
+            // Initialize pagination
+            initializePagination();
+            
+            // Update navigation UI based on saved answers
+            updateNavigationUI();
         });
         
         // Save current page to restore if user comes back
@@ -294,6 +463,9 @@
                         
                         // Save the answer
                         localStorage.setItem(`quiz_${setId}_answer_${currentQuestion}`, this.value);
+                        
+                        // Update UI
+                        updateNavigationUI();
                     }
                 });
             });
@@ -305,27 +477,78 @@
             }
             
             // Update navigation to show which questions are answered
-            updateNavigationStatus(answeredQuestions);
+            updateNavigationUI();
             
             return isAnswered;
         }
     
         // Update the navigation to show which questions are answered
-        function updateNavigationStatus(answeredQuestions) {
-            const navLinks = document.querySelectorAll('.question-nav-link');
-            navLinks.forEach(link => {
-                const questionNum = parseInt(link.textContent.trim());
-                if (answeredQuestions[questionNum]) {
-                    link.classList.add('answered');
-                    // Add a visual indicator
-                    if (!link.querySelector('.answer-indicator')) {
-                        const indicator = document.createElement('span');
-                        indicator.className = 'answer-indicator';
-                        indicator.innerHTML = '✓';
-                        link.appendChild(indicator);
-                    }
+        function updateNavigationUI() {
+            const setId = {{ $set->id }};
+            const totalQuestions = {{ $totalPages }};
+            
+            if (localStorage.getItem(`quiz_${setId}_answered_all`)) {
+                const answeredQuestions = JSON.parse(localStorage.getItem(`quiz_${setId}_answered_all`));
+                const answeredCount = Object.values(answeredQuestions).filter(val => val === true).length;
+                
+                // Update counter
+                const counterEl = document.getElementById('answered-count');
+                if (counterEl) {
+                    counterEl.textContent = answeredCount;
                 }
-            });
+                
+                // Update navigation links
+                document.querySelectorAll('.question-nav-link').forEach(link => {
+                    const questionNum = parseInt(link.querySelector('.question-number').textContent.trim());
+                    if (answeredQuestions[questionNum]) {
+                        link.classList.add('answered');
+                        // Add a visual indicator
+                        if (!link.querySelector('.answer-indicator')) {
+                            const indicator = document.createElement('span');
+                            indicator.className = 'answer-indicator';
+                            indicator.innerHTML = '✓';
+                            link.appendChild(indicator);
+                        }
+                    }
+                });
+            }
+        }
+        
+        /**
+         * Initialize the pagination system
+         */
+        function initializePagination() {
+            const totalQuestions = {{ $totalPages }};
+            const currentPage = {{ $currentPage }};
+            const setId = {{ $set->id }};
+            
+            // Get current batch (groups of 10)
+            const currentBatch = Math.ceil(currentPage / 10);
+            const batchStart = (currentBatch - 1) * 10 + 1;
+            const batchEnd = Math.min(batchStart + 9, totalQuestions);
+            
+            // Track the current batch
+            localStorage.setItem(`quiz_${setId}_current_batch`, currentBatch);
+        }
+        
+        /**
+         * Navigate to a specific batch
+         */
+        function navigateToBatch(batchNumber) {
+            const setId = {{ $set->id }};
+            const totalQuestions = {{ $totalPages }};
+            
+            // Calculate the page number for the first question in the batch
+            const firstQuestionInBatch = (batchNumber - 1) * 10 + 1;
+            
+            // Make sure the batch is valid
+            if (firstQuestionInBatch > 0 && firstQuestionInBatch <= totalQuestions) {
+                // Save the current batch
+                localStorage.setItem(`quiz_${setId}_current_batch`, batchNumber);
+                
+                // Navigate to the first question in the batch
+                window.location.href = `{{ route('quizzes.attempt', ['set' => $set, 'page' => '']) }}${firstQuestionInBatch}`;
+            }
         }
         
         function confirmSubmit() {
@@ -338,16 +561,19 @@
             // Check if all questions have been answered
             let allAnswered = true;
             let unansweredCount = 0;
+            let unansweredList = [];
             
             for (let i = 1; i <= totalQuestions; i++) {
                 if (!answeredQuestions[i]) {
                     allAnswered = false;
                     unansweredCount++;
+                    unansweredList.push(i);
                 }
             }
             
             if (!allAnswered) {
-                return confirm(`You have not answered ${unansweredCount} question(s). Are you sure you want to submit?`);
+                const confirmMsg = `You have not answered ${unansweredCount} question(s).\n\nQuestions: ${unansweredList.join(', ')}\n\nAre you sure you want to submit?`;
+                return confirm(confirmMsg);
             }
             
             return true;
