@@ -27,6 +27,40 @@
                         <p class="text-gray-600">Set #{{ $attempt->set->set_number }}</p>
                     </div>
                     
+                    @if($attempt->is_retake && session('showing_learning_mode'))
+                    <!-- Learning Mode Results Banner -->
+                    <div class="mb-8 bg-blue-50 border-l-4 border-blue-500 text-blue-700 p-6 rounded-md shadow-md">
+                        <h3 class="text-lg font-bold mb-2">Learning Mode Results</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-white p-4 rounded border border-blue-200">
+                                <h4 class="font-semibold text-blue-800">Original Record (Unchanged):</h4>
+                                <p class="text-2xl font-bold text-gray-800">
+                                    {{ $attempt->originalAttempt->score ?? session('original_score', '?') }}/{{ $attempt->originalAttempt->total_questions ?? session('original_total', '?') }}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    @if($attempt->originalAttempt)
+                                        ({{ $attempt->originalAttempt->score_percentage }}%)
+                                    @else
+                                        Your official score remains unchanged
+                                    @endif
+                                </p>
+                            </div>
+                            <div class="bg-white p-4 rounded border border-blue-200">
+                                <h4 class="font-semibold text-blue-800">Learning Attempt Result:</h4>
+                                <p class="text-2xl font-bold text-gray-800">
+                                    {{ $attempt->score }}/{{ $attempt->total_questions }}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    ({{ $attempt->score_percentage }}%) - For learning purposes only
+                                </p>
+                            </div>
+                        </div>
+                        <p class="mt-4 text-sm">
+                            <strong>Note:</strong> This was a learning mode attempt. Your original score and rankings remain unchanged.
+                        </p>
+                    </div>
+                    @else
+                    <!-- Regular Results (Non-Learning Mode) -->
                     <div class="bg-gray-50 rounded-lg p-6 mb-8">
                         <div class="flex flex-col md:flex-row justify-between items-center">
                             <div>
@@ -43,8 +77,9 @@
                             </div>
                         </div>
                     </div>
+                    @endif
 
-                    @if($attempt->is_retake)
+                    @if($attempt->is_retake && !session('showing_learning_mode'))
                     <div class="bg-blue-50 rounded-lg p-4 mb-6">
                         <h4 class="text-lg font-bold text-blue-700">Retake Information</h4>
                         <p class="text-gray-700">This was a retake attempt. You spent {{ $attempt->ue_points_spent }} UEPoints.</p>
@@ -89,6 +124,7 @@
                     </div>
                     @endif
 
+                    @if(!$attempt->is_retake || !session('showing_learning_mode'))
                     <div class="mt-4 text-center">
                         <div class="inline-block px-3 py-1 rounded bg-green-100 text-green-800">
                             <p class="text-sm font-medium">
@@ -118,6 +154,7 @@
                             </p>
                         </div>
                     </div>
+                    @endif
                     
                     <h3 class="text-lg font-medium mb-4">Question Review</h3>
                     

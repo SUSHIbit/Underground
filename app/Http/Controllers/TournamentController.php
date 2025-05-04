@@ -152,23 +152,23 @@ class TournamentController extends Controller
         // Check if tournament has already ended
         if (Carbon::parse($tournament->date_time)->isPast()) {
             return redirect()->route('tournaments.show', $tournament)
-                           ->with('error', 'This tournament has already ended.');
+                        ->with('error', 'This tournament has already ended.');
         }
         
         // Check eligibility
         if (!$tournament->isEligible($user)) {
             return redirect()->route('tournaments.show', $tournament)
-                           ->with('error', 'You do not meet the eligibility criteria for this tournament.');
+                        ->with('error', 'You do not meet the eligibility criteria for this tournament.');
         }
         
         // Check if already participating
         $existing = TournamentParticipant::where('tournament_id', $tournament->id)
-                   ->where('user_id', $user->id)
-                   ->first();
-                   
+                ->where('user_id', $user->id)
+                ->first();
+                
         if ($existing) {
             return redirect()->route('tournaments.show', $tournament)
-                           ->with('error', 'You are already participating in this tournament.');
+                        ->with('error', 'You are already participating in this tournament.');
         }
         
         try {
@@ -182,6 +182,9 @@ class TournamentController extends Controller
                     'team_id' => null,
                     'role' => 'member'
                 ]);
+                
+                // Award 2 UEPoints for successfully joining the tournament
+                $user->addUEPoints(2);
             } else {
                 // This route should not be used for team tournaments
                 return redirect()->route('tournaments.show', $tournament)

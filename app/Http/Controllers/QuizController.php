@@ -87,7 +87,7 @@ class QuizController extends Controller
         // Check if UEPoints are sufficient (assuming 5 points per retake)
         if (!$user->hasEnoughUEPoints(5)) {
             return redirect()->route('quizzes.show', $set)
-                           ->with('error', 'You do not have enough UEPoints to retake this quiz.');
+                        ->with('error', 'You do not have enough UEPoints to retake this quiz.');
         }
         
         // Find the original attempt
@@ -96,7 +96,7 @@ class QuizController extends Controller
                                     ->where('completed', true)
                                     ->whereNull('original_attempt_id')
                                     ->first();
-        
+                                    
         if (!$originalAttempt) {
             $originalAttempt = QuizAttempt::where('user_id', $user->id)
                                         ->where('set_id', $set->id)
@@ -106,13 +106,13 @@ class QuizController extends Controller
                                     
         if (!$originalAttempt) {
             return redirect()->route('quizzes.show', $set)
-                           ->with('error', 'No previous attempt found.');
+                        ->with('error', 'No previous attempt found.');
         }
         
         // Deduct UEPoints
         $user->deductUEPoints(5);
         
-        // Create a new attempt as a retake
+        // Create a new attempt as a retake (marked as learning mode)
         $retakeAttempt = QuizAttempt::create([
             'user_id' => $user->id,
             'set_id' => $set->id,
@@ -124,8 +124,13 @@ class QuizController extends Controller
             'original_attempt_id' => $originalAttempt->id
         ]);
         
+        // Store a flag in session to indicate this is a learning mode
+        session(['quiz_learning_mode' => true]);
+        session(['original_score' => $originalAttempt->score]);
+        session(['original_total' => $originalAttempt->total_questions]);
+        
         return redirect()->route('quizzes.attempt', $set)
-                       ->with('success', 'You are now retaking the quiz. 5 UEPoints have been deducted.');
+                    ->with('success', 'You are now retaking the quiz in Learning Mode. 5 UEPoints have been deducted.');
     }
     
     public function attempt(Set $set, Request $request)
@@ -347,7 +352,11 @@ class QuizController extends Controller
         
         // Award points only if it's not a retake
         if (!$isRetake) {
+            // Award 5 points for completing the quiz
             $user->addPoints(5);
+            
+            // Award 2 UEPoints for attempting the quiz
+            $user->addUEPoints(2);
         } 
         // No UEPoints rewards for retakes
         
@@ -358,6 +367,11 @@ class QuizController extends Controller
                 'message' => 'Quiz auto-submitted successfully',
                 'redirect' => route('results.show', $attempt)
             ]);
+        }
+        
+        // Store learning mode information in session for results page
+        if ($isRetake) {
+            session(['showing_learning_mode' => true]);
         }
         
         return redirect()->route('results.show', $attempt);

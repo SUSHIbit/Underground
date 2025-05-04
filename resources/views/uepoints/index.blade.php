@@ -37,12 +37,12 @@
                     <div class="mb-8">
                         <h3 class="text-xl font-bold mb-4">How to Earn UEPoints</h3>
                         <div class="bg-gray-50 p-6 rounded-lg">
-                            <p class="mb-3">UEPoints are awarded by administration based on various activities and special events.</p>
+                            <p class="mb-3">You can earn UEPoints through various activities:</p>
                             <ul class="list-disc list-inside space-y-2">
-                                <li>Participating in weekly challenges</li>
-                                <li>Special events and tournaments</li>
-                                <li>Classroom participation</li>
-                                <li>Administrative awards</li>
+                                <li>Attempt a quiz (+2 UEPoints)</li>
+                                <li>Attempt a challenge (+2 UEPoints)</li>
+                                <li>Participate in a tournament (+2 UEPoints)</li>
+                                <li>Special events and administrative awards</li>
                             </ul>
                         </div>
                     </div>

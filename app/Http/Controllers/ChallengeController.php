@@ -408,6 +408,9 @@ class ChallengeController extends Controller
             
             // Add points to user
             $user->addPoints($pointsToAward);
+            
+            // Award 2 UEPoints for attempting the challenge
+            $user->addUEPoints(2);
         }
         // No UEPoints rewards for retakes
         
