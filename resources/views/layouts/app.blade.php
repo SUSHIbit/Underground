@@ -138,27 +138,27 @@
                          x-transition:leave="transition ease-in duration-75"
                          x-transition:leave-start="opacity-100 scale-100"
                          x-transition:leave-end="opacity-0 scale-95"
-                         class="ml-4 border-l border-amber-800/30"
+                         class="ml-4 space-y-1 mt-1"
                          style="display: none;">
                         
-                        <a href="{{ route('ranks.index') }}" class="flex items-center justify-start p-3 rounded-md {{ request()->routeIs('ranks.*') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
-                            <span class="w-6 mr-2">&bull;</span>
-                            <span>View Ranks</span>
+                        <a href="{{ route('ranks.index') }}" class="flex items-center justify-start p-2 rounded-md {{ request()->routeIs('ranks.*') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                            <span x-show="sidebarOpen" class="w-3 mr-3 text-amber-400/60">•</span>
+                            <span x-show="sidebarOpen">View Ranks</span>
                         </a>
                         
-                        <a href="{{ route('skills.index') }}" class="flex items-center justify-start p-3 rounded-md {{ request()->routeIs('skills.*') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
-                            <span class="w-6 mr-2">&bull;</span>
-                            <span>Tournament Skills</span>
+                        <a href="{{ route('skills.index') }}" class="flex items-center justify-start p-2 rounded-md {{ request()->routeIs('skills.*') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                            <span x-show="sidebarOpen" class="w-3 mr-3 text-amber-400/60">•</span>
+                            <span x-show="sidebarOpen">Tournament Skills</span>
                         </a>
                         
-                        <a href="{{ route('leaderboard') }}" class="flex items-center justify-start p-3 rounded-md {{ request()->routeIs('leaderboard') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
-                            <span class="w-6 mr-2">&bull;</span>
-                            <span>Leaderboard</span>
+                        <a href="{{ route('leaderboard') }}" class="flex items-center justify-start p-2 rounded-md {{ request()->routeIs('leaderboard') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                            <span x-show="sidebarOpen" class="w-3 mr-3 text-amber-400/60">•</span>
+                            <span x-show="sidebarOpen">Leaderboard</span>
                         </a>
                         
-                        <a href="{{ route('uepoints.index') }}" class="flex items-center justify-start p-3 rounded-md {{ request()->routeIs('uepoints.*') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
-                            <span class="w-6 mr-2">&bull;</span>
-                            <span>UEPoints</span>
+                        <a href="{{ route('uepoints.index') }}" class="flex items-center justify-start p-2 rounded-md {{ request()->routeIs('uepoints.*') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                            <span x-show="sidebarOpen" class="w-3 mr-3 text-amber-400/60">•</span>
+                            <span x-show="sidebarOpen">UEPoints</span>
                         </a>
                     </div>
                 </div>

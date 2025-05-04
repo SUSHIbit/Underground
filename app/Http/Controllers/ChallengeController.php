@@ -96,13 +96,13 @@ class ChallengeController extends Controller
         // Check if UEPoints are sufficient (10 points for challenge retake)
         if (!$user->hasEnoughUEPoints(10)) {
             return redirect()->route('challenges.show', $set)
-                           ->with('error', 'You do not have enough UEPoints to retake this challenge.');
+                        ->with('error', 'You do not have enough UEPoints to retake this challenge.');
         }
         
         // Check if user has met prerequisites
         if (!$set->challengeDetail->hasCompletedPrerequisites($user)) {
             return redirect()->route('challenges.index')
-                           ->with('error', 'You must complete all prerequisites before retaking this challenge.');
+                        ->with('error', 'You must complete all prerequisites before retaking this challenge.');
         }
         
         // Find the original attempt
@@ -121,13 +121,13 @@ class ChallengeController extends Controller
                                     
         if (!$originalAttempt) {
             return redirect()->route('challenges.show', $set)
-                           ->with('error', 'No previous attempt found.');
+                        ->with('error', 'No previous attempt found.');
         }
         
-        // Deduct UEPoints
+        // Deduct UEPoints (10 for challenge)
         $user->deductUEPoints(10);
         
-        // Create a new attempt as a retake
+        // Create a new attempt as a retake (marked as learning mode)
         $retakeAttempt = QuizAttempt::create([
             'user_id' => $user->id,
             'set_id' => $set->id,
@@ -139,8 +139,13 @@ class ChallengeController extends Controller
             'original_attempt_id' => $originalAttempt->id
         ]);
         
+        // Store flags in session to indicate this is a learning mode
+        session(['challenge_learning_mode' => true]);
+        session(['original_score' => $originalAttempt->score]);
+        session(['original_total' => $originalAttempt->total_questions]);
+        
         return redirect()->route('challenges.attempt', $set)
-                       ->with('success', 'You are now retaking the challenge. 10 UEPoints have been deducted.');
+                    ->with('success', 'You are now retaking the challenge in Learning Mode. 10 UEPoints have been deducted. Your result will not be saved.');
     }
     
     public function attempt(Set $set, Request $request)
