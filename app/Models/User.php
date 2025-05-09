@@ -29,7 +29,8 @@ class User extends Authenticatable
         'profile_picture',
         'points',
         'ue_points',
-        'theme_preference', // Add this line
+        'theme_preference',
+        'is_judge', // Add this to fillable
     ];
 
     /**
@@ -50,6 +51,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'is_judge' => 'boolean', // Add this casting
     ];
 
     /**
@@ -279,5 +281,33 @@ class User extends Authenticatable
                     ->where('tournament_id', $tournamentId)
                     ->whereNotNull('team_id')
                     ->exists();
+    }
+
+
+
+        /**
+     * Check if the user is a judge.
+     *
+     * @return bool
+     */
+    public function isJudge(): bool
+    {
+        return $this->is_judge;
+    }
+
+    /**
+     * Get the display name for the user's roles.
+     *
+     * @return string
+     */
+    public function getRoleDisplayName(): string
+    {
+        $roleName = ucfirst($this->role);
+        
+        if ($this->is_judge) {
+            $roleName .= ' • Judge';
+        }
+        
+        return $roleName;
     }
 }

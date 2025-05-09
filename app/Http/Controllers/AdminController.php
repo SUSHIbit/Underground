@@ -28,8 +28,13 @@ class AdminController extends Controller
         $accessors = User::where('role', 'accessor')
                     ->orderBy('created_at', 'desc')
                     ->get();
+                    
+        // Get all judges (users with is_judge flag)
+        $judges = User::where('is_judge', true)
+                    ->orderBy('created_at', 'desc')
+                    ->get();
         
-        return view('admin.dashboard', compact('students', 'lecturers', 'accessors'));
+        return view('admin.dashboard', compact('students', 'lecturers', 'accessors', 'judges'));
     }
     
     /**
@@ -47,6 +52,7 @@ class AdminController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'role' => 'required|in:student,lecturer,accessor,admin',
+            'is_judge' => 'sometimes|boolean',
         ]);
         
         if ($validator->fails()) {
@@ -54,6 +60,7 @@ class AdminController extends Controller
         }
         
         $user->role = $request->role;
+        $user->is_judge = $request->has('is_judge');
         $user->save();
         
         return redirect()->route('admin.dashboard')->with('success', 'User role updated successfully.');

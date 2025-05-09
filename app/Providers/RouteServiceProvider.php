@@ -20,14 +20,16 @@ class RouteServiceProvider extends ServiceProvider
     public static function home()
     {
         if (auth()->check()) {
-            if (auth()->user()->role === 'lecturer') {
+            $user = auth()->user();
+            
+            if ($user->role === 'lecturer') {
                 return '/lecturer/dashboard';
-            } elseif (auth()->user()->role === 'accessor') {
+            } elseif ($user->role === 'accessor') {
                 return '/accessor/dashboard';
-            } elseif (auth()->user()->role === 'admin') {
+            } elseif ($user->role === 'admin') {
                 return '/admin/dashboard';
-            } elseif (auth()->user()->role === 'judge') {
-                return '/judge/dashboard';  // Added judge redirect
+            } elseif ($user->is_judge) {
+                return '/judge/dashboard';  // Redirect users with is_judge to judge dashboard
             }
         }
         

@@ -15,7 +15,7 @@ class JudgeMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user() && $request->user()->role === 'judge') {
+        if ($request->user() && $request->user()->is_judge) {
             return $next($request);
         }
         
