@@ -298,37 +298,8 @@
     <script>
         // Store answers in localStorage
         document.addEventListener('DOMContentLoaded', function() {
-            // Flag to track intentional navigation within the quiz
-            let internalNavigation = false;
-            
-            // Set up beforeunload event
-            window.addEventListener('beforeunload', function(e) {
-                // Skip this check if we're navigating within the quiz
-                if (internalNavigation) {
-                    return;
-                }
-                
-                // Cancel the event and show confirmation dialog
-                e.preventDefault();
-                // Set a confirmation message
-                e.returnValue = 'Are you sure you want to leave? Your challenge progress will be submitted automatically.';
-                
-                // Try to submit the form - this will happen after the confirmation if user confirms
-                submitForm(true);
-                
-                // This message might not be displayed in some browsers due to security reasons
-                return 'Are you sure you want to leave? Your challenge progress will be submitted automatically.';
-            });
-            
-            // Add click event listeners to all navigation links
-            document.querySelectorAll('.question-nav-link, a[href*="attempt"]').forEach(link => {
-                link.addEventListener('click', function() {
-                    // Flag that we're doing internal navigation
-                    internalNavigation = true;
-                    // Set a timeout to reset the flag in case navigation fails
-                    setTimeout(() => { internalNavigation = false; }, 500);
-                });
-            });
+            // REMOVED: Flag to track intentional navigation and beforeunload event
+            // No longer tracking or interrupting page navigation
             
             const form = document.getElementById('quiz-form');
             const radios = form.querySelectorAll('input[type="radio"]');
@@ -400,7 +371,7 @@
                     
                     if (timeLeft <= 0) {
                         clearInterval(timerInterval);
-                        // Auto-submit the form
+                        // Auto-submit the form only when timer expires
                         submitForm(true);
                     } else {
                         timeLeft--;
@@ -434,12 +405,12 @@
             // Update navigation UI based on saved answers
             updateNavigationUI();
         });
-        
+
         // Save current page to restore if user comes back
         function savePage(pageNum) {
             localStorage.setItem(`quiz_{{ $set->id }}_current_page`, pageNum);
         }
-        
+
         // Track all answered questions
         function trackAnsweredQuestions() {
             const setId = {{ $set->id }};
@@ -502,7 +473,7 @@
             
             return isAnswered;
         }
-    
+
         // Update the navigation to show which questions are answered
         function updateNavigationUI() {
             const setId = {{ $set->id }};
@@ -534,7 +505,7 @@
                 });
             }
         }
-        
+
         /**
          * Initialize the pagination system
          */
@@ -551,7 +522,7 @@
             // Track the current batch
             localStorage.setItem(`quiz_${setId}_current_batch`, currentBatch);
         }
-        
+
         /**
          * Navigate to a specific batch
          */
@@ -571,7 +542,7 @@
                 window.location.href = `{{ route('challenges.attempt', ['set' => $set, 'page' => '']) }}${firstQuestionInBatch}`;
             }
         }
-        
+
         function confirmSubmit() {
             const setId = {{ $set->id }};
             const totalQuestions = {{ $totalPages }};
@@ -599,7 +570,7 @@
             
             return true;
         }
-        
+
         function submitForm(isAutoSubmit = false) {
             const setId = {{ $set->id }};
             const totalQuestions = {{ $totalPages }};
@@ -626,8 +597,7 @@
             }
             
             if (isAutoSubmit || confirmSubmit()) {
-                // Remove the beforeunload event handler to prevent the confirmation dialog
-                window.removeEventListener('beforeunload', function(){});
+                // REMOVED: beforeunload event handler removal (since we no longer set it)
                 
                 // Log what we're submitting
                 console.log("Submitting challenge with answers:", 
