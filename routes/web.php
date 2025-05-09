@@ -139,6 +139,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/tournaments/{tournament}/update-team', [TournamentController::class, 'updateTeam'])->name('tournaments.update-team');
 });
 
+// Judge Routes
 Route::middleware(['auth', 'judge'])->prefix('judge')->name('judge.')->group(function () {
     Route::get('/dashboard', [JudgeDashboardController::class, 'index'])->name('dashboard');
     Route::get('/tournaments/{tournament}', [JudgeDashboardController::class, 'tournament'])->name('tournament');

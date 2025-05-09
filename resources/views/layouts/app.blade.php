@@ -35,7 +35,7 @@
                 </div>
                 
                 <!-- Navigation -->
-                <nav class="flex-1 px-2 py-4 space-y-1" x-data="{ extrasOpen: {{ request()->routeIs('extras') || request()->routeIs('ranks.*') || request()->routeIs('skills.*') || request()->routeIs('leaderboard') || request()->routeIs('uepoints.*') ? 'true' : 'false' }} }">
+                <nav class="flex-1 px-2 py-4 space-y-1" x-data="{ extrasOpen: {{ request()->routeIs('extras') || request()->routeIs('ranks.*') || request()->routeIs('skills.*') || request()->routeIs('leaderboard') || request()->routeIs('uepoints.*') || request()->routeIs('judge.*') ? 'true' : 'false' }} }">
                     @if(auth()->user()->role === 'student')
                         <!-- Student Navigation -->
                         <a href="{{ route('dashboard') }}" class="flex items-center justify-center md:justify-start p-3 rounded-md {{ request()->routeIs('dashboard') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
@@ -117,7 +117,7 @@
 
                 <!-- Extras with Submenu -->
                 <div class="relative">
-                    <button @click="extrasOpen = !extrasOpen" class="flex items-center justify-center md:justify-start p-3 rounded-md w-full {{ request()->routeIs('extras') || request()->routeIs('ranks.*') || request()->routeIs('skills.*') || request()->routeIs('leaderboard') || request()->routeIs('uepoints.*') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                    <button @click="extrasOpen = !extrasOpen" class="flex items-center justify-center md:justify-start p-3 rounded-md w-full {{ request()->routeIs('extras') || request()->routeIs('ranks.*') || request()->routeIs('skills.*') || request()->routeIs('leaderboard') || request()->routeIs('uepoints.*') || request()->routeIs('judge.*') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                         </svg>
@@ -160,6 +160,13 @@
                             <span x-show="sidebarOpen" class="w-3 mr-3 text-amber-400/60">•</span>
                             <span x-show="sidebarOpen">UEPoints</span>
                         </a>
+
+                        @if(Auth::user()->is_judge)
+                            <a href="{{ route('judge.dashboard') }}" class="flex items-center justify-start p-2 rounded-md {{ request()->routeIs('judge.*') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                                <span x-show="sidebarOpen" class="w-3 mr-3 text-amber-400/60">•</span>
+                                <span x-show="sidebarOpen">Judge</span>
+                            </a>
+                        @endif
                     </div>
                 </div>
             </nav>

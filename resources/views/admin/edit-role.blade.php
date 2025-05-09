@@ -35,6 +35,13 @@
                                         {{ ucfirst($user->role) }}
                                     </span>
                                 </p>
+                                @if($user->is_judge)
+                                    <p class="mt-2">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
+                                            Judge Capability
+                                        </span>
+                                    </p>
+                                @endif
                             </div>
                         </div>
                         
@@ -61,6 +68,14 @@
                                         <option value="accessor" {{ $user->role === 'accessor' ? 'selected' : '' }}>Accessor</option>
                                         <option value="admin" {{ $user->role === 'admin' ? 'selected' : '' }}>Admin</option>
                                     </select>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" name="is_judge" id="is_judge" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" {{ $user->is_judge ? 'checked' : '' }}>
+                                        <label for="is_judge" class="ml-2 block text-sm font-medium text-gray-700">Judge Capability</label>
+                                    </div>
+                                    <p class="mt-1 text-sm text-gray-500">Users with judge capability can access the Judge Dashboard and grade tournament submissions.</p>
                                 </div>
                                 
                                 <div class="mt-6">
