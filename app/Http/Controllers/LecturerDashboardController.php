@@ -241,8 +241,8 @@ class LecturerDashboardController extends Controller
             abort(403);
         }
         
-        // Include rubrics in loading
-        $tournament->load(['judges.user', 'comments.user', 'rubrics']);
+        // Include rubrics in loading, but load judges directly
+        $tournament->load(['judges', 'comments.user', 'rubrics']);
         
         return view('lecturer.edit-tournament', compact('tournament'));
     }
