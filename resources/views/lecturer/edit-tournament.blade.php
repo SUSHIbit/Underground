@@ -593,7 +593,7 @@
                 `;
                 
                 newRubricsContainer.appendChild(newRubricRow);
-                
+
                 // Add event listener to new weight input
                 const newWeightInput = newRubricRow.querySelector('.rubric-weight');
                 newWeightInput.addEventListener('change', updateTotalWeight);
