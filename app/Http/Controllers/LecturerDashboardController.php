@@ -272,13 +272,16 @@ class LecturerDashboardController extends Controller
             'judge_roles.*' => 'nullable|string|max:255',
             // Add validation for rubrics
             'rubrics' => 'required|array',
-            'rubrics.*.id' => 'nullable|integer|exists:tournament_rubrics,id',
             'rubrics.*.title' => 'required|string|max:255',
             'rubrics.*.score_weight' => 'required|integer|min:1|max:100',
         ]);
         
         // Validate total rubric weight = 100
-        $totalWeight = array_sum(array_column($validated['rubrics'], 'score_weight'));
+        $totalWeight = 0;
+        foreach ($validated['rubrics'] as $rubric) {
+            $totalWeight += intval($rubric['score_weight']);
+        }
+        
         if ($totalWeight !== 100) {
             return redirect()->back()->withErrors(['rubrics' => 'Total rubric weight must equal 100'])->withInput();
         }
@@ -308,30 +311,31 @@ class LecturerDashboardController extends Controller
         
         $tournament->judges()->sync($judgeData);
         
-        // Update rubrics - handle create, update and delete
-        $currentRubricIds = $tournament->rubrics->pluck('id')->toArray();
-        $newRubricIds = [];
+        // First get all existing rubric IDs to track what to keep and what to delete
+        $existingRubricIds = $tournament->rubrics->pluck('id')->toArray();
+        $updatedRubricIds = [];
         
-        foreach ($validated['rubrics'] as $rubricData) {
-            if (isset($rubricData['id'])) {
+        // Process each submitted rubric
+        foreach ($validated['rubrics'] as $index => $rubricData) {
+            if (isset($rubricData['id']) && !empty($rubricData['id'])) {
                 // Update existing rubric
                 $tournament->rubrics()->where('id', $rubricData['id'])->update([
                     'title' => $rubricData['title'],
                     'score_weight' => $rubricData['score_weight']
                 ]);
-                $newRubricIds[] = $rubricData['id'];
+                $updatedRubricIds[] = $rubricData['id'];
             } else {
-                // Create new rubric
+                // Create new rubric - it doesn't have an ID
                 $newRubric = $tournament->rubrics()->create([
                     'title' => $rubricData['title'],
                     'score_weight' => $rubricData['score_weight']
                 ]);
-                $newRubricIds[] = $newRubric->id;
+                $updatedRubricIds[] = $newRubric->id;
             }
         }
         
-        // Delete rubrics that were removed
-        $rubricsToDelete = array_diff($currentRubricIds, $newRubricIds);
+        // Delete any rubrics that weren't in the updated set
+        $rubricsToDelete = array_diff($existingRubricIds, $updatedRubricIds);
         if (!empty($rubricsToDelete)) {
             $tournament->rubrics()->whereIn('id', $rubricsToDelete)->delete();
         }

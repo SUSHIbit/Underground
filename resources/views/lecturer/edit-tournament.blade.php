@@ -303,7 +303,7 @@
                                                     name="rubrics[{{ $index }}][title]" 
                                                     placeholder="Rubric Title" 
                                                     class="w-full p-2 border border-gray-300 rounded-md"
-                                                    value="{{ $rubric->title }}"
+                                                    value="{{ old("rubrics.{$index}.title", $rubric->title) }}"
                                                     required
                                                 >
                                             </div>
@@ -313,7 +313,7 @@
                                                     name="rubrics[{{ $index }}][score_weight]" 
                                                     placeholder="Weight" 
                                                     class="w-full p-2 border border-gray-300 rounded-md rubric-weight"
-                                                    value="{{ $rubric->score_weight }}"
+                                                    value="{{ old("rubrics.{$index}.score_weight", $rubric->score_weight) }}"
                                                     min="1"
                                                     max="100"
                                                     required
