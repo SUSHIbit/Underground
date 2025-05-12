@@ -78,7 +78,8 @@ class AccessorDashboardController extends Controller
                         ->with('error', 'This tournament is not pending approval.');
         }
         
-        $tournament->load(['creator', 'judges', 'comments.user']);
+        // Load the tournament with its relationships including rubrics
+        $tournament->load(['creator', 'judges', 'comments.user', 'rubrics']);
         
         return view('accessor.review-tournament', compact('tournament'));
     }

@@ -93,6 +93,40 @@
                         <p class="whitespace-pre-line">{{ $tournament->project_submission }}</p>
                     </div>
                     
+                    <!-- Rubrics Section (Added) -->
+                    <div class="mb-6">
+                        <h4 class="font-medium mb-2">Judging Rubrics</h4>
+                        <div class="bg-gray-50 rounded-md p-4">
+                            @if($tournament->rubrics->count() > 0)
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full bg-white">
+                                        <thead>
+                                            <tr>
+                                                <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Rubric Title</th>
+                                                <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Weight</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($tournament->rubrics as $rubric)
+                                                <tr>
+                                                    <td class="py-2 px-4 border-b border-gray-200">{{ $rubric->title }}</td>
+                                                    <td class="py-2 px-4 border-b border-gray-200">{{ $rubric->score_weight }}%</td>
+                                                </tr>
+                                            @endforeach
+                                            <tr class="bg-gray-50">
+                                                <td class="py-2 px-4 border-b border-gray-200 font-medium">Total</td>
+                                                <td class="py-2 px-4 border-b border-gray-200 font-medium">{{ $tournament->getTotalRubricWeight() }}%</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @else
+                                <p class="text-gray-500">No rubrics have been defined for this tournament.</p>
+                            @endif
+                        </div>
+                    </div>
+                    
+                    <!-- Judges Section -->
                     <div class="mb-6">
                         <h4 class="font-medium">Judges</h4>
                         <ul class="list-disc list-inside">
