@@ -216,54 +216,133 @@
                                 >{{ old('project_submission', $tournament->project_submission) }}</textarea>
                             </div>
                             
+                            <!-- Judges Section -->
                             <div class="mb-6">
                                 <h4 class="font-medium mb-4">Judges</h4>
                                 
                                 <div id="judges-container">
                                     @foreach($tournament->judges as $index => $judge)
-                                        <div class="grid grid-cols-3 gap-4 mb-2 judge-row">
+                                        <div class="grid grid-cols-4 gap-4 mb-2 judge-row">
+                                            <div class="col-span-3">
+                                                <select 
+                                                    name="judges[{{ $index }}]" 
+                                                    class="w-full p-2 border border-gray-300 rounded-md"
+                                                    required
+                                                >
+                                                    <option value="">Select a Judge</option>
+                                                    @foreach(\App\Models\User::where('is_judge', true)->orderBy('name')->get() as $judgeUser)
+                                                        <option value="{{ $judgeUser->id }}" {{ $judgeUser->id == $judge->id ? 'selected' : '' }}>
+                                                            {{ $judgeUser->name }} ({{ $judgeUser->email }})
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
                                             <div class="col-span-1">
                                                 <input 
                                                     type="text" 
-                                                    name="judges[{{ $index }}][name]" 
-                                                    placeholder="Judge Name" 
-                                                    class="w-full p-2 border border-gray-300 rounded-md"
-                                                    value="{{ $judge->name }}"
-                                                    required
-                                                >
-                                            </div>
-                                            <div class="col-span-2">
-                                                <input 
-                                                    type="text" 
-                                                    name="judges[{{ $index }}][role]" 
+                                                    name="judge_roles[{{ $index }}]" 
                                                     placeholder="Judge Role" 
                                                     class="w-full p-2 border border-gray-300 rounded-md"
-                                                    value="{{ $judge->role }}"
+                                                    value="{{ $judge->pivot->role ?? '' }}"
                                                 >
                                             </div>
                                         </div>
                                     @endforeach
                                     
+                                    <!-- Add empty rows for new judges if needed -->
                                     @for($i = $tournament->judges->count(); $i < 4; $i++)
-                                        <div class="grid grid-cols-3 gap-4 mb-2 judge-row">
+                                        <div class="grid grid-cols-4 gap-4 mb-2 judge-row">
+                                            <div class="col-span-3">
+                                                <select 
+                                                    name="judges[{{ $i }}]" 
+                                                    class="w-full p-2 border border-gray-300 rounded-md"
+                                                >
+                                                    <option value="">Select a Judge</option>
+                                                    @foreach(\App\Models\User::where('is_judge', true)->orderBy('name')->get() as $judgeUser)
+                                                        <option value="{{ $judgeUser->id }}">
+                                                            {{ $judgeUser->name }} ({{ $judgeUser->email }})
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
                                             <div class="col-span-1">
                                                 <input 
                                                     type="text" 
-                                                    name="judges[{{ $i }}][name]" 
-                                                    placeholder="Judge Name" 
-                                                    class="w-full p-2 border border-gray-300 rounded-md"
-                                                >
-                                            </div>
-                                            <div class="col-span-2">
-                                                <input 
-                                                    type="text" 
-                                                    name="judges[{{ $i }}][role]" 
+                                                    name="judge_roles[{{ $i }}]" 
                                                     placeholder="Judge Role" 
                                                     class="w-full p-2 border border-gray-300 rounded-md"
                                                 >
                                             </div>
                                         </div>
                                     @endfor
+                                </div>
+                                
+                                <button type="button" id="add-judge" class="text-blue-500 hover:text-blue-700 mt-2">
+                                    + Add Judge
+                                </button>
+                            </div>
+                            
+                            <!-- Rubrics Section -->
+                            <div class="mb-6">
+                                <h4 class="font-medium mb-4">Judging Rubrics</h4>
+                                
+                                <!-- Rubric validation error message -->
+                                @error('rubrics')
+                                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
+                                        {{ $message }}
+                                    </div>
+                                @enderror
+                                
+                                <div id="rubrics-container">
+                                    @foreach($tournament->rubrics as $index => $rubric)
+                                        <div class="grid grid-cols-4 gap-4 mb-2 rubric-row">
+                                            <input type="hidden" name="rubrics[{{ $index }}][id]" value="{{ $rubric->id }}">
+                                            <div class="col-span-3">
+                                                <input 
+                                                    type="text" 
+                                                    name="rubrics[{{ $index }}][title]" 
+                                                    placeholder="Rubric Title" 
+                                                    class="w-full p-2 border border-gray-300 rounded-md"
+                                                    value="{{ $rubric->title }}"
+                                                    required
+                                                >
+                                            </div>
+                                            <div class="col-span-1 flex items-center">
+                                                <input 
+                                                    type="number" 
+                                                    name="rubrics[{{ $index }}][score_weight]" 
+                                                    placeholder="Weight" 
+                                                    class="w-full p-2 border border-gray-300 rounded-md rubric-weight"
+                                                    value="{{ $rubric->score_weight }}"
+                                                    min="1"
+                                                    max="100"
+                                                    required
+                                                >
+                                                <span class="ml-2">%</span>
+                                                <button type="button" class="ml-2 text-red-500 remove-rubric">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                    
+                                    <!-- For new rubrics -->
+                                    <div id="new-rubrics-container"></div>
+                                </div>
+                                
+                                <div class="flex justify-between mt-4">
+                                    <button type="button" id="add-rubric" class="text-blue-500 hover:text-blue-700">
+                                        + Add Rubric
+                                    </button>
+                                    <div>
+                                        <span class="font-medium">Total Weight: </span>
+                                        <span id="total-weight" class="font-medium {{ $tournament->getTotalRubricWeight() === 100 ? 'text-green-500' : 'text-red-500' }}">
+                                            {{ $tournament->getTotalRubricWeight() }}%
+                                        </span>
+                                        <span class="text-sm text-gray-500 ml-2">(Must equal 100%)</span>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -351,13 +430,59 @@
                             <p class="whitespace-pre-line">{{ $tournament->project_submission }}</p>
                         </div>
                         
+                        <!-- Read-only Judges Section -->
                         <div class="mb-6">
-                            <h4 class="font-medium">Judges</h4>
-                            <ul class="list-disc list-inside">
-                                @foreach($tournament->judges as $judge)
-                                    <li>{{ $judge->name }} - {{ $judge->role }}</li>
-                                @endforeach
-                            </ul>
+                            <h4 class="font-medium mb-4">Judges</h4>
+                            
+                            <div class="bg-gray-50 rounded-md p-4">
+                                @if($tournament->judges->count() > 0)
+                                    <ul class="list-disc list-inside">
+                                        @foreach($tournament->judges as $judge)
+                                            <li>
+                                                {{ $judge->name }} 
+                                                @if($judge->pivot->role)
+                                                    <span class="text-gray-600">- {{ $judge->pivot->role }}</span>
+                                                @endif
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @else
+                                    <p class="text-gray-500">No judges assigned to this tournament.</p>
+                                @endif
+                            </div>
+                        </div>
+                        
+                        <!-- Read-only Rubrics Section -->
+                        <div class="mb-6">
+                            <h4 class="font-medium mb-4">Judging Rubrics</h4>
+                            <div class="bg-gray-50 rounded-md p-4">
+                                @if($tournament->rubrics->count() > 0)
+                                    <div class="overflow-x-auto">
+                                        <table class="min-w-full bg-white">
+                                            <thead>
+                                                <tr>
+                                                    <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Rubric Title</th>
+                                                    <th class="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Weight</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($tournament->rubrics as $rubric)
+                                                    <tr>
+                                                        <td class="py-2 px-4 border-b border-gray-200">{{ $rubric->title }}</td>
+                                                        <td class="py-2 px-4 border-b border-gray-200">{{ $rubric->score_weight }}%</td>
+                                                    </tr>
+                                                @endforeach
+                                                <tr class="bg-gray-50">
+                                                    <td class="py-2 px-4 border-b border-gray-200 font-medium">Total</td>
+                                                    <td class="py-2 px-4 border-b border-gray-200 font-medium">{{ $tournament->getTotalRubricWeight() }}%</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                @else
+                                    <p class="text-gray-500">No rubrics have been defined for this tournament.</p>
+                                @endif
+                            </div>
                         </div>
                         
                         <div>
@@ -370,4 +495,129 @@
             </div>
         </div>
     </div>
+
+    <!-- JavaScript for Dynamic Judges and Rubrics Management -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Judge management
+        const addJudgeButton = document.getElementById('add-judge');
+        const judgesContainer = document.getElementById('judges-container');
+        
+        if (addJudgeButton && judgesContainer) {
+            let judgeIndex = document.querySelectorAll('.judge-row').length;
+            
+            addJudgeButton.addEventListener('click', function() {
+                // Clone the last judge row and increment index
+                const lastJudgeRow = document.querySelectorAll('.judge-row')[judgeIndex - 1];
+                const newJudgeRow = lastJudgeRow.cloneNode(true);
+                
+                // Update input names with new index
+                const selectInput = newJudgeRow.querySelector('select');
+                const roleInput = newJudgeRow.querySelector('input');
+                
+                selectInput.name = `judges[${judgeIndex}]`;
+                selectInput.value = '';
+                roleInput.name = `judge_roles[${judgeIndex}]`;
+                roleInput.value = '';
+                
+                judgesContainer.appendChild(newJudgeRow);
+                judgeIndex++;
+            });
+        }
+        
+        // Rubric management
+        const addRubricButton = document.getElementById('add-rubric');
+        const newRubricsContainer = document.getElementById('new-rubrics-container');
+        const totalWeightDisplay = document.getElementById('total-weight');
+        
+        if (addRubricButton && newRubricsContainer) {
+            let rubricIndex = document.querySelectorAll('.rubric-row').length;
+            
+            // Function to update total weight
+            function updateTotalWeight() {
+                let total = 0;
+                document.querySelectorAll('.rubric-weight').forEach(input => {
+                    total += parseInt(input.value) || 0;
+                });
+                
+                totalWeightDisplay.textContent = total + '%';
+                
+                if (total === 100) {
+                    totalWeightDisplay.classList.remove('text-red-500');
+                    totalWeightDisplay.classList.add('text-green-500');
+                } else {
+                    totalWeightDisplay.classList.remove('text-green-500');
+                    totalWeightDisplay.classList.add('text-red-500');
+                }
+            }
+            
+            // Add event listener to all weight inputs
+            document.querySelectorAll('.rubric-weight').forEach(input => {
+                input.addEventListener('change', updateTotalWeight);
+                input.addEventListener('keyup', updateTotalWeight);
+            });
+            
+            // Add new rubric
+            addRubricButton.addEventListener('click', function() {
+                const newRubricRow = document.createElement('div');
+                newRubricRow.className = 'grid grid-cols-4 gap-4 mb-2 rubric-row';
+                
+                newRubricRow.innerHTML = `
+                    <div class="col-span-3">
+                        <input 
+                            type="text" 
+                            name="rubrics[${rubricIndex}][title]" 
+                            placeholder="Rubric Title" 
+                            class="w-full p-2 border border-gray-300 rounded-md"
+                            required
+                        >
+                    </div>
+                    <div class="col-span-1 flex items-center">
+                        <input 
+                            type="number" 
+                            name="rubrics[${rubricIndex}][score_weight]" 
+                            placeholder="Weight" 
+                            class="w-full p-2 border border-gray-300 rounded-md rubric-weight"
+                            min="1"
+                            max="100"
+                            value="0"
+                            required
+                        >
+                        <span class="ml-2">%</span>
+                        <button type="button" class="ml-2 text-red-500 remove-rubric">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                `;
+                
+                newRubricsContainer.appendChild(newRubricRow);
+                
+                // Add event listener to new weight input
+                const newWeightInput = newRubricRow.querySelector('.rubric-weight');
+                newWeightInput.addEventListener('change', updateTotalWeight);
+                newWeightInput.addEventListener('keyup', updateTotalWeight);
+                
+                // Add event listener to remove button
+                const removeButton = newRubricRow.querySelector('.remove-rubric');
+                removeButton.addEventListener('click', function() {
+                    newRubricRow.remove();
+                    updateTotalWeight();
+                });
+                
+                rubricIndex++;
+                updateTotalWeight();
+            });
+            
+            // Handle existing remove rubric buttons
+            document.querySelectorAll('.remove-rubric').forEach(button => {
+                button.addEventListener('click', function() {
+                    button.closest('.rubric-row').remove();
+                    updateTotalWeight();
+                });
+            });
+        }
+    });
+    </script>
 </x-app-layout>

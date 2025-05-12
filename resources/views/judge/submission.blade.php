@@ -65,6 +65,24 @@
                             <div class="text-gray-300 whitespace-pre-line">{{ $tournament->judging_criteria }}</div>
                         </div>
                         
+                        <!-- Judging Rubrics -->
+                        <div class="bg-gray-900/40 p-4 rounded-lg mb-6">
+                            <h5 class="font-medium text-amber-400 mb-2">Judging Rubrics</h5>
+                            
+                            @if($tournament->rubrics->count() > 0)
+                                <div class="space-y-2">
+                                    @foreach($tournament->rubrics as $rubric)
+                                        <div class="flex justify-between items-center border-b border-amber-800/10 py-2">
+                                            <span class="text-gray-300">{{ $rubric->title }}</span>
+                                            <span class="bg-amber-900/20 px-2 py-1 rounded-md text-amber-400">{{ $rubric->score_weight }}%</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <p class="text-gray-400">No specific rubrics have been defined for this tournament.</p>
+                            @endif
+                        </div>
+                        
                         <!-- Grading Form -->
                         <div class="bg-gray-900/20 p-4 rounded-lg">
                             <h4 class="font-medium text-lg mb-4 text-amber-400">

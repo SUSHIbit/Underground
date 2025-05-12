@@ -233,6 +233,7 @@ class LecturerDashboardController extends Controller
         ));
     }
 
+    // Update the editTournament method to load rubrics too
     public function editTournament(Tournament $tournament)
     {
         // Ensure the lecturer owns this tournament
@@ -240,16 +241,8 @@ class LecturerDashboardController extends Controller
             abort(403);
         }
         
-        // Try to load judges and comments, handle the case if comments can't be loaded
-        try {
-            $tournament->load(['judges', 'comments.user']);
-        } catch (\Exception $e) {
-            // If comments can't be loaded due to schema issues, just load judges
-            $tournament->load(['judges']);
-            
-            // Create a temporary property to avoid errors in view
-            $tournament->comments = collect();
-        }
+        // Include rubrics in loading
+        $tournament->load(['judges.user', 'comments.user', 'rubrics']);
         
         return view('lecturer.edit-tournament', compact('tournament'));
     }
@@ -277,8 +270,20 @@ class LecturerDashboardController extends Controller
             'judges.*' => 'required|exists:users,id',
             'judge_roles' => 'nullable|array',
             'judge_roles.*' => 'nullable|string|max:255',
+            // Add validation for rubrics
+            'rubrics' => 'required|array',
+            'rubrics.*.id' => 'nullable|integer|exists:tournament_rubrics,id',
+            'rubrics.*.title' => 'required|string|max:255',
+            'rubrics.*.score_weight' => 'required|integer|min:1|max:100',
         ]);
         
+        // Validate total rubric weight = 100
+        $totalWeight = array_sum(array_column($validated['rubrics'], 'score_weight'));
+        if ($totalWeight !== 100) {
+            return redirect()->back()->withErrors(['rubrics' => 'Total rubric weight must equal 100'])->withInput();
+        }
+        
+        // Update tournament
         $tournament->update([
             'title' => $validated['title'],
             'description' => $validated['description'],
@@ -293,7 +298,7 @@ class LecturerDashboardController extends Controller
             'project_submission' => $validated['project_submission'],
         ]);
         
-        // Update judges by syncing the pivot table (tournament_judge_users)
+        // Update judges by syncing the pivot table
         $judgeData = [];
         foreach ($validated['judges'] as $index => $judgeId) {
             $judgeData[$judgeId] = [
@@ -302,6 +307,34 @@ class LecturerDashboardController extends Controller
         }
         
         $tournament->judges()->sync($judgeData);
+        
+        // Update rubrics - handle create, update and delete
+        $currentRubricIds = $tournament->rubrics->pluck('id')->toArray();
+        $newRubricIds = [];
+        
+        foreach ($validated['rubrics'] as $rubricData) {
+            if (isset($rubricData['id'])) {
+                // Update existing rubric
+                $tournament->rubrics()->where('id', $rubricData['id'])->update([
+                    'title' => $rubricData['title'],
+                    'score_weight' => $rubricData['score_weight']
+                ]);
+                $newRubricIds[] = $rubricData['id'];
+            } else {
+                // Create new rubric
+                $newRubric = $tournament->rubrics()->create([
+                    'title' => $rubricData['title'],
+                    'score_weight' => $rubricData['score_weight']
+                ]);
+                $newRubricIds[] = $newRubric->id;
+            }
+        }
+        
+        // Delete rubrics that were removed
+        $rubricsToDelete = array_diff($currentRubricIds, $newRubricIds);
+        if (!empty($rubricsToDelete)) {
+            $tournament->rubrics()->whereIn('id', $rubricsToDelete)->delete();
+        }
         
         return redirect()->route('lecturer.tournaments')
                     ->with('success', 'Tournament updated successfully.');
