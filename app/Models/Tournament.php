@@ -181,4 +181,32 @@ class Tournament extends Model
         // Check if user's rank meets or exceeds the minimum rank
         return $userRankIndex >= $minRankIndex;
     }
+
+    /**
+     * Get the rubrics for this tournament
+     */
+    public function rubrics()
+    {
+        return $this->hasMany(TournamentRubric::class);
+    }
+
+    /**
+     * Get total weight of all rubrics
+     * 
+     * @return int
+     */
+    public function getTotalRubricWeight()
+    {
+        return $this->rubrics()->sum('score_weight');
+    }
+
+    /**
+     * Check if tournament has valid rubrics (at least 3 and sum to 100)
+     * 
+     * @return bool
+     */
+    public function hasValidRubrics()
+    {
+        return $this->rubrics()->count() >= 3 && $this->getTotalRubricWeight() == 100;
+    }
 }
