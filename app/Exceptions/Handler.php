@@ -24,7 +24,15 @@ class Handler extends ExceptionHandler
     public function register(): void
     {
         $this->reportable(function (Throwable $e) {
-            //
+            // Only log errors and exceptions, not info level events
+            if ($e instanceof \Exception) {
+                \Log::error('Exception occurred:', [
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
         });
     }
 }

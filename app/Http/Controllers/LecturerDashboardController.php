@@ -248,138 +248,137 @@ class LecturerDashboardController extends Controller
     }
 
     public function updateTournament(Request $request, Tournament $tournament)
-{
-    // Ensure the lecturer owns this tournament
-    if ($tournament->created_by !== auth()->id()) {
-        abort(403);
-    }
-    
-    \Log::info('Tournament update request data:', ['data' => $request->all()]);
-    
-    $validated = $request->validate([
-        'title' => 'required|string|max:255',
-        'description' => 'required|string',
-        'date_time' => 'required|date',
-        'location' => 'required|string|max:255',
-        'eligibility' => 'required|string',
-        'minimum_rank' => 'required|string',
-        'team_size' => 'required|integer|min:1',
-        'deadline' => 'required|date',
-        'rules' => 'required|string',
-        'judging_criteria' => 'required|string',
-        'project_submission' => 'required|string',
-        'judges' => 'required|array',
-        'judges.*' => 'required|exists:users,id',
-        'judge_roles' => 'nullable|array',
-        'judge_roles.*' => 'nullable|string|max:255',
-        // Add validation for rubrics
-        'rubrics' => 'required|array',
-        'rubrics.*.title' => 'required|string|max:255',
-        'rubrics.*.score_weight' => 'required|integer|min:1|max:100',
-    ]);
-    
-    // Validate total rubric weight = 100
-    $totalWeight = 0;
-    foreach ($validated['rubrics'] as $rubric) {
-        $totalWeight += intval($rubric['score_weight']);
-    }
-    
-    if ($totalWeight !== 100) {
-        return redirect()->back()->withErrors(['rubrics' => 'Total rubric weight must equal 100'])->withInput();
-    }
-    
-    try {
-        // Start transaction
-        \DB::beginTransaction();
-        
-        // Update tournament
-        $tournament->update([
-            'title' => $validated['title'],
-            'description' => $validated['description'],
-            'date_time' => $validated['date_time'],
-            'location' => $validated['location'],
-            'eligibility' => $validated['eligibility'],
-            'minimum_rank' => $validated['minimum_rank'],
-            'team_size' => $validated['team_size'],
-            'deadline' => $validated['deadline'],
-            'rules' => $validated['rules'],
-            'judging_criteria' => $validated['judging_criteria'],
-            'project_submission' => $validated['project_submission'],
-        ]);
-        
-        // Update judges by syncing the pivot table
-        $judgeData = [];
-        foreach ($validated['judges'] as $index => $judgeId) {
-            if (!empty($judgeId)) {  // Only add if judge ID is not empty
-                $judgeData[$judgeId] = [
-                    'role' => $validated['judge_roles'][$index] ?? null
-                ];
-            }
+    {
+        // Ensure the lecturer owns this tournament
+        if ($tournament->created_by !== auth()->id()) {
+            abort(403);
         }
         
-        // Use sync instead of directly accessing relationships
-        if (!empty($judgeData)) {
+        try {
+            // Enable query logging for debugging
+            DB::enableQueryLog();
+            
+            // Filter out empty judge entries before validation
+            $judges = array_filter($request->input('judges', []), function($value) {
+                return !empty($value);
+            });
+            
+            // Rebuild judges array to be sequential
+            $judges = array_values($judges);
+            
+            // Create a filtered version of judge_roles that matches the filtered judges
+            $judgeRoles = [];
+            if (is_array($request->input('judge_roles'))) {
+                foreach ($judges as $key => $judgeId) {
+                    $originalKey = array_search($judgeId, $request->input('judges', []));
+                    if ($originalKey !== false && isset($request->input('judge_roles')[$originalKey])) {
+                        $judgeRoles[$key] = $request->input('judge_roles')[$originalKey];
+                    } else {
+                        $judgeRoles[$key] = null;
+                    }
+                }
+            }
+            
+            // Replace judges and judge_roles in the request data
+            $requestData = $request->all();
+            $requestData['judges'] = $judges;
+            $requestData['judge_roles'] = $judgeRoles;
+            
+            // Now validate the modified request data
+            $validated = validator($requestData, [
+                'title' => 'required|string|max:255',
+                'description' => 'required|string',
+                'date_time' => 'required|date',
+                'location' => 'required|string|max:255',
+                'eligibility' => 'required|string',
+                'minimum_rank' => 'required|string',
+                'team_size' => 'required|integer|min:1',
+                'deadline' => 'required|date',
+                'rules' => 'required|string',
+                'judging_criteria' => 'required|string',
+                'project_submission' => 'required|string',
+                'judges' => 'required|array|min:1',
+                'judges.*' => 'required|exists:users,id',
+                'judge_roles' => 'nullable|array',
+                'judge_roles.*' => 'nullable|string|max:255',
+                'rubrics' => 'required|array|min:1',
+                'rubrics.*.title' => 'required|string|max:255',
+                'rubrics.*.score_weight' => 'required|integer|min:1|max:100',
+            ])->validate();
+            
+            // Validate total rubric weight = 100
+            $totalWeight = 0;
+            foreach ($validated['rubrics'] as $rubric) {
+                $totalWeight += intval($rubric['score_weight']);
+            }
+            
+            if ($totalWeight !== 100) {
+                return redirect()->back()->withErrors(['rubrics' => 'Total rubric weight must equal 100'])->withInput();
+            }
+            
+            DB::beginTransaction();
+            
+            // Update tournament basic details first
+            $tournament->update([
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                'date_time' => $validated['date_time'],
+                'location' => $validated['location'],
+                'eligibility' => $validated['eligibility'],
+                'minimum_rank' => $validated['minimum_rank'],
+                'team_size' => $validated['team_size'],
+                'deadline' => $validated['deadline'],
+                'rules' => $validated['rules'],
+                'judging_criteria' => $validated['judging_criteria'],
+                'project_submission' => $validated['project_submission'],
+            ]);
+            
+            // Clear all existing judges and add the new ones from the form
+            $judgeData = [];
+            foreach ($validated['judges'] as $index => $judgeId) {
+                // Only include role if it exists and is not empty
+                $role = isset($validated['judge_roles'][$index]) && !empty($validated['judge_roles'][$index]) 
+                    ? $validated['judge_roles'][$index] 
+                    : null;
+                    
+                $judgeData[$judgeId] = ['role' => $role];
+            }
+            
+            // Sync judges
             $tournament->judges()->sync($judgeData);
-        }
-        
-        // FIXED RUBRIC PROCESSING
-        // Get existing rubrics to compare
-        $existingRubrics = $tournament->rubrics()->get();
-        $existingRubricIds = $existingRubrics->pluck('id')->toArray();
-        $processedRubricIds = [];
-        
-        \Log::info('Processing rubrics with data:', ['rubrics' => $validated['rubrics']]);
-        
-        foreach ($validated['rubrics'] as $rubricData) {
-            if (isset($rubricData['id']) && !empty($rubricData['id'])) {
-                // Update existing rubric
-                $rubricId = $rubricData['id'];
-                $tournament->rubrics()->where('id', $rubricId)->update([
+            Log::info('Judges synced successfully', ['judgeData' => $judgeData]);
+            
+            // For rubrics, first delete all existing ones
+            $tournament->rubrics()->delete();
+            
+            // Then create new ones
+            foreach ($validated['rubrics'] as $rubricData) {
+                $tournament->rubrics()->create([
                     'title' => $rubricData['title'],
-                    'score_weight' => $rubricData['score_weight']
+                    'score_weight' => $rubricData['score_weight'],
                 ]);
-                $processedRubricIds[] = $rubricId;
-            } else {
-                // Create new rubric directly
-                $newRubric = new \App\Models\TournamentRubric();
-                $newRubric->tournament_id = $tournament->id;
-                $newRubric->title = $rubricData['title'];
-                $newRubric->score_weight = $rubricData['score_weight'];
-                $newRubric->save();
-                
-                $processedRubricIds[] = $newRubric->id;
-                \Log::info('Created new rubric:', ['id' => $newRubric->id, 'title' => $newRubric->title]);
             }
+            
+            DB::commit();
+            
+            // Log the executed queries for debugging
+            Log::info('Tournament update executed queries:', ['queries' => DB::getQueryLog()]);
+            
+            return redirect()->route('lecturer.tournaments')
+                    ->with('success', 'Tournament updated successfully.');
+                    
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to update tournament', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->back()
+                    ->with('error', 'Failed to update tournament: ' . $e->getMessage())
+                    ->withInput();
         }
-        
-        // Delete rubrics that were removed
-        $rubricIdsToDelete = array_diff($existingRubricIds, $processedRubricIds);
-        if (!empty($rubricIdsToDelete)) {
-            \App\Models\TournamentRubric::whereIn('id', $rubricIdsToDelete)
-                ->where('tournament_id', $tournament->id)
-                ->delete();
-        }
-        
-        // Commit the transaction
-        \DB::commit();
-        
-        return redirect()->route('lecturer.tournaments')
-                ->with('success', 'Tournament updated successfully.');
-                
-    } catch (\Exception $e) {
-        // Rollback the transaction if anything fails
-        \DB::rollBack();
-        
-        \Log::error('Tournament update error:', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        
-        return redirect()->back()
-                ->with('error', 'An error occurred: ' . $e->getMessage())
-                ->withInput();
     }
-}
 
     public function submitTournamentForApproval(Tournament $tournament)
     {

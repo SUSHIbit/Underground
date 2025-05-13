@@ -591,7 +591,7 @@
                         </button>
                     </div>
                 `;
-                
+
                 newRubricsContainer.appendChild(newRubricRow);
 
                 // Add event listener to new weight input
