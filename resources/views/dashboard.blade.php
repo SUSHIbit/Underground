@@ -5,17 +5,17 @@
         </h2>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+    <div class="py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="bg-gray-800 border border-amber-800/20 overflow-hidden shadow-lg rounded-lg">
-                <div class="p-6 text-gray-200">
+                <div class="p-4 sm:p-6 text-gray-200">
                     <h3 class="text-lg font-medium mb-4 text-amber-400">Welcome, {{ $user->username }}!</h3>
 
                     <div class="bg-gray-900 overflow-hidden shadow-sm rounded-lg mt-6">
-                        <div class="p-6 text-gray-200">
+                        <div class="p-4 sm:p-6 text-gray-200">
                             <h3 class="text-lg font-medium mb-4 text-amber-400">Your Progress</h3>
                             
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                                 <div class="border border-amber-800/20 rounded-lg p-4 bg-gray-800">
                                     <h4 class="font-medium text-gray-300 mb-2">Current Rank</h4>
                                     <p class="text-2xl font-bold 
@@ -46,7 +46,7 @@
                                     </a>
                                 </div>
                                 
-                                <div class="border border-amber-800/20 rounded-lg p-4 bg-gray-800">
+                                <div class="border border-amber-800/20 rounded-lg p-4 bg-gray-800 sm:col-span-2 lg:col-span-1">
                                     <h4 class="font-medium text-gray-300 mb-2">Next Rank</h4>
                                     @php
                                         $nextRankInfo = $user->getPointsToNextRank();
@@ -81,7 +81,7 @@
                     </div>
                     
                     <div class="mt-8 mb-6">
-                        <div class="flex flex-wrap gap-4">
+                        <div class="flex flex-wrap gap-3">
                             <a href="{{ route('quizzes.index') }}" class="bg-amber-600 hover:bg-amber-700 text-white font-medium py-2 px-4 rounded-md shadow transition-colors">
                                 Take a Quiz
                             </a>
@@ -98,49 +98,52 @@
                     
                     @if($quizAttempts->count() > 0)
                         <div class="overflow-x-auto rounded-lg border border-amber-800/20">
-                            <table class="min-w-full divide-y divide-amber-800/20">
-                                <thead class="bg-gray-900">
-                                    <tr>
-                                        <th scope="col" class="py-3 px-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Type</th>
-                                        <th scope="col" class="py-3 px-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Title</th>
-                                        <th scope="col" class="py-3 px-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Score</th>
-                                        <th scope="col" class="py-3 px-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
-                                        <th scope="col" class="py-3 px-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-gray-800 divide-y divide-amber-800/10">
-                                    @foreach($quizAttempts as $attempt)
+                            <div class="min-w-full">
+                                <table class="min-w-full divide-y divide-amber-800/20">
+                                    <thead class="bg-gray-900">
                                         <tr>
-                                            <td class="py-3 px-4 whitespace-nowrap">
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                    {{ $attempt->set->type === 'quiz' ? 'bg-amber-100 text-amber-800' : 'bg-purple-100 text-purple-800' }}">
-                                                    {{ ucfirst($attempt->set->type) }}
-                                                </span>
-                                            </td>
-                                            <td class="py-3 px-4 whitespace-nowrap text-sm text-gray-300">
-                                                @if($attempt->set->type === 'quiz')
-                                                    {{ $attempt->set->quizDetail->subject->name }} - 
-                                                    {{ $attempt->set->quizDetail->topic->name }}
-                                                @else
-                                                    {{ $attempt->set->challengeDetail->name }}
-                                                @endif
-                                            </td>
-                                            <td class="py-3 px-4 whitespace-nowrap text-sm">
-                                                <span class="{{ $attempt->score_percentage >= 70 ? 'text-green-400' : ($attempt->score_percentage >= 50 ? 'text-amber-400' : 'text-red-400') }}">
-                                                    {{ $attempt->score }}/{{ $attempt->total_questions }}
-                                                    ({{ $attempt->score_percentage }}%)
-                                                </span>
-                                            </td>
-                                            <td class="py-3 px-4 whitespace-nowrap text-sm text-gray-300">{{ $attempt->created_at->format('M d, Y') }}</td>
-                                            <td class="py-3 px-4 whitespace-nowrap text-sm">
-                                                <a href="{{ route('results.show', $attempt) }}" class="text-amber-400 hover:text-amber-300">
-                                                    View Results
-                                                </a>
-                                            </td>
+                                            <th scope="col" class="py-3 px-3 sm:px-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Type</th>
+                                            <th scope="col" class="py-3 px-3 sm:px-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Title</th>
+                                            <th scope="col" class="py-3 px-3 sm:px-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Score</th>
+                                            <th scope="col" class="py-3 px-3 sm:px-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">Date</th>
+                                            <th scope="col" class="py-3 px-3 sm:px-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
                                         </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody class="bg-gray-800 divide-y divide-amber-800/10">
+                                        @foreach($quizAttempts as $attempt)
+                                            <tr>
+                                                <td class="py-3 px-3 sm:px-4 whitespace-nowrap">
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                                        {{ $attempt->set->type === 'quiz' ? 'bg-amber-100 text-amber-800' : 'bg-purple-100 text-purple-800' }}">
+                                                        {{ ucfirst($attempt->set->type) }}
+                                                    </span>
+                                                </td>
+                                                <td class="py-3 px-3 sm:px-4 text-sm text-gray-300">
+                                                    <div class="truncate max-w-[150px] sm:max-w-none">
+                                                        @if($attempt->set->type === 'quiz')
+                                                            {{ $attempt->set->quizDetail->subject->name }} - 
+                                                            {{ $attempt->set->quizDetail->topic->name }}
+                                                        @else
+                                                            {{ $attempt->set->challengeDetail->name }}
+                                                        @endif
+                                                    </div>
+                                                </td>
+                                                <td class="py-3 px-3 sm:px-4 whitespace-nowrap text-sm">
+                                                    <span class="{{ $attempt->score_percentage >= 70 ? 'text-green-400' : ($attempt->score_percentage >= 50 ? 'text-amber-400' : 'text-red-400') }}">
+                                                        {{ $attempt->score }}/{{ $attempt->total_questions }}
+                                                    </span>
+                                                </td>
+                                                <td class="py-3 px-3 sm:px-4 whitespace-nowrap text-sm text-gray-300 hidden sm:table-cell">{{ $attempt->created_at->format('M d, Y') }}</td>
+                                                <td class="py-3 px-3 sm:px-4 whitespace-nowrap text-sm">
+                                                    <a href="{{ route('results.show', $attempt) }}" class="text-amber-400 hover:text-amber-300">
+                                                        View
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     @else
                         <div class="bg-gray-900 rounded-lg border border-amber-800/20 p-6 text-center">
