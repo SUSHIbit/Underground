@@ -30,7 +30,8 @@
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                         <div>
                             <h3 class="text-xl font-bold mb-2 text-amber-400">{{ $tournament->title }}</h3>
-                            <p class="text-gray-400 mb-1">{{ \Carbon\Carbon::parse($tournament->date_time)->format('F j, Y, g:i a') }}</p>
+                            <p class="text-gray-400 mb-1">Judging Date: {{ \Carbon\Carbon::parse($tournament->judging_date)->format('F j, Y, g:i a') }}</p>
+                            <p class="text-gray-400">Event Date: {{ \Carbon\Carbon::parse($tournament->date_time)->format('F j, Y, g:i a') }}</p>
                             <p class="text-gray-400">Location: {{ $tournament->location }}</p>
                         </div>
                         

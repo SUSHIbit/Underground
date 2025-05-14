@@ -31,7 +31,7 @@
                                     <thead class="bg-gray-900">
                                         <tr>
                                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Title</th>
-                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Date & Time</th>
+                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Judging Date & Time</th>
                                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">Location</th>
                                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">Your Role</th>
                                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Action</th>
@@ -44,7 +44,7 @@
                                                     <div class="truncate">{{ $tournament->title }}</div>
                                                 </td>
                                                 <td class="px-4 py-4 text-sm text-gray-400 whitespace-nowrap">
-                                                    {{ \Carbon\Carbon::parse($tournament->date_time)->format('M d, Y g:i a') }}
+                                                    {{ \Carbon\Carbon::parse($tournament->judging_date)->format('M d, Y g:i a') }}
                                                 </td>
                                                 <td class="px-4 py-4 text-sm text-gray-400 hidden md:table-cell truncate max-w-[150px]">
                                                     <div class="truncate">{{ $tournament->location }}</div>
@@ -79,7 +79,7 @@
                                     <thead class="bg-gray-900">
                                         <tr>
                                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Title</th>
-                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Date & Time</th>
+                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Judging Date & Time</th>
                                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">Location</th>
                                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">Your Role</th>
                                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Available</th>
@@ -92,7 +92,7 @@
                                                     <div class="truncate">{{ $tournament->title }}</div>
                                                 </td>
                                                 <td class="px-4 py-4 text-sm text-gray-400 whitespace-nowrap">
-                                                    {{ \Carbon\Carbon::parse($tournament->date_time)->format('M d, Y g:i a') }}
+                                                    {{ \Carbon\Carbon::parse($tournament->judging_date)->format('M d, Y g:i a') }}
                                                 </td>
                                                 <td class="px-4 py-4 text-sm text-gray-400 hidden md:table-cell truncate max-w-[150px]">
                                                     <div class="truncate">{{ $tournament->location }}</div>
@@ -103,7 +103,7 @@
                                                 <td class="px-4 py-4 text-sm text-yellow-400 whitespace-nowrap">
                                                     @php
                                                         $waitingPeriodDays = 2;
-                                                        $waitingPeriodEnd = \Carbon\Carbon::parse($tournament->date_time)->addDays($waitingPeriodDays);
+                                                        $waitingPeriodEnd = \Carbon\Carbon::parse($tournament->judging_date)->addDays($waitingPeriodDays);
                                                     @endphp
                                                     Available {{ $waitingPeriodEnd->diffForHumans() }}
                                                 </td>
@@ -129,7 +129,7 @@
                                     <thead class="bg-gray-900">
                                         <tr>
                                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Title</th>
-                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Date & Time</th>
+                                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Judging Date & Time</th>
                                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">Location</th>
                                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">Your Role</th>
                                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
@@ -142,7 +142,7 @@
                                                     <div class="truncate">{{ $tournament->title }}</div>
                                                 </td>
                                                 <td class="px-4 py-4 text-sm text-gray-400 whitespace-nowrap">
-                                                    {{ \Carbon\Carbon::parse($tournament->date_time)->format('M d, Y g:i a') }}
+                                                    {{ \Carbon\Carbon::parse($tournament->judging_date)->format('M d, Y g:i a') }}
                                                 </td>
                                                 <td class="px-4 py-4 text-sm text-gray-400 hidden md:table-cell truncate max-w-[150px]">
                                                     <div class="truncate">{{ $tournament->location }}</div>
@@ -151,7 +151,7 @@
                                                     {{ $tournament->pivot->role ?? 'Judge' }}
                                                 </td>
                                                 <td class="px-4 py-4 text-sm text-gray-400 whitespace-nowrap">
-                                                    Starts {{ \Carbon\Carbon::parse($tournament->date_time)->diffForHumans() }}
+                                                    Judging starts {{ \Carbon\Carbon::parse($tournament->judging_date)->diffForHumans() }}
                                                 </td>
                                             </tr>
                                         @endforeach
