@@ -51,7 +51,7 @@ class JudgeDashboardController extends Controller
         return view('judge.dashboard', compact('readyToJudgeTournaments', 'waitingPeriodTournaments', 'upcomingTournaments'));
     }
     
-    /**
+        /**
      * Display the tournament's details and submissions.
      */
     public function tournament(Tournament $tournament)
@@ -61,11 +61,17 @@ class JudgeDashboardController extends Controller
             return redirect()->route('judge.dashboard')->with('error', 'You are not assigned as a judge for this tournament.');
         }
         
-        // Check if tournament has ended and waiting period has passed
-        $waitingPeriodDays = 2; // Define a 2-day waiting period
-        $tournamentDate = Carbon::parse($tournament->date_time);
-        $waitingPeriodEnd = $tournamentDate->copy()->addDays($waitingPeriodDays);
-        $canJudge = now()->greaterThanOrEqualTo($waitingPeriodEnd);
+        // Get current time in Malaysia timezone
+        $now = Carbon::now('Asia/Kuala_Lumpur');
+        
+        // Parse the judging date in Malaysia timezone
+        $judgingDate = Carbon::parse($tournament->judging_date)->setTimezone('Asia/Kuala_Lumpur');
+        
+        // If the judging date has passed, judging should be available immediately
+        $canJudge = $now->greaterThanOrEqualTo($judgingDate);
+        
+        // No waiting period needed if judging date has already passed
+        $waitingPeriodEnd = $judgingDate;
         
         // Get all participants with their submissions
         $participants = $tournament->participants()
@@ -85,7 +91,8 @@ class JudgeDashboardController extends Controller
             'submittedCount', 
             'gradedCount',
             'canJudge',
-            'waitingPeriodEnd'
+            'waitingPeriodEnd',
+            'judgingDate'
         ));
     }
     
@@ -99,15 +106,18 @@ class JudgeDashboardController extends Controller
             return redirect()->route('judge.dashboard')->with('error', 'You are not assigned as a judge for this tournament.');
         }
         
-        // Check if tournament has ended and waiting period has passed
-        $waitingPeriodDays = 2; // Define a 2-day waiting period
-        $tournamentDate = Carbon::parse($tournament->date_time);
-        $waitingPeriodEnd = $tournamentDate->copy()->addDays($waitingPeriodDays);
-        $canJudge = now()->greaterThanOrEqualTo($waitingPeriodEnd);
+        // Get current time in Malaysia timezone
+        $now = Carbon::now('Asia/Kuala_Lumpur');
+        
+        // Parse the judging date in Malaysia timezone
+        $judgingDate = Carbon::parse($tournament->judging_date)->setTimezone('Asia/Kuala_Lumpur');
+        
+        // If the judging date has passed, judging should be available immediately
+        $canJudge = $now->greaterThanOrEqualTo($judgingDate);
         
         if (!$canJudge) {
             return redirect()->route('judge.tournament', $tournament)
-                           ->with('error', 'Judging is not yet available for this tournament. The waiting period has not ended.');
+                        ->with('error', 'Judging is not yet available for this tournament. Please wait until the judging date.');
         }
         
         // Make sure the participant belongs to this tournament
@@ -123,7 +133,6 @@ class JudgeDashboardController extends Controller
     
     /**
      * Submit score for a tournament participant.
-     * Modified to synchronize scores for team members.
      */
     public function submitScore(Request $request, Tournament $tournament, TournamentParticipant $participant)
     {
@@ -132,15 +141,18 @@ class JudgeDashboardController extends Controller
             return redirect()->route('judge.dashboard')->with('error', 'You are not assigned as a judge for this tournament.');
         }
         
-        // Check if tournament has ended and waiting period has passed
-        $waitingPeriodDays = 2; // Define a 2-day waiting period
-        $tournamentDate = Carbon::parse($tournament->date_time);
-        $waitingPeriodEnd = $tournamentDate->copy()->addDays($waitingPeriodDays);
-        $canJudge = now()->greaterThanOrEqualTo($waitingPeriodEnd);
+        // Get current time in Malaysia timezone
+        $now = Carbon::now('Asia/Kuala_Lumpur');
+        
+        // Parse the judging date in Malaysia timezone
+        $judgingDate = Carbon::parse($tournament->judging_date)->setTimezone('Asia/Kuala_Lumpur');
+        
+        // If the judging date has passed, judging should be available immediately
+        $canJudge = $now->greaterThanOrEqualTo($judgingDate);
         
         if (!$canJudge) {
             return redirect()->route('judge.tournament', $tournament)
-                        ->with('error', 'Judging is not yet available for this tournament. The waiting period has not ended.');
+                        ->with('error', 'Judging is not yet available for this tournament. Please wait until the judging date.');
         }
         
         // Make sure the participant belongs to this tournament

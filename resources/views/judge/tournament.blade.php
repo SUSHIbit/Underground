@@ -21,6 +21,12 @@
                         </div>
                     @endif
 
+                    @php
+                        $now = \Carbon\Carbon::now('Asia/Kuala_Lumpur');
+                        $judgingDate = \Carbon\Carbon::parse($tournament->judging_date)->setTimezone('Asia/Kuala_Lumpur');
+                        $canJudgeNow = $now->greaterThanOrEqualTo($judgingDate);
+                    @endphp
+
                     <div class="mb-6">
                         <a href="{{ route('judge.dashboard') }}" class="text-amber-400 hover:text-amber-300">
                             &larr; Back to Judge Dashboard
@@ -30,7 +36,7 @@
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                         <div>
                             <h3 class="text-xl font-bold mb-2 text-amber-400">{{ $tournament->title }}</h3>
-                            <p class="text-gray-400 mb-1">Judging Date: {{ \Carbon\Carbon::parse($tournament->judging_date)->format('F j, Y, g:i a') }}</p>
+                            <p class="text-gray-400 mb-1">Judging Date: {{ $judgingDate->format('F j, Y, g:i a') }}</p>
                             <p class="text-gray-400">Event Date: {{ \Carbon\Carbon::parse($tournament->date_time)->format('F j, Y, g:i a') }}</p>
                             <p class="text-gray-400">Location: {{ $tournament->location }}</p>
                         </div>
@@ -51,15 +57,23 @@
                         </div>
                     </div>
 
-                    @if(!$canJudge)
-                        <div class="mb-8 bg-yellow-900/20 p-4 rounded-lg border border-yellow-800/20">
-                            <h4 class="font-medium text-lg mb-2 text-yellow-400">Judging in Waiting Period</h4>
+                    @if(!$canJudgeNow)
+                        <div class="mb-8 bg-amber-900/20 p-4 rounded-lg border border-amber-800/20">
+                            <h4 class="font-medium text-lg mb-2 text-amber-400">Judging in Waiting Period</h4>
                             <p class="text-gray-300">
-                                To ensure fair judging, there is a waiting period after the tournament has ended before judging begins.
+                                To ensure fair judging, please wait until the judging date before grading submissions.
                                 This allows all participants to finalize their submissions.
                             </p>
-                            <p class="mt-4 text-yellow-400 font-medium">
-                                Judging will be available on {{ $waitingPeriodEnd->format('F j, Y, g:i a') }} ({{ $waitingPeriodEnd->diffForHumans() }})
+                            <p class="mt-4 text-amber-400 font-medium">
+                                Judging will be available on {{ $judgingDate->format('F j, Y, g:i a') }} 
+                                ({{ $judgingDate->diffForHumans() }})
+                            </p>
+                        </div>
+                    @else
+                        <div class="mb-8 bg-green-900/20 p-4 rounded-lg border border-green-800/20">
+                            <h4 class="font-medium text-lg mb-2 text-green-400">Judging Available Now</h4>
+                            <p class="text-gray-300">
+                                The judging period has begun. You can now grade participant submissions.
                             </p>
                         </div>
                     @endif
@@ -68,6 +82,24 @@
                     <div class="bg-gray-900/40 p-4 rounded-lg mb-8">
                         <h4 class="font-medium text-lg mb-2 text-amber-400">Judging Criteria</h4>
                         <div class="text-gray-300 whitespace-pre-line">{{ $tournament->judging_criteria }}</div>
+                    </div>
+
+                    <!-- Judging Rubrics -->
+                    <div class="bg-gray-900/40 p-4 rounded-lg mb-8">
+                        <h4 class="font-medium text-lg mb-2 text-amber-400">Judging Rubrics</h4>
+                        
+                        @if($tournament->rubrics->count() > 0)
+                            <div class="space-y-2">
+                                @foreach($tournament->rubrics as $rubric)
+                                    <div class="flex justify-between items-center border-b border-amber-800/10 py-2">
+                                        <span class="text-gray-300">{{ $rubric->title }}</span>
+                                        <span class="bg-amber-900/20 px-2 py-1 rounded-md text-amber-400">{{ $rubric->score_weight }}%</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <p class="text-gray-400">No specific rubrics have been defined for this tournament.</p>
+                        @endif
                     </div>
 
                     <!-- Submissions -->
@@ -98,11 +130,20 @@
                                             
                                             @if($tournament->team_size > 1)
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                                                    <p>{{ $participant->team_name ?? 'No team name' }}</p>
-                                                    @if(isset($participant->team_members) && count($participant->team_members) > 0)
+                                                    @if($participant->team)
+                                                        <p>{{ $participant->team->name }}</p>
                                                         <div class="text-xs text-gray-500 mt-1">
-                                                            {{ count($participant->team_members) }} members
+                                                            {{ $participant->role }}
                                                         </div>
+                                                    @elseif(isset($participant->team_name) && $participant->team_name)
+                                                        <p>{{ $participant->team_name }}</p>
+                                                        @if(isset($participant->team_members) && count($participant->team_members) > 0)
+                                                            <div class="text-xs text-gray-500 mt-1">
+                                                                {{ count($participant->team_members) }} members
+                                                            </div>
+                                                        @endif
+                                                    @else
+                                                        <span class="text-gray-500">No team</span>
                                                     @endif
                                                 </td>
                                             @endif
@@ -143,12 +184,12 @@
                                             
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                 @if($participant->submission_url)
-                                                    @if($canJudge)
+                                                    @if($canJudgeNow)
                                                         <a href="{{ route('judge.submission', ['tournament' => $tournament, 'participant' => $participant]) }}" class="text-amber-400 hover:text-amber-300">
                                                             {{ $participant->score !== null ? 'Review' : 'Grade' }}
                                                         </a>
                                                     @else
-                                                        <span class="text-gray-500">Waiting period</span>
+                                                        <span class="text-gray-500">Waiting for judging date</span>
                                                     @endif
                                                 @else
                                                     <span class="text-gray-500">Cannot grade</span>
