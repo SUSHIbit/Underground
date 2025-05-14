@@ -125,10 +125,18 @@ class JudgeDashboardController extends Controller
             return redirect()->route('judge.tournament', $tournament)->with('error', 'Invalid participant for this tournament.');
         }
         
-        // Load related user data
-        $participant->load('user');
+        // Load related user data and rubric scores
+        $participant->load('user', 'team.participants.user');
         
-        return view('judge.submission', compact('tournament', 'participant'));
+        // Get existing rubric scores if available
+        $rubricScores = [];
+        $existingScores = $participant->rubricScores()->get();
+        
+        foreach ($existingScores as $score) {
+            $rubricScores[$score->tournament_rubric_id] = $score->score;
+        }
+        
+        return view('judge.submission', compact('tournament', 'participant', 'rubricScores'));
     }
     
     /**
@@ -160,11 +168,26 @@ class JudgeDashboardController extends Controller
             return redirect()->route('judge.tournament', $tournament)->with('error', 'Invalid participant for this tournament.');
         }
         
-        // Validate the request
-        $validated = $request->validate([
-            'score' => 'required|integer|min:0|max:10',
-            'feedback' => 'required|string|max:1000',
-        ]);
+        // Validate the request based on whether rubrics exist
+        if ($tournament->rubrics->count() > 0) {
+            // Dynamic validation for rubric scores
+            $rubricRules = [];
+            foreach ($tournament->rubrics as $rubric) {
+                $rubricRules["rubric_scores.{$rubric->id}"] = 'required|numeric|min:0|max:10';
+            }
+            
+            $validated = $request->validate(array_merge([
+                'score' => 'required|numeric|min:0|max:10',
+                'feedback' => 'required|string|max:1000',
+                'rubric_scores' => 'required|array',
+            ], $rubricRules));
+        } else {
+            // Simple validation without rubrics
+            $validated = $request->validate([
+                'score' => 'required|numeric|min:0|max:10',
+                'feedback' => 'required|string|max:1000',
+            ]);
+        }
         
         try {
             DB::beginTransaction();
@@ -174,6 +197,20 @@ class JudgeDashboardController extends Controller
                 'score' => $validated['score'],
                 'feedback' => $validated['feedback'],
             ]);
+            
+            // Save individual rubric scores if they exist
+            if (isset($validated['rubric_scores']) && is_array($validated['rubric_scores'])) {
+                // Remove old scores first
+                $participant->rubricScores()->delete();
+                
+                // Add new scores
+                foreach ($validated['rubric_scores'] as $rubricId => $score) {
+                    $participant->rubricScores()->create([
+                        'tournament_rubric_id' => $rubricId,
+                        'score' => $score,
+                    ]);
+                }
+            }
             
             // Award points to the user based on their score
             // Calculate points based on score out of 10

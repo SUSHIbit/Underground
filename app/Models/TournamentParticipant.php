@@ -51,4 +51,12 @@ class TournamentParticipant extends Model
             // This is just a placeholder to show the concept
         }
     }
+
+    /**
+     * Get the rubric scores for this participant.
+     */
+    public function rubricScores()
+    {
+        return $this->hasMany(RubricScore::class, 'tournament_participant_id');
+    }
 }
