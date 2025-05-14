@@ -6,6 +6,7 @@ use App\Models\Tournament;
 use App\Models\TournamentParticipant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class JudgeDashboardController extends Controller
@@ -17,35 +18,37 @@ class JudgeDashboardController extends Controller
     {
         $user = Auth::user();
         $now = Carbon::now();
-        $waitingPeriodDays = 2; // Define a 2-day waiting period
         
         // Get tournaments where the user is assigned as a judge
-        $tournaments = $user->judgedTournaments()
-                          ->orderBy('judging_date', 'asc')
-                          ->get();
+        $tournaments = $user->judgedTournaments()->get();
         
-        // Separate tournaments into three categories based on judging_date
+        // Empty collections for each category
+        $readyToJudgeTournaments = collect();
+        $waitingPeriodTournaments = collect();
+        $upcomingTournaments = collect();
         
-        // 1. Upcoming: Tournaments whose judging_date is still in the future
-        $upcomingTournaments = $tournaments->filter(function($tournament) use ($now) {
-            return $now->lessThan(Carbon::parse($tournament->judging_date));
-        });
-        
-        // 2. Recently passed: Tournaments whose judging_date has passed but are still in waiting period
-        $waitingPeriodTournaments = $tournaments->filter(function($tournament) use ($now, $waitingPeriodDays) {
+        // Process each tournament and place it in the correct category
+        foreach ($tournaments as $tournament) {
             $judgingDate = Carbon::parse($tournament->judging_date);
-            $waitingPeriodEnd = $judgingDate->copy()->addDays($waitingPeriodDays);
-            return $now->greaterThanOrEqualTo($judgingDate) && $now->lessThan($waitingPeriodEnd);
-        });
+            
+            // If the judging date is in the past
+            if ($now->greaterThanOrEqualTo($judgingDate)) {
+                // It's either ready to judge or in waiting period
+                $readyToJudgeTournaments->push($tournament);
+            } 
+            // If judging date is in the future but within 48 hours
+            else if ($judgingDate->diffInHours($now) <= 48) {
+                // It's in waiting period (coming up soon)
+                $waitingPeriodTournaments->push($tournament);
+            } 
+            // If judging date is more than 48 hours in the future
+            else {
+                // It's an upcoming tournament
+                $upcomingTournaments->push($tournament);
+            }
+        }
         
-        // 3. Ready to judge: Tournaments whose judging_date has passed and waiting period is over
-        $readyToJudgeTournaments = $tournaments->filter(function($tournament) use ($now, $waitingPeriodDays) {
-            $judgingDate = Carbon::parse($tournament->judging_date);
-            $waitingPeriodEnd = $judgingDate->copy()->addDays($waitingPeriodDays);
-            return $now->greaterThanOrEqualTo($waitingPeriodEnd);
-        });
-        
-        return view('judge.dashboard', compact('upcomingTournaments', 'waitingPeriodTournaments', 'readyToJudgeTournaments'));
+        return view('judge.dashboard', compact('readyToJudgeTournaments', 'waitingPeriodTournaments', 'upcomingTournaments'));
     }
     
     /**

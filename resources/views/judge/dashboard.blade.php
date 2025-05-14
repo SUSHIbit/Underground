@@ -101,11 +101,7 @@
                                                     {{ $tournament->pivot->role ?? 'Judge' }}
                                                 </td>
                                                 <td class="px-4 py-4 text-sm text-yellow-400 whitespace-nowrap">
-                                                    @php
-                                                        $waitingPeriodDays = 2;
-                                                        $waitingPeriodEnd = \Carbon\Carbon::parse($tournament->judging_date)->addDays($waitingPeriodDays);
-                                                    @endphp
-                                                    Available {{ $waitingPeriodEnd->diffForHumans() }}
+                                                    Available soon
                                                 </td>
                                             </tr>
                                         @endforeach
