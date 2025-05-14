@@ -60,6 +60,11 @@
                             </div>
                             
                             <div class="mb-4">
+                                <h4 class="font-medium">Judging Date & Time</h4>
+                                <p>{{ $tournament->judging_date ? \Carbon\Carbon::parse($tournament->judging_date)->format('F j, Y, g:i a') : 'Not set' }}</p>
+                            </div>
+                            
+                            <div class="mb-4">
                                 <h4 class="font-medium">Minimum Rank</h4>
                                 <p>{{ $tournament->minimum_rank }}</p>
                             </div>

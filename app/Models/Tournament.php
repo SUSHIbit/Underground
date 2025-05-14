@@ -19,6 +19,7 @@ class Tournament extends Model
         'minimum_rank', 
         'team_size', 
         'deadline', 
+        'judging_date',
         'rules', 
         'judging_criteria', 
         'project_submission',
@@ -35,6 +36,7 @@ class Tournament extends Model
     protected $casts = [
         'date_time' => 'datetime',
         'deadline' => 'datetime',
+        'judging_date' => 'datetime',
         'submitted_at' => 'datetime',
         'reviewed_at' => 'datetime',
         'published_at' => 'datetime',

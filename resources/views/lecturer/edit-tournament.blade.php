@@ -141,6 +141,20 @@
                                         >
                                     </div>
                                     
+                                    <!-- Judging Date and Time Fields -->
+                                    <div class="mb-4">
+                                        <label for="judging_date" class="block mb-2 font-medium text-gray-700">Judging Date & Time</label>
+                                        <input 
+                                            type="datetime-local" 
+                                            name="judging_date" 
+                                            id="judging_date" 
+                                            class="w-full p-2 border border-gray-300 rounded-md"
+                                            value="{{ old('judging_date', $tournament->judging_date ? \Carbon\Carbon::parse($tournament->judging_date)->format('Y-m-d\TH:i') : '') }}"
+                                            required
+                                        >
+                                        <p class="mt-1 text-sm text-gray-500">Please select a date and time after the submission deadline.</p>
+                                    </div>
+                                    
                                     <div class="mb-4">
                                         <label for="minimum_rank" class="block mb-2 font-medium text-gray-700">Minimum Rank</label>
                                         <select 
@@ -394,6 +408,11 @@
                                 <div class="mb-4">
                                     <h4 class="font-medium">Submission Deadline</h4>
                                     <p>{{ $tournament->deadline ? \Carbon\Carbon::parse($tournament->deadline)->format('F j, Y, g:i a') : 'Not set' }}</p>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <h4 class="font-medium">Judging Date & Time</h4>
+                                    <p>{{ $tournament->judging_date ? \Carbon\Carbon::parse($tournament->judging_date)->format('F j, Y, g:i a') : 'Not set' }}</p>
                                 </div>
                                 
                                 <div class="mb-4">
