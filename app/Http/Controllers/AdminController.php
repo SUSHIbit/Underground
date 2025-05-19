@@ -45,14 +45,11 @@ class AdminController extends Controller
         return view('admin.edit-role', compact('user'));
     }
     
-    /**
-     * Update the user role.
-     */
     public function updateRole(Request $request, User $user)
     {
         $validator = Validator::make($request->all(), [
             'role' => 'required|in:student,lecturer,accessor,admin',
-            'is_judge' => 'sometimes|boolean',
+            'is_judge' => 'required|in:0,1', // Accept 0 or 1 as valid values
         ]);
         
         if ($validator->fails()) {
@@ -60,7 +57,7 @@ class AdminController extends Controller
         }
         
         $user->role = $request->role;
-        $user->is_judge = $request->has('is_judge');
+        $user->is_judge = (bool)$request->is_judge; // Convert to boolean
         $user->save();
         
         return redirect()->route('admin.dashboard')->with('success', 'User role updated successfully.');

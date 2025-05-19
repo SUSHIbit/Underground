@@ -70,12 +70,13 @@
                                     </select>
                                 </div>
                                 
-                                <div class="mb-4">
-                                    <div class="flex items-center">
-                                        <input type="checkbox" name="is_judge" id="is_judge" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" {{ $user->is_judge ? 'checked' : '' }}>
-                                        <label for="is_judge" class="ml-2 block text-sm font-medium text-gray-700">Judge Capability</label>
-                                    </div>
-                                    <p class="mt-1 text-sm text-gray-500">Users with judge capability can access the Judge Dashboard and grade tournament submissions.</p>
+                                <div>
+                                    <!-- Add hidden field for is_judge so it always sends a value -->
+                                    <input type="hidden" name="is_judge" value="0">
+                                    <!-- Checkbox will override the hidden field when checked -->
+                                    <input type="checkbox" name="is_judge" id="is_judge" value="1" {{ $user->is_judge ? 'checked' : '' }}>
+                                    <label for="is_judge">Judge Capability</label>
+                                    <p class="text-sm text-gray-400">Users with judge capability can access the Judge Dashboard and grade tournament submissions.</p>
                                 </div>
                                 
                                 <div class="mt-6">
