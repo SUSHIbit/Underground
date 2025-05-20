@@ -1,3 +1,4 @@
+<!-- resources/views/quizzes/attempt.blade.php (continued) -->
 <x-attempt-layout>
     <x-slot name="title">
         {{ __('Taking Quiz') }}: {{ $set->quizDetail->subject->name }} - {{ $set->quizDetail->topic->name }}
@@ -5,10 +6,9 @@
 
     <div class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-
             @if($attempt->is_retake)
             <!-- Learning Mode Banner -->
-            <div class="mb-4 bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-md shadow-md">
+            <div class="mb-4 bg-blue-900/20 border-l-4 border-blue-500 text-blue-400 p-4 rounded-md shadow-md">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
                         <svg class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
@@ -27,21 +27,21 @@
             </div>
             @endif
             
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-medium">Question {{ $currentPage }} of {{ $totalPages }}</h3>
+            <div class="bg-gray-800 border border-amber-800/20 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-4 sm:p-6 text-gray-200">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                        <h3 class="text-lg font-medium text-amber-400">Question {{ $currentPage }} of {{ $totalPages }}</h3>
                         
                         <!-- Timer Display -->
                         @if(isset($timer_minutes) && $timer_minutes > 0)
                             <div class="text-center">
-                                <div id="timer" class="text-xl font-bold px-4 py-2 rounded-lg bg-blue-100">
+                                <div id="timer" class="text-xl font-bold px-4 py-2 rounded-lg bg-blue-900/20 border border-blue-800/30">
                                     <span id="minutes">--</span>:<span id="seconds">--</span>
                                 </div>
-                                <div class="text-sm text-gray-600 mt-1">Time Remaining</div>
+                                <div class="text-sm text-gray-400 mt-1">Time Remaining</div>
                             </div>
                         @else
-                            <div class="text-gray-600">
+                            <div class="text-gray-400">
                                 Set #{{ $set->set_number }}
                             </div>
                         @endif
@@ -50,20 +50,20 @@
                     <form action="{{ route('quizzes.submit', $set) }}" method="POST" id="quiz-form" onsubmit="return confirmSubmit()">
                         @csrf
                         
-                        <div class="mb-6">
-                            <h4 class="text-xl mb-4">{{ $question->question_text }}</h4>
+                        <div class="mb-6 bg-gray-900/50 p-4 rounded-lg border border-amber-800/20">
+                            <h4 class="text-xl mb-4 text-amber-300">{{ $question->question_text }}</h4>
                             
                             <div class="space-y-3">
                                 @foreach($question->options as $option => $text)
-                                    <div class="flex items-center">
+                                    <div class="flex items-center p-2 rounded-md hover:bg-gray-700/50 cursor-pointer">
                                         <input type="radio" 
                                                name="answers[{{ $question->id }}]" 
                                                id="option-{{ $option }}" 
                                                value="{{ $option }}" 
-                                               class="h-4 w-4 text-blue-600" 
+                                               class="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-600 bg-gray-700"
                                                required>
-                                        <label for="option-{{ $option }}" class="ml-2">
-                                            {{ $option }}: {{ $text }}
+                                        <label for="option-{{ $option }}" class="ml-2 block text-gray-300 cursor-pointer w-full">
+                                            <span class="font-medium text-amber-400">{{ $option }}:</span> {{ $text }}
                                         </label>
                                     </div>
                                 @endforeach
@@ -75,10 +75,10 @@
                         
                         <!-- Add a debug section that only shows in development -->
                         @if(config('app.env') === 'local')
-                        <div class="mt-4 p-3 bg-gray-100 rounded-lg">
+                        <div class="mt-4 p-3 bg-gray-900/80 rounded-lg border border-gray-700">
                             <details>
-                                <summary class="cursor-pointer text-sm text-gray-600">Debug Info</summary>
-                                <div class="mt-2 text-xs">
+                                <summary class="cursor-pointer text-sm text-gray-400">Debug Info</summary>
+                                <div class="mt-2 text-xs text-gray-500">
                                     <p>Current Question ID: {{ $question->id }}</p>
                                     <p>Current Question Number: {{ $currentPage }}</p>
                                     <p>Total Questions: {{ $totalPages }}</p>
@@ -92,36 +92,36 @@
                         <!-- IMPROVED NAVIGATION SECTION START -->
                         <div class="flex flex-col space-y-4 mt-6">
                             <!-- Question progress bar -->
-                            <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-                                <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ ($currentPage / $totalPages) * 100 }}%"></div>
+                            <div class="w-full bg-gray-700 rounded-full h-2.5 mb-2">
+                                <div class="bg-amber-600 h-2.5 rounded-full" style="width: {{ ($currentPage / $totalPages) * 100 }}%"></div>
                             </div>
 
                             <!-- Question counter -->
                             <div class="text-center mb-2">
-                                <span class="text-sm text-gray-600">Question {{ $currentPage }} of {{ $totalPages }}</span>
+                                <span class="text-sm text-gray-400">Question {{ $currentPage }} of {{ $totalPages }}</span>
                             </div>
 
                             <!-- Main pagination options -->
-                            <div class="flex items-center justify-between navigation-container">
+                            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 navigation-container">
                                 <!-- Previous button -->
-                                <div class="nav-buttons">
+                                <div class="nav-buttons w-full sm:w-auto">
                                     @if($currentPage > 1)
                                         <a href="{{ route('quizzes.attempt', ['set' => $set, 'page' => $currentPage - 1]) }}" 
-                                           class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                                           class="w-full sm:w-auto inline-block text-center bg-gray-700 hover:bg-gray-600 text-gray-200 font-bold py-2 px-4 rounded-md transition duration-150 border border-amber-800/20"
                                            onclick="savePage({{ $currentPage - 1 }})">
                                             Previous
                                         </a>
                                     @else
-                                        <button disabled class="bg-gray-200 text-gray-500 font-bold py-2 px-4 rounded cursor-not-allowed">
+                                        <button disabled class="w-full sm:w-auto bg-gray-800 text-gray-500 font-bold py-2 px-4 rounded-md cursor-not-allowed border border-gray-700">
                                             Previous
                                         </button>
                                     @endif
                                 </div>
 
                                 <!-- Pagination batches with dynamic calculation -->
-                                <div x-data="{ showAllQuestions: false, currentBatch: {{ ceil($currentPage / 10) }} }" class="pagination-batch">
+                                <div x-data="{ showAllQuestions: false, currentBatch: {{ ceil($currentPage / 10) }} }" class="pagination-batch order-3 sm:order-2">
                                     <!-- Current batch pagination (shows 10 at a time) -->
-                                    <div class="flex space-x-1 items-center">
+                                    <div class="flex flex-wrap justify-center space-x-1 items-center">
                                         @php
                                             $batchStart = (ceil($currentPage / 10) - 1) * 10 + 1;
                                             $batchEnd = min($batchStart + 9, $totalPages);
@@ -131,21 +131,21 @@
                                         @if($batchStart > 1)
                                             <button @click="currentBatch--" 
                                                     onclick="navigateToBatch({{ ceil($currentPage / 10) - 1 }})"
-                                                    class="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-md batch-nav-btn"
+                                                    class="w-8 h-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 rounded-md batch-nav-btn text-gray-200 border border-amber-800/20"
                                                     title="Previous batch">
                                                 &laquo;
                                             </button>
                                         @endif
 
                                         <!-- Question numbers in current batch -->
-                                        <div class="flex space-x-1">
+                                        <div class="flex flex-wrap gap-1 justify-center">
                                             <template x-for="pageNum in {{ $batchEnd - $batchStart + 1 }}" :key="pageNum">
                                                 <div x-data="{ page: {{ $batchStart }} - 1 + pageNum }">
                                                     <a :href="'{{ route('quizzes.attempt', ['set' => $set, 'page' => '']) }}' + page"
                                                        :class="page == {{ $currentPage }} ? 
-                                                               'bg-blue-500 text-white' : 
-                                                               'bg-gray-200 text-gray-700 hover:bg-gray-300'"
-                                                       class="question-nav-link inline-flex justify-center items-center w-8 h-8 rounded-md relative"
+                                                               'bg-amber-600 text-white border-amber-700' : 
+                                                               'bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700'"
+                                                       class="question-nav-link inline-flex justify-center items-center w-8 h-8 rounded-md relative border"
                                                        @click="savePage(page)">
                                                         <span class="question-number" x-text="page"></span>
                                                     </a>
@@ -157,7 +157,7 @@
                                         @if($batchEnd < $totalPages)
                                             <button @click="currentBatch++" 
                                                     onclick="navigateToBatch({{ ceil($currentPage / 10) + 1 }})"
-                                                    class="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-md batch-nav-btn"
+                                                    class="w-8 h-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 rounded-md batch-nav-btn text-gray-200 border border-amber-800/20"
                                                     title="Next batch">
                                                 &raquo;
                                             </button>
@@ -165,7 +165,7 @@
 
                                         <!-- Toggle button for all questions -->
                                         <button @click="showAllQuestions = !showAllQuestions" 
-                                                class="ml-2 px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded-md flex items-center"
+                                                class="ml-2 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md flex items-center text-gray-200 border border-amber-800/20"
                                                 title="Show all questions">
                                             <span>All</span>
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -183,14 +183,14 @@
                                          x-transition:leave="transition ease-in duration-100"
                                          x-transition:leave-start="opacity-100 scale-100"
                                          x-transition:leave-end="opacity-0 scale-95"
-                                         class="absolute z-10 mt-2 p-3 bg-white rounded-md shadow-lg border border-gray-200 all-questions-panel"
+                                         class="absolute z-10 mt-2 p-3 bg-gray-800 rounded-md shadow-lg border border-amber-800/20 all-questions-panel"
                                          style="display: none;">
                                         
-                                        <h4 class="text-sm font-medium text-gray-700 mb-2">All Questions</h4>
+                                        <h4 class="text-sm font-medium text-amber-400 mb-2">All Questions</h4>
                                         <div class="grid grid-cols-5 gap-2 max-h-60 overflow-y-auto p-1">
                                             @for($i = 1; $i <= $totalPages; $i++)
                                                 <a href="{{ route('quizzes.attempt', ['set' => $set, 'page' => $i]) }}" 
-                                                   class="question-nav-link inline-flex justify-center items-center w-8 h-8 {{ $i == $currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }} rounded-md relative"
+                                                   class="question-nav-link inline-flex justify-center items-center w-8 h-8 {{ $i == $currentPage ? 'bg-amber-600 text-white border-amber-700' : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border-gray-700' }} rounded-md relative border"
                                                    onclick="savePage({{ $i }})">
                                                     <span class="question-number">{{ $i }}</span>
                                                 </a>
@@ -198,7 +198,7 @@
                                         </div>
                                         
                                         <div class="mt-2 text-center">
-                                            <button @click="showAllQuestions = false" class="text-xs text-gray-600 hover:text-gray-800">
+                                            <button @click="showAllQuestions = false" class="text-xs text-amber-400 hover:text-amber-300">
                                                 Close
                                             </button>
                                         </div>
@@ -206,17 +206,17 @@
                                 </div>
 
                                 <!-- Next button and submit -->
-                                <div class="nav-buttons">
+                                <div class="nav-buttons w-full sm:w-auto order-2 sm:order-3">
                                     @if($currentPage < $totalPages)
                                         <a href="{{ route('quizzes.attempt', ['set' => $set, 'page' => $currentPage + 1]) }}" 
-                                           class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                                           class="w-full sm:w-auto inline-block text-center bg-gray-700 hover:bg-gray-600 text-gray-200 font-bold py-2 px-4 rounded-md transition duration-150 border border-amber-800/20"
                                            onclick="savePage({{ $currentPage + 1 }})">
                                             Next
                                         </a>
                                     @else
                                         <button type="button" 
                                                 onclick="submitForm()" 
-                                                class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                                                class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-150">
                                             Submit Quiz
                                         </button>
                                     @endif
@@ -225,7 +225,7 @@
 
                             <!-- Visual answered status -->
                             <div class="mt-1 text-center">
-                                <span class="text-xs text-gray-500">
+                                <span class="text-xs text-gray-400">
                                     <span id="answered-count">0</span> of {{ $totalPages }} questions answered
                                 </span>
                             </div>
@@ -251,7 +251,8 @@
 
         /* Style for answered questions */
         .answered {
-            background-color: #d1fae5 !important; /* Light green background */
+            background-color: rgba(16, 185, 129, 0.2) !important; /* Light green background with opacity */
+            border-color: rgba(4, 120, 87, 0.5) !important;
         }
 
         .answer-indicator {
@@ -259,7 +260,7 @@
             top: -4px;
             right: -4px;
             font-size: 10px;
-            background-color: #10b981;
+            background-color: rgb(16, 185, 129);
             color: white;
             border-radius: 50%;
             width: 14px;
@@ -267,27 +268,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
 
         /* Mobile responsiveness */
         @media (max-width: 640px) {
-            .navigation-container {
-                flex-direction: column;
-                gap: 0.75rem;
-            }
-            
-            .pagination-batch {
-                order: 2;
-            }
-            
-            .nav-buttons {
-                width: 100%;
-                display: flex;
-                justify-content: space-between;
-            }
-            
-            /* Adjust the all questions panel on mobile */
             .all-questions-panel {
                 width: 90vw;
                 left: 5vw;
@@ -328,25 +313,8 @@
             // Track all answered questions
             trackAnsweredQuestions();
             
-            // Add class to style the navigation links
-            const styleElement = document.createElement('style');
-            styleElement.innerHTML = `
-                .answered {
-                    background-color: #d1fae5 !important; /* Light green */
-                }
-                .answer-indicator {
-                    display: inline-block;
-                    margin-left: 4px;
-                    color: #10b981; /* Green color */
-                }
-            `;
-            document.head.appendChild(styleElement);
-            
-            // Add classes to the navigation links
-            const navLinks = document.querySelectorAll('.inline-flex.justify-center.items-center');
-            navLinks.forEach(link => {
-                link.classList.add('question-nav-link');
-            });
+            // Update navigation UI based on saved answers
+            updateNavigationUI();
             
             // Set up the timer if it exists
             @if(isset($timer_minutes) && $timer_minutes > 0 && isset($remaining_seconds))
@@ -360,14 +328,22 @@
                     document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
                     document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
                     
+                    // Update the nav timer if it exists
+                    const navMinutes = document.getElementById('minutes-nav');
+                    const navSeconds = document.getElementById('seconds-nav');
+                    if (navMinutes && navSeconds) {
+                        navMinutes.textContent = String(minutes).padStart(2, '0');
+                        navSeconds.textContent = String(seconds).padStart(2, '0');
+                    }
+                    
                     // Change color as time decreases
                     const timerElement = document.getElementById('timer');
                     if (timeLeft < 60) { // Less than 1 minute
-                        timerElement.classList.remove('bg-blue-100', 'bg-yellow-100');
-                        timerElement.classList.add('bg-red-100', 'text-red-700');
+                        timerElement.classList.remove('bg-blue-900/20', 'bg-yellow-900/20', 'border-blue-800/30', 'border-yellow-800/30');
+                        timerElement.classList.add('bg-red-900/20', 'text-red-400', 'border-red-800/30');
                     } else if (timeLeft < 300) { // Less than 5 minutes
-                        timerElement.classList.remove('bg-blue-100');
-                        timerElement.classList.add('bg-yellow-100', 'text-yellow-700');
+                        timerElement.classList.remove('bg-blue-900/20', 'border-blue-800/30');
+                        timerElement.classList.add('bg-yellow-900/20', 'text-yellow-400', 'border-yellow-800/30');
                     }
                     
                     if (timeLeft <= 0) {
@@ -386,25 +362,8 @@
                 const timerInterval = setInterval(updateTimer, 1000);
             @endif
             
-            // Debug info for local environment
-            @if(config('app.env') === 'local')
-            if (localStorage.getItem(`quiz_{{ $set->id }}_answered_all`)) {
-                const status = JSON.parse(localStorage.getItem(`quiz_{{ $set->id }}_answered_all`));
-                const statusEl = document.getElementById('answered-status');
-                if (statusEl) {
-                    statusEl.innerHTML = '<p>Questions answered status:</p>';
-                    for (const [num, answered] of Object.entries(status)) {
-                        statusEl.innerHTML += `<p>Question ${num}: ${answered ? '✓' : '❌'}</p>`;
-                    }
-                }
-            }
-            @endif
-            
             // Initialize pagination
             initializePagination();
-            
-            // Update navigation UI based on saved answers
-            updateNavigationUI();
         });
 
         // Save current page to restore if user comes back
@@ -598,13 +557,18 @@
             }
             
             if (isAutoSubmit || confirmSubmit()) {
-                // REMOVED: beforeunload event handler removal (since we no longer set it)
-                
-                // Log what we're submitting
-                console.log("Submitting quiz with answers:", 
-                    Array.from(document.querySelectorAll('input[name^="answers["]'))
-                        .map(el => `${el.name}: ${el.value}`)
-                );
+                // Show a loading state
+                const submitBtn = document.querySelector('button[onclick="submitForm()"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = `
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Submitting...
+                    `;
+                }
                 
                 // Submit the form
                 document.getElementById('quiz-form').submit();
