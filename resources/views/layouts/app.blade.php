@@ -221,28 +221,30 @@
         <div class="flex-1 flex flex-col min-w-0">
             <!-- Header -->
             <header class="bg-gray-800 shadow-md border-b border-amber-800/20">
-                <div class="px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+                <div class="px-4 sm:px-6 lg:px-8 flex items-center h-16">
                     <!-- Mobile menu button -->
                     <button 
                         @click="sidebarOpen = !sidebarOpen" 
-                        class="lg:hidden text-gray-300 hover:text-white focus:outline-none focus:text-white"
+                        class="lg:hidden text-gray-300 hover:text-white focus:outline-none focus:text-white mr-4"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
                     
-                    <!-- Page Title -->
-                    <h2 class="font-semibold text-xl text-amber-400 leading-tight">
-                        @isset($header)
-                            {{ $header }}
-                        @else
-                            {{ __('Dashboard') }}
-                        @endisset
-                    </h2>
+                    <!-- Centered Page Title -->
+                    <div class="flex-1 flex justify-center">
+                        <h2 class="font-semibold text-xl text-amber-400 leading-tight text-center">
+                            @isset($header)
+                                {{ $header }}
+                            @else
+                                {{ __('Dashboard') }}
+                            @endisset
+                        </h2>
+                    </div>
                     
-                    <!-- Right side placeholder to balance the layout -->
-                    <div class="w-6 h-6 lg:hidden"></div>
+                    <!-- Right side spacer to balance mobile button on the left -->
+                    <div class="w-10 lg:hidden"></div>
                 </div>
             </header>
 
