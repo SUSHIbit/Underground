@@ -19,6 +19,33 @@
                         <h3 class="text-lg font-medium mb-1">Challenge: {{ $set->challengeDetail->name }}</h3>
                         <p class="text-gray-600">Set #{{ $set->set_number }}</p>
                         <p class="text-gray-600">Created by: {{ $set->creator->name }}</p>
+                        
+                        <!-- Show current status -->
+                        <div class="mt-2">
+                            <span class="px-2 py-1 rounded-full text-xs 
+                                @if($set->status == 'pending_approval')
+                                    bg-yellow-100 text-yellow-800
+                                @elseif($set->status == 'approved')
+                                    bg-green-100 text-green-800
+                                @elseif($set->status == 'approved_unpublished')
+                                    bg-blue-100 text-blue-800
+                                @else
+                                    bg-red-100 text-red-800
+                                @endif">
+                                @if($set->status == 'approved_unpublished')
+                                    Approved (Ready to Publish)
+                                @else
+                                    {{ ucfirst(str_replace('_', ' ', $set->status)) }}
+                                @endif
+                            </span>
+                        </div>
+                        
+                        @if($set->review_notes && ($set->isApproved() || $set->isApprovedUnpublished() || $set->isRejected()))
+                            <div class="mt-4 p-3 {{ $set->isRejected() ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200' }} rounded-lg">
+                                <h4 class="font-medium {{ $set->isRejected() ? 'text-red-800' : 'text-green-800' }} mb-2">Review Notes</h4>
+                                <p class="{{ $set->isRejected() ? 'text-red-700' : 'text-green-700' }}">{{ $set->review_notes }}</p>
+                            </div>
+                        @endif
                     </div>
                     
                     <!-- Prerequisites -->
@@ -87,6 +114,7 @@
                                     </div>
                                 </div>
                                 
+                                @if($set->isPendingApproval())
                                 <div class="mt-4 border-t pt-4">
                                     <h5 class="font-medium text-gray-700 mb-2">Add Comment</h5>
                                     <form action="{{ route('accessor.sets.comment', $set) }}" method="POST">
@@ -105,6 +133,7 @@
                                         </button>
                                     </form>
                                 </div>
+                                @endif
                                 
                                 @if($set->comments->where('question_id', $question->id)->count() > 0)
                                     <div class="mt-4 p-3 bg-yellow-50 rounded-lg">
@@ -126,6 +155,7 @@
                         @endforeach
                     </div>
                     
+                    @if($set->isPendingApproval())
                     <div class="mt-8 border-t pt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <h4 class="font-medium mb-2">Approve Challenge</h4>
@@ -201,6 +231,7 @@
                             </button>
                         </form>
                     </div>
+                    @endif
                 </div>
             </div>
         </div>

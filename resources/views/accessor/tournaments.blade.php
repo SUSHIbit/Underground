@@ -91,8 +91,18 @@
                                             </td>
                                             <td class="py-2 px-4 border-b border-gray-200">
                                                 <span class="px-2 py-1 rounded-full text-xs 
-                                                    {{ $tournament->status == 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                                    {{ ucfirst($tournament->status) }}
+                                                    @if($tournament->status == 'approved')
+                                                        bg-green-100 text-green-800
+                                                    @elseif($tournament->status == 'approved_unpublished')
+                                                        bg-blue-100 text-blue-800
+                                                    @else
+                                                        bg-red-100 text-red-800
+                                                    @endif">
+                                                    @if($tournament->status == 'approved_unpublished')
+                                                        Approved (Ready to Publish)
+                                                    @else
+                                                        {{ ucfirst(str_replace('_', ' ', $tournament->status)) }}
+                                                    @endif
                                                 </span>
                                             </td>
                                             <td class="py-2 px-4 border-b border-gray-200">{{ $tournament->reviewed_at->format('M d, Y') }}</td>

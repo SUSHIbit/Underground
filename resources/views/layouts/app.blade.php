@@ -121,7 +121,8 @@
                     </a>
                 @endif
 
-                <!-- Extras with Submenu -->
+                <!-- Extras with Submenu - Only for Students and Judges -->
+                @if(auth()->user()->role === 'student' || auth()->user()->is_judge)
                 <div class="relative">
                     <button @click="extrasOpen = !extrasOpen" class="flex items-center w-full p-3 rounded-md {{ request()->routeIs('extras') || request()->routeIs('ranks.*') || request()->routeIs('skills.*') || request()->routeIs('leaderboard') || request()->routeIs('uepoints.*') || request()->routeIs('judge.*') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -146,6 +147,7 @@
                          x-transition:leave-end="opacity-0 scale-95"
                          class="ml-4 space-y-1 mt-1">
                         
+                        @if(auth()->user()->role === 'student')
                         <a href="{{ route('ranks.index') }}" class="flex items-center p-2 rounded-md {{ request()->routeIs('ranks.*') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                             <span class="w-3 mr-3 text-amber-400/60">•</span>
                             <span>View Ranks</span>
@@ -165,6 +167,7 @@
                             <span class="w-3 mr-3 text-amber-400/60">•</span>
                             <span>UEPoints</span>
                         </a>
+                        @endif
 
                         @if(Auth::user()->is_judge)
                             <a href="{{ route('judge.dashboard') }}" class="flex items-center p-2 rounded-md {{ request()->routeIs('judge.*') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
@@ -174,11 +177,13 @@
                         @endif
                     </div>
                 </div>
+                @endif
                 </nav>
 
                 <!-- Bottom Section with User Profile and Logout -->
                 <div class="mt-auto">
-                    <!-- Add Settings here before the User Profile -->
+                    <!-- Add Settings here before the User Profile - Only for Students and Judges -->
+                    @if(auth()->user()->role === 'student' || auth()->user()->is_judge)
                     <div class="border-t border-amber-800/20 pt-2">
                         <a href="{{ route('settings') }}" class="flex items-center p-3 rounded-md {{ request()->routeIs('settings') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -188,6 +193,7 @@
                             <span class="ml-3">Settings</span>
                         </a>
                     </div>
+                    @endif
 
                     <!-- User Profile -->
                     <div class="p-4 border-t border-amber-800/20">

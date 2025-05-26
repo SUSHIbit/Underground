@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class AccessorDashboardController extends Controller
 {
-        /**
+    /**
      * Display the accessor's dashboard.
      */
     public function index()
@@ -19,8 +19,8 @@ class AccessorDashboardController extends Controller
                       ->latest('submitted_at')
                       ->get();
         
-        // Get recently reviewed sets
-        $reviewedSets = Set::whereIn('status', ['approved', 'rejected'])
+        // Get recently reviewed sets - include both approved_unpublished and approved statuses
+        $reviewedSets = Set::whereIn('status', ['approved', 'approved_unpublished', 'rejected'])
                       ->with(['creator', 'reviewer', 'quizDetail.subject', 'quizDetail.topic', 'challengeDetail'])
                       ->latest('reviewed_at')
                       ->limit(10)
@@ -34,10 +34,10 @@ class AccessorDashboardController extends Controller
      */
     public function review(Set $set)
     {
-        // Ensure the set is pending approval
-        if (!$set->isPendingApproval()) {
+        // Allow review of sets that are pending approval OR already reviewed (for viewing)
+        if (!$set->isPendingApproval() && !$set->isApproved() && !$set->isApprovedUnpublished() && !$set->isRejected()) {
             return redirect()->route('accessor.dashboard')
-                           ->with('error', 'This set is not pending approval.');
+                           ->with('error', 'This set cannot be reviewed.');
         }
         
         $set->load(['creator', 'questions', 'comments.user', 'comments.question']);
@@ -51,7 +51,9 @@ class AccessorDashboardController extends Controller
         }
     }
 
-
+    /**
+     * Display tournaments dashboard for accessor.
+     */
     public function tournaments()
     {
         // Get tournaments pending approval
@@ -60,8 +62,8 @@ class AccessorDashboardController extends Controller
                     ->latest('submitted_at')
                     ->get();
         
-        // Get recently reviewed tournaments
-        $reviewedTournaments = Tournament::whereIn('status', ['approved', 'rejected'])
+        // Get recently reviewed tournaments - include both approved_unpublished and approved statuses
+        $reviewedTournaments = Tournament::whereIn('status', ['approved', 'approved_unpublished', 'rejected'])
                     ->with(['creator', 'reviewer', 'judges'])
                     ->latest('reviewed_at')
                     ->limit(10)
@@ -70,12 +72,15 @@ class AccessorDashboardController extends Controller
         return view('accessor.tournaments', compact('pendingTournaments', 'reviewedTournaments'));
     }
 
+    /**
+     * Show the tournament review page.
+     */
     public function reviewTournament(Tournament $tournament)
     {
-        // Ensure the tournament is pending approval
-        if (!$tournament->isPendingApproval()) {
+        // Allow review of tournaments that are pending approval OR already reviewed (for viewing)
+        if (!$tournament->isPendingApproval() && !$tournament->isApproved() && !$tournament->isApprovedUnpublished() && !$tournament->isRejected()) {
             return redirect()->route('accessor.tournaments')
-                        ->with('error', 'This tournament is not pending approval.');
+                        ->with('error', 'This tournament cannot be reviewed.');
         }
         
         // Load the tournament with its relationships including rubrics
