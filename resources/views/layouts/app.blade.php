@@ -182,8 +182,7 @@
 
                 <!-- Bottom Section with User Profile and Logout -->
                 <div class="mt-auto">
-                    <!-- Add Settings here before the User Profile - Only for Students and Judges -->
-                    @if(auth()->user()->role === 'student' || auth()->user()->is_judge)
+                    <!-- Settings - NOW AVAILABLE FOR ALL ROLES -->
                     <div class="border-t border-amber-800/20 pt-2">
                         <a href="{{ route('settings') }}" class="flex items-center p-3 rounded-md {{ request()->routeIs('settings') ? 'bg-gray-700 text-amber-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -193,7 +192,6 @@
                             <span class="ml-3">Settings</span>
                         </a>
                     </div>
-                    @endif
 
                     <!-- User Profile -->
                     <div class="p-4 border-t border-amber-800/20">

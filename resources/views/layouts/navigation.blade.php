@@ -1,5 +1,5 @@
 <!-- resources/views/layouts/navigation.blade.php -->
-<nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
+<nav x-data="{ open: false }" class="bg-gray-800 border-b border-amber-800/20">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
@@ -7,66 +7,74 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}">
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
+                        <div class="text-amber-500 font-bold text-2xl">UG</div>
                     </a>
                 </div>
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ __('Dashboard') }}
-                    </x-nav-link>
-                    
                     @if(Auth::user()->role === 'student')
-                        <x-nav-link :href="route('quizzes.index')" :active="request()->routeIs('quizzes.*')">
+                        <a href="{{ route('dashboard') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('dashboard') ? 'border-amber-400 text-amber-500' : 'border-transparent text-gray-300 hover:text-gray-200 hover:border-gray-300' }} text-sm font-medium leading-5 focus:outline-none focus:border-amber-700 transition duration-150 ease-in-out">
+                            {{ __('Dashboard') }}
+                        </a>
+                        
+                        <a href="{{ route('quizzes.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('quizzes.*') ? 'border-amber-400 text-amber-500' : 'border-transparent text-gray-300 hover:text-gray-200 hover:border-gray-300' }} text-sm font-medium leading-5 focus:outline-none focus:border-amber-700 transition duration-150 ease-in-out">
                             {{ __('Quizzes') }}
-                        </x-nav-link>
-                        <x-nav-link :href="route('challenges.index')" :active="request()->routeIs('challenges.*')">
+                        </a>
+                        
+                        <a href="{{ route('challenges.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('challenges.*') ? 'border-amber-400 text-amber-500' : 'border-transparent text-gray-300 hover:text-gray-200 hover:border-gray-300' }} text-sm font-medium leading-5 focus:outline-none focus:border-amber-700 transition duration-150 ease-in-out">
                             {{ __('Challenges') }}
-                        </x-nav-link>
+                        </a>
+                        
+                        <a href="{{ route('tournaments.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('tournaments.*') ? 'border-amber-400 text-amber-500' : 'border-transparent text-gray-300 hover:text-gray-200 hover:border-gray-300' }} text-sm font-medium leading-5 focus:outline-none focus:border-amber-700 transition duration-150 ease-in-out">
+                            {{ __('Tournaments') }}
+                        </a>
                     @elseif(Auth::user()->role === 'lecturer')
-                        <x-nav-link :href="route('lecturer.dashboard')" :active="request()->routeIs('lecturer.*')">
-                            {{ __('Lecturer Dashboard') }}
-                        </x-nav-link>
+                        <a href="{{ route('lecturer.dashboard') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('lecturer.dashboard') ? 'border-amber-400 text-amber-500' : 'border-transparent text-gray-300 hover:text-gray-200 hover:border-gray-300' }} text-sm font-medium leading-5 focus:outline-none focus:border-amber-700 transition duration-150 ease-in-out">
+                            {{ __('Dashboard') }}
+                        </a>
+                        
+                        <a href="{{ route('lecturer.tournaments') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('lecturer.tournaments*') ? 'border-amber-400 text-amber-500' : 'border-transparent text-gray-300 hover:text-gray-200 hover:border-gray-300' }} text-sm font-medium leading-5 focus:outline-none focus:border-amber-700 transition duration-150 ease-in-out">
+                            {{ __('Tournaments') }}
+                        </a>
                     @elseif(Auth::user()->role === 'accessor')
-                        <x-nav-link :href="route('accessor.dashboard')" :active="request()->routeIs('accessor.*')">
-                            {{ __('Accessor Dashboard') }}
-                        </x-nav-link>
+                        <a href="{{ route('accessor.dashboard') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('accessor.dashboard') ? 'border-amber-400 text-amber-500' : 'border-transparent text-gray-300 hover:text-gray-200 hover:border-gray-300' }} text-sm font-medium leading-5 focus:outline-none focus:border-amber-700 transition duration-150 ease-in-out">
+                            {{ __('Dashboard') }}
+                        </a>
+                        
+                        <a href="{{ route('accessor.tournaments') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('accessor.tournaments*') ? 'border-amber-400 text-amber-500' : 'border-transparent text-gray-300 hover:text-gray-200 hover:border-gray-300' }} text-sm font-medium leading-5 focus:outline-none focus:border-amber-700 transition duration-150 ease-in-out">
+                            {{ __('Tournaments') }}
+                        </a>
                     @elseif(Auth::user()->role === 'admin')
-                        <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
-                            {{ __('Admin Dashboard') }}
-                        </x-nav-link>
+                        <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('admin.dashboard') ? 'border-amber-400 text-amber-500' : 'border-transparent text-gray-300 hover:text-gray-200 hover:border-gray-300' }} text-sm font-medium leading-5 focus:outline-none focus:border-amber-700 transition duration-150 ease-in-out">
+                            {{ __('Dashboard') }}
+                        </a>
+                    @elseif(Auth::user()->role === 'judge')
+                        <a href="{{ route('judge.dashboard') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('judge.dashboard') ? 'border-amber-400 text-amber-500' : 'border-transparent text-gray-300 hover:text-gray-200 hover:border-gray-300' }} text-sm font-medium leading-5 focus:outline-none focus:border-amber-700 transition duration-150 ease-in-out">
+                            {{ __('Dashboard') }}
+                        </a>
                     @endif
 
-                    <!-- Add this to the navigation links section -->
-                    @if(Auth::user()->role === 'student')
-                    <x-nav-link :href="route('tournaments.index')" :active="request()->routeIs('tournaments.*')">
-                        {{ __('Tournaments') }}
-                    </x-nav-link>
-                    @elseif(Auth::user()->role === 'lecturer')
-                    <x-nav-link :href="route('lecturer.tournaments')" :active="request()->routeIs('lecturer.tournaments*')">
-                        {{ __('Tournaments') }}
-                    </x-nav-link>
-                    @elseif(Auth::user()->role === 'accessor')
-                    <x-nav-link :href="route('accessor.tournaments')" :active="request()->routeIs('accessor.tournaments*')">
-                        {{ __('Tournaments') }}
-                    </x-nav-link>
+                    @if(Auth::user()->is_judge)
+                        <a href="{{ route('judge.dashboard') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('judge.*') ? 'border-amber-400 text-amber-500' : 'border-transparent text-gray-300 hover:text-gray-200 hover:border-gray-300' }} text-sm font-medium leading-5 focus:outline-none focus:border-amber-700 transition duration-150 ease-in-out">
+                            {{ __('Judge') }}
+                        </a>
                     @endif
                 </div>
             </div>
 
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6">
-                <x-dropdown align="right" width="48">
-                    <x-slot name="trigger">
+                <div class="relative" x-data="{ open: false }" @click.outside="open = false" @close.stop="open = false">
+                    <div @click="open = ! open">
                         <div class="flex items-center">
                             <!-- Profile Picture - FIXED SIZE -->
-                            <img class="h-8 w-8 !important rounded-full object-cover mr-2" 
+                            <img class="h-8 w-8 rounded-full object-cover mr-2" 
                                 style="max-width: 32px !important; max-height: 32px !important;"
                                 src="{{ Auth::user()->profile_picture ? asset('storage/' . Auth::user()->profile_picture) : asset('images/default-avatar.png') }}" 
                                 alt="{{ Auth::user()->name }}">
 
-                            <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
+                            <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-300 bg-gray-800 hover:text-gray-200 focus:outline-none transition ease-in-out duration-150">
                                 <div>{{ Auth::user()->name }}</div>
 
                                 <div class="ms-1">
@@ -76,35 +84,45 @@
                                 </div>
                             </button>
                         </div>
-                    </x-slot>
+                    </div>
 
-                    <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">
-                            {{ __('Profile') }}
-                        </x-dropdown-link>
+                    <div x-show="open"
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0 scale-95"
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75"
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-50 mt-2 w-48 rounded-md shadow-lg ltr:origin-top-right rtl:origin-top-left end-0"
+                            style="display: none;"
+                            @click="open = false">
+                        <div class="rounded-md ring-1 ring-black ring-opacity-5 py-1 bg-gray-700">
+                            <a href="{{ route('profile.edit') }}" class="block w-full px-4 py-2 text-start text-sm leading-5 text-gray-300 hover:bg-gray-600 focus:outline-none focus:bg-gray-600 transition duration-150 ease-in-out">
+                                {{ __('Profile') }}
+                            </a>
 
-                        <!-- New Settings Section -->
-                        <x-dropdown-link :href="route('settings')">
-                            {{ __('Settings') }}
-                        </x-dropdown-link>
+                            <!-- Settings Section - Available for ALL roles -->
+                            <a href="{{ route('settings') }}" class="block w-full px-4 py-2 text-start text-sm leading-5 text-gray-300 hover:bg-gray-600 focus:outline-none focus:bg-gray-600 transition duration-150 ease-in-out">
+                                {{ __('Settings') }}
+                            </a>
 
-                        <!-- Authentication -->
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-
-                            <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault();
-                                                this.closest('form').submit();">
-                                {{ __('Log Out') }}
-                            </x-dropdown-link>
-                        </form>
-                    </x-slot>
-                </x-dropdown>
+                            <!-- Authentication -->
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <a href="{{ route('logout') }}"
+                                        onclick="event.preventDefault(); this.closest('form').submit();"
+                                        class="block w-full px-4 py-2 text-start text-sm leading-5 text-gray-300 hover:bg-gray-600 focus:outline-none focus:bg-gray-600 transition duration-150 ease-in-out">
+                                    {{ __('Log Out') }}
+                                </a>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Mobile menu button -->
             <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
+                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-300 hover:bg-gray-700 focus:outline-none focus:bg-gray-700 focus:text-gray-300 transition duration-150 ease-in-out">
                     <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -117,43 +135,57 @@
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                {{ __('Dashboard') }}
-            </x-responsive-nav-link>
-
             @if(Auth::user()->role === 'student')
-                <x-responsive-nav-link :href="route('quizzes.index')" :active="request()->routeIs('quizzes.*')">
+                <a href="{{ route('dashboard') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 {{ request()->routeIs('dashboard') ? 'border-amber-400 text-amber-300 bg-amber-50/10' : 'border-transparent text-gray-300 hover:text-gray-200 hover:bg-gray-700 hover:border-gray-300' }} text-start text-base font-medium focus:outline-none focus:text-amber-300 focus:bg-amber-50/10 focus:border-amber-700 transition duration-150 ease-in-out">
+                    {{ __('Dashboard') }}
+                </a>
+                
+                <a href="{{ route('quizzes.index') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 {{ request()->routeIs('quizzes.*') ? 'border-amber-400 text-amber-300 bg-amber-50/10' : 'border-transparent text-gray-300 hover:text-gray-200 hover:bg-gray-700 hover:border-gray-300' }} text-start text-base font-medium focus:outline-none focus:text-amber-300 focus:bg-amber-50/10 focus:border-amber-700 transition duration-150 ease-in-out">
                     {{ __('Quizzes') }}
-                </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('challenges.index')" :active="request()->routeIs('challenges.*')">
+                </a>
+                
+                <a href="{{ route('challenges.index') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 {{ request()->routeIs('challenges.*') ? 'border-amber-400 text-amber-300 bg-amber-50/10' : 'border-transparent text-gray-300 hover:text-gray-200 hover:bg-gray-700 hover:border-gray-300' }} text-start text-base font-medium focus:outline-none focus:text-amber-300 focus:bg-amber-50/10 focus:border-amber-700 transition duration-150 ease-in-out">
                     {{ __('Challenges') }}
-                </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('tournaments.index')" :active="request()->routeIs('tournaments.*')">
+                </a>
+                
+                <a href="{{ route('tournaments.index') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 {{ request()->routeIs('tournaments.*') ? 'border-amber-400 text-amber-300 bg-amber-50/10' : 'border-transparent text-gray-300 hover:text-gray-200 hover:bg-gray-700 hover:border-gray-300' }} text-start text-base font-medium focus:outline-none focus:text-amber-300 focus:bg-amber-50/10 focus:border-amber-700 transition duration-150 ease-in-out">
                     {{ __('Tournaments') }}
-                </x-responsive-nav-link>
+                </a>
             @elseif(Auth::user()->role === 'lecturer')
-                <x-responsive-nav-link :href="route('lecturer.dashboard')" :active="request()->routeIs('lecturer.*')">
-                    {{ __('Lecturer Dashboard') }}
-                </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('lecturer.tournaments')" :active="request()->routeIs('lecturer.tournaments*')">
+                <a href="{{ route('lecturer.dashboard') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 {{ request()->routeIs('lecturer.dashboard') ? 'border-amber-400 text-amber-300 bg-amber-50/10' : 'border-transparent text-gray-300 hover:text-gray-200 hover:bg-gray-700 hover:border-gray-300' }} text-start text-base font-medium focus:outline-none focus:text-amber-300 focus:bg-amber-50/10 focus:border-amber-700 transition duration-150 ease-in-out">
+                    {{ __('Dashboard') }}
+                </a>
+                
+                <a href="{{ route('lecturer.tournaments') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 {{ request()->routeIs('lecturer.tournaments*') ? 'border-amber-400 text-amber-300 bg-amber-50/10' : 'border-transparent text-gray-300 hover:text-gray-200 hover:bg-gray-700 hover:border-gray-300' }} text-start text-base font-medium focus:outline-none focus:text-amber-300 focus:bg-amber-50/10 focus:border-amber-700 transition duration-150 ease-in-out">
                     {{ __('Tournaments') }}
-                </x-responsive-nav-link>
+                </a>
             @elseif(Auth::user()->role === 'accessor')
-                <x-responsive-nav-link :href="route('accessor.dashboard')" :active="request()->routeIs('accessor.*')">
-                    {{ __('Accessor Dashboard') }}
-                </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('accessor.tournaments')" :active="request()->routeIs('accessor.tournaments*')">
+                <a href="{{ route('accessor.dashboard') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 {{ request()->routeIs('accessor.dashboard') ? 'border-amber-400 text-amber-300 bg-amber-50/10' : 'border-transparent text-gray-300 hover:text-gray-200 hover:bg-gray-700 hover:border-gray-300' }} text-start text-base font-medium focus:outline-none focus:text-amber-300 focus:bg-amber-50/10 focus:border-amber-700 transition duration-150 ease-in-out">
+                    {{ __('Dashboard') }}
+                </a>
+                
+                <a href="{{ route('accessor.tournaments') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 {{ request()->routeIs('accessor.tournaments*') ? 'border-amber-400 text-amber-300 bg-amber-50/10' : 'border-transparent text-gray-300 hover:text-gray-200 hover:bg-gray-700 hover:border-gray-300' }} text-start text-base font-medium focus:outline-none focus:text-amber-300 focus:bg-amber-50/10 focus:border-amber-700 transition duration-150 ease-in-out">
                     {{ __('Tournaments') }}
-                </x-responsive-nav-link>
+                </a>
             @elseif(Auth::user()->role === 'admin')
-                <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
-                    {{ __('Admin Dashboard') }}
-                </x-responsive-nav-link>
+                <a href="{{ route('admin.dashboard') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 {{ request()->routeIs('admin.dashboard') ? 'border-amber-400 text-amber-300 bg-amber-50/10' : 'border-transparent text-gray-300 hover:text-gray-200 hover:bg-gray-700 hover:border-gray-300' }} text-start text-base font-medium focus:outline-none focus:text-amber-300 focus:bg-amber-50/10 focus:border-amber-700 transition duration-150 ease-in-out">
+                    {{ __('Dashboard') }}
+                </a>
+            @elseif(Auth::user()->role === 'judge')
+                <a href="{{ route('judge.dashboard') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 {{ request()->routeIs('judge.dashboard') ? 'border-amber-400 text-amber-300 bg-amber-50/10' : 'border-transparent text-gray-300 hover:text-gray-200 hover:bg-gray-700 hover:border-gray-300' }} text-start text-base font-medium focus:outline-none focus:text-amber-300 focus:bg-amber-50/10 focus:border-amber-700 transition duration-150 ease-in-out">
+                    {{ __('Dashboard') }}
+                </a>
+            @endif
+
+            @if(Auth::user()->is_judge)
+                <a href="{{ route('judge.dashboard') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 {{ request()->routeIs('judge.*') ? 'border-amber-400 text-amber-300 bg-amber-50/10' : 'border-transparent text-gray-300 hover:text-gray-200 hover:bg-gray-700 hover:border-gray-300' }} text-start text-base font-medium focus:outline-none focus:text-amber-300 focus:bg-amber-50/10 focus:border-amber-700 transition duration-150 ease-in-out">
+                    {{ __('Judge') }}
+                </a>
             @endif
         </div>
 
         <!-- Responsive Settings Options -->
-        <div class="pt-4 pb-1 border-t border-gray-200">
+        <div class="pt-4 pb-1 border-t border-gray-600">
             <div class="flex items-center px-4">
                 <!-- Add profile picture to mobile view with proper size constraints -->
                 <div class="flex-shrink-0 mr-3">
@@ -162,30 +194,29 @@
                         alt="{{ Auth::user()->name }}">
                 </div>
                 <div>
-                    <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
-                    <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
+                    <div class="font-medium text-base text-gray-200">{{ Auth::user()->name }}</div>
+                    <div class="font-medium text-sm text-gray-400">{{ Auth::user()->email }}</div>
                 </div>
             </div>
 
             <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')">
+                <a href="{{ route('profile.edit') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-gray-300 hover:text-gray-200 hover:bg-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-200 focus:bg-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
                     {{ __('Profile') }}
-                </x-responsive-nav-link>
+                </a>
 
-                <!-- Responsive Settings Link -->
-                <x-responsive-nav-link :href="route('settings')">
+                <!-- Responsive Settings Link - Available for ALL roles -->
+                <a href="{{ route('settings') }}" class="block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-gray-300 hover:text-gray-200 hover:bg-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-200 focus:bg-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
                     {{ __('Settings') }}
-                </x-responsive-nav-link>
+                </a>
 
                 <!-- Authentication -->
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-
-                    <x-responsive-nav-link :href="route('logout')"
-                            onclick="event.preventDefault();
-                                        this.closest('form').submit();">
+                    <a href="{{ route('logout') }}"
+                            onclick="event.preventDefault(); this.closest('form').submit();"
+                            class="block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-gray-300 hover:text-gray-200 hover:bg-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-200 focus:bg-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
                         {{ __('Log Out') }}
-                    </x-responsive-nav-link>
+                    </a>
                 </form>
             </div>
         </div>
