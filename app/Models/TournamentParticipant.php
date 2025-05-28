@@ -34,21 +34,30 @@ class TournamentParticipant extends Model
     {
         return $this->belongsTo(TournamentTeam::class);
     }
-    
+
     /**
      * Override the score attribute setter to synchronize scores for team members
      * 
-     * @param int|null $value
+     * @param float|null $value
      * @return void
      */
     public function setScoreAttribute($value)
     {
         $this->attributes['score'] = $value;
         
-        // When updating the score, synchronize with team members if this is a team tournament
-        if ($this->team_id && $value !== null) {
-            // We'll handle the actual synchronization in the JudgeDashboardController
-            // This is just a placeholder to show the concept
+        // Only synchronize if this is a team tournament and the score is being set
+        if ($this->team_id && $value !== null && !$this->isDirty('score')) {
+            // Use a flag to prevent infinite recursion
+            if (!isset($this->syncingScore)) {
+                $this->syncingScore = true;
+                
+                // Synchronize with other team members
+                static::where('team_id', $this->team_id)
+                    ->where('id', '!=', $this->id)
+                    ->update(['score' => $value]);
+                
+                unset($this->syncingScore);
+            }
         }
     }
 

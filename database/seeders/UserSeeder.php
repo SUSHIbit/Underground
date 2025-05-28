@@ -84,7 +84,7 @@ class UserSeeder extends Seeder
                 'name' => "Judge $i",
                 'username' => "judge$i",
                 'email' => "judge$i@example.com",
-                'password' => Hash::make('password'),
+                'password' => Hash::make('123456789'),
                 'role' => 'student', // Judges have a regular role (usually student)
                 'is_judge' => true,  // But they have the judge flag
                 'points' => rand(500, 1000), // Judges usually have higher ranks
