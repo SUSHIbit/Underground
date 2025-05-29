@@ -225,16 +225,46 @@
                         </div>
                     @endif
                     
-                    <!-- Participants Section -->
-                    <div class="mt-8 border-t border-amber-800/20 pt-6">
-                        <div class="bg-gray-700/30 p-4 rounded-lg border border-amber-800/20">
-                            <h4 class="font-semibold text-lg mb-4 text-amber-400">View Participants</h4>
-                            <p class="text-gray-300 mb-4">See who else is participating in this tournament.</p>
-                            <a href="{{ route('tournaments.participants', $tournament) }}" class="inline-block bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded transition-colors">
-                                View All Participants
-                            </a>
+                    <!-- Participants Section (Only show when tournament is ongoing) -->
+                    @if(!$hasEnded)
+                        <div class="mt-8 border-t border-amber-800/20 pt-6">
+                            <div class="bg-gray-700/30 p-4 rounded-lg border border-amber-800/20">
+                                <h4 class="font-semibold text-lg mb-4 text-amber-400">View Participants</h4>
+                                <p class="text-gray-300 mb-4">See who else is participating in this tournament.</p>
+                                <a href="{{ route('tournaments.participants', $tournament) }}" class="inline-block bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                    View All Participants
+                                </a>
+                            </div>
                         </div>
-                    </div>
+                    @endif
+                    
+                    <!-- Tournament Results Section (Only show when tournament has ended) -->
+                    @if($hasEnded)
+                        <div class="mt-8 border-t border-amber-800/20 pt-6">
+                            <div class="bg-gray-700/30 p-4 rounded-lg border border-amber-800/20">
+                                @if($tournament->team_size > 1)
+                                    <!-- For team tournaments, show only team button -->
+                                    @if($isParticipating)
+                                        <h4 class="font-semibold text-lg mb-4 text-amber-400">Your Team</h4>
+                                        <p class="text-gray-300 mb-4">View your team details and results.</p>
+                                        <a href="{{ route('tournaments.team', $tournament) }}" class="inline-block bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                            View Team
+                                        </a>
+                                    @else
+                                        <h4 class="font-semibold text-lg mb-4 text-amber-400">Tournament Completed</h4>
+                                        <p class="text-gray-300">This tournament has ended. You did not participate in this tournament.</p>
+                                    @endif
+                                @else
+                                    <!-- For solo tournaments, show results button -->
+                                    <h4 class="font-semibold text-lg mb-4 text-amber-400">Tournament Results</h4>
+                                    <p class="text-gray-300 mb-4">View your final results for this tournament.</p>
+                                    <a href="{{ route('tournaments.participants', $tournament) }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                        View Results
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
                     
                     <!-- Bottom Back button -->
                     <div class="mt-6">

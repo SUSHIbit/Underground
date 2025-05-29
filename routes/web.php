@@ -193,4 +193,10 @@ Route::middleware(['auth'])->group(function () {
         ->name('tournaments.team.disband');
 });
 
+// Tournament Team Results Route (must be before other tournament routes)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/tournaments/{tournament}/team/results', [TournamentController::class, 'teamResults'])
+        ->name('tournaments.team.results');
+});
+
 require __DIR__.'/auth.php';

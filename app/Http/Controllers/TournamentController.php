@@ -704,4 +704,37 @@ class TournamentController extends Controller
                            ->with('error', 'Failed to disband team: ' . $e->getMessage());
         }
     }
+
+        /**
+     * View team results for a tournament
+     */
+    public function teamResults(Tournament $tournament)
+    {
+        $user = Auth::user();
+        
+        // Find the user's team for this tournament
+        $participant = TournamentParticipant::where('tournament_id', $tournament->id)
+                                        ->where('user_id', $user->id)
+                                        ->whereNotNull('team_id')
+                                        ->with('team.leader')
+                                        ->first();
+        
+        if (!$participant || !$participant->team) {
+            return redirect()->route('tournaments.show', $tournament)
+                        ->with('error', 'You are not part of a team in this tournament.');
+        }
+        
+        $team = $participant->team;
+        
+        // Get all team members with their results
+        $teamMembers = TournamentParticipant::where('team_id', $team->id)
+                                        ->with('user')
+                                        ->get();
+        
+        return view('tournaments.team-results', compact(
+            'tournament', 
+            'team', 
+            'teamMembers'
+        ));
+    }
 }

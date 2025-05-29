@@ -30,6 +30,9 @@
                     <div class="mb-8">
                         <h3 class="text-xl font-bold mb-2 text-amber-400">{{ $team->name }}</h3>
                         <p class="text-gray-400 mb-2">Team for: {{ $tournament->title }}</p>
+                        @if($tournament->hasEnded())
+                            <span class="inline-block px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-sm">Tournament Completed</span>
+                        @endif
                     </div>
                     
                     <!-- Team Information -->
@@ -60,23 +63,26 @@
                                             <span class="px-2 py-1 bg-gray-700/50 text-gray-300 text-xs rounded-full">You</span>
                                         @endif
                                         
-                                        @if($isLeader && !$memberData['is_leader'] && !$tournament->hasEnded())
-                                            <form action="{{ route('tournaments.team.remove-member', ['tournament' => $tournament, 'participant' => $memberData['participant_id']]) }}" method="POST" class="ml-2">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-full" onclick="return confirm('Are you sure you want to remove this member from the team?')">
-                                                    Remove
-                                                </button>
-                                            </form>
-                                        @endif
-                                        
-                                        @if(!$isLeader && $memberData['is_current_user'] && !$tournament->hasEnded())
-                                            <form action="{{ route('tournaments.team.leave', $tournament) }}" method="POST" class="ml-2">
-                                                @csrf
-                                                <button type="submit" class="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-full" onclick="return confirm('Are you sure you want to leave this team?')">
-                                                    Leave Team
-                                                </button>
-                                            </form>
+                                        <!-- Only show management buttons if tournament hasn't ended -->
+                                        @if(!$tournament->hasEnded())
+                                            @if($isLeader && !$memberData['is_leader'])
+                                                <form action="{{ route('tournaments.team.remove-member', ['tournament' => $tournament, 'participant' => $memberData['participant_id']]) }}" method="POST" class="ml-2">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-full" onclick="return confirm('Are you sure you want to remove this member from the team?')">
+                                                        Remove
+                                                    </button>
+                                                </form>
+                                            @endif
+                                            
+                                            @if(!$isLeader && $memberData['is_current_user'])
+                                                <form action="{{ route('tournaments.team.leave', $tournament) }}" method="POST" class="ml-2">
+                                                    @csrf
+                                                    <button type="submit" class="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-full" onclick="return confirm('Are you sure you want to leave this team?')">
+                                                        Leave Team
+                                                    </button>
+                                                </form>
+                                            @endif
                                         @endif
                                     </div>
                                 </div>
@@ -103,6 +109,7 @@
                                 </div>
                             </div>
                             
+                            <!-- Only show team management actions if tournament hasn't ended -->
                             @if($isLeader && !$tournament->hasEnded())
                                 <div class="mt-4">
                                     @if(!$isTeamComplete)
@@ -273,6 +280,17 @@
                             @else
                                 <p class="text-gray-400">Your team did not submit a project for this tournament.</p>
                             @endif
+                        </div>
+                    @endif
+                    
+                    <!-- Tournament Results Section (Only show when tournament has ended) -->
+                    @if($tournament->hasEnded())
+                        <div class="bg-blue-900/10 rounded-lg p-6 mb-8 border border-blue-800/20">
+                            <h4 class="font-semibold text-lg mb-4 text-blue-400">Team Results</h4>
+                            <p class="text-gray-300 mb-4">View individual results for all team members.</p>
+                            <a href="{{ route('tournaments.team.results', $tournament) }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                View Team Results
+                            </a>
                         </div>
                     @endif
                     
