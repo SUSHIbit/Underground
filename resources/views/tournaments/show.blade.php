@@ -119,9 +119,7 @@
                             @if($tournament->team_size > 1)
                                 <!-- For team tournaments -->
                                 <p class="text-white mb-4">You are part of a team for this tournament. You can view your team details, manage members, and submit your project through the team page.</p>
-                                <a href="{{ route('tournaments.team', $tournament) }}" class="inline-block bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded mb-4">
-                                    View Team
-                                </a>
+                                <!-- REMOVED THE REDUNDANT "View Team" BUTTON FROM HERE -->
                             @else
                                 <!-- For solo tournaments - include submission form here -->
                                 <p class="text-white mb-4">You are registered for this tournament as an individual participant.</p>
