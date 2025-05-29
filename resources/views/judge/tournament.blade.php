@@ -21,6 +21,12 @@
                         </div>
                     @endif
 
+                    @if(session('info'))
+                        <div class="bg-blue-900/20 border-l-4 border-blue-500 text-blue-400 p-4 mb-4" role="alert">
+                            <p>{{ session('info') }}</p>
+                        </div>
+                    @endif
+
                     @php
                         $now = \Carbon\Carbon::now('Asia/Kuala_Lumpur');
                         $judgingDate = \Carbon\Carbon::parse($tournament->judging_date)->setTimezone('Asia/Kuala_Lumpur');
@@ -115,6 +121,54 @@
                             </p>
                         </div>
                     @endif
+
+                    <!-- Grading Completion Section -->
+                    <div class="bg-gray-900/40 p-4 rounded-lg mb-8">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <h4 class="font-medium text-lg mb-2 text-amber-400">Grading Status</h4>
+                                <div class="space-y-1">
+                                    <p class="text-sm text-gray-300">
+                                        Judges Completed: <span class="text-amber-400">{{ $completedJudgesCount }}/{{ $totalJudgesCount }}</span>
+                                    </p>
+                                    @if($isCurrentJudgeComplete)
+                                        <p class="text-sm text-green-400">✓ You have completed grading for this tournament</p>
+                                    @else
+                                        <p class="text-sm text-gray-400">You have not completed grading yet</p>
+                                    @endif
+                                    @if($isAllGradingComplete)
+                                        <p class="text-sm text-green-400">✓ All judges have completed grading - Results are now visible to participants</p>
+                                    @endif
+                                </div>
+                            </div>
+                            
+                            @if($canCompleteGrading && $canJudgeNow)
+                                <div class="mt-4 md:mt-0">
+                                    <form action="{{ route('judge.complete-grading', $tournament) }}" method="POST" onsubmit="return confirm('Are you sure you want to mark your grading as complete? You will not be able to change any scores after this.')">
+                                        @csrf
+                                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                            Mark Grading Complete
+                                        </button>
+                                    </form>
+                                </div>
+                            @elseif($isCurrentJudgeComplete)
+                                <div class="mt-4 md:mt-0">
+                                    <span class="inline-flex items-center px-3 py-2 bg-green-900/20 text-green-400 rounded-lg border border-green-800/30">
+                                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        Grading Complete
+                                    </span>
+                                </div>
+                            @elseif($canJudgeNow)
+                                <div class="mt-4 md:mt-0">
+                                    <p class="text-sm text-amber-400 bg-amber-900/20 px-3 py-2 rounded-lg border border-amber-800/30">
+                                        Grade all submissions to complete grading
+                                    </p>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
 
                     <!-- Tournament Criteria -->
                     <div class="bg-gray-900/40 p-4 rounded-lg mb-8">
@@ -259,7 +313,7 @@
                                             
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                 @if($participant->submission_url)
-                                                    @if($canJudgeNow)
+                                                    @if($canJudgeNow && !$isCurrentJudgeComplete)
                                                         <a href="{{ route('judge.submission', ['tournament' => $tournament, 'participant' => $participant]) }}" class="text-amber-400 hover:text-amber-300">
                                                             @if($participant->currentJudgeScore)
                                                                 {{ $tournament->team_size > 1 ? 'Update Team Grade' : 'Update Grade' }}
@@ -267,6 +321,8 @@
                                                                 {{ $tournament->team_size > 1 ? 'Grade Team' : 'Grade' }}
                                                             @endif
                                                         </a>
+                                                    @elseif($isCurrentJudgeComplete)
+                                                        <span class="text-green-400">Grading Complete</span>
                                                     @else
                                                         <span class="text-gray-500">Waiting for judging date</span>
                                                     @endif

@@ -162,6 +162,9 @@ Route::middleware(['auth', 'judge'])->prefix('judge')->name('judge.')->group(fun
     Route::get('/tournaments/{tournament}', [JudgeDashboardController::class, 'tournament'])->name('tournament');
     Route::get('/tournaments/{tournament}/submissions/{participant}', [JudgeDashboardController::class, 'submission'])->name('submission');
     Route::post('/tournaments/{tournament}/submissions/{participant}/grade', [JudgeDashboardController::class, 'submitScore'])->name('submit-score');
+    
+    // New route for completing grading
+    Route::post('/tournaments/{tournament}/complete-grading', [JudgeDashboardController::class, 'completeGrading'])->name('complete-grading');
 });
 
 require __DIR__.'/auth.php';

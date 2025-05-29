@@ -211,4 +211,68 @@ class Tournament extends Model
     {
         return $this->rubrics()->count() >= 3 && $this->getTotalRubricWeight() == 100;
     }
+
+    /**
+     * Check if all judges have completed grading for this tournament
+     */
+    public function isGradingComplete()
+    {
+        $totalJudges = $this->judges()->count();
+        $completedJudges = $this->judges()->wherePivot('grading_completed', true)->count();
+        
+        return $totalJudges > 0 && $completedJudges === $totalJudges;
+    }
+
+    /**
+     * Check if a specific judge has completed grading
+     */
+    public function isJudgeGradingComplete($judgeUserId)
+    {
+        return $this->judges()
+                    ->where('user_id', $judgeUserId)
+                    ->wherePivot('grading_completed', true)
+                    ->exists();
+    }
+
+    /**
+     * Get the count of judges who have completed grading
+     */
+    public function getCompletedJudgesCount()
+    {
+        return $this->judges()->wherePivot('grading_completed', true)->count();
+    }
+
+    /**
+     * Check if a judge can mark grading as complete
+     * They must have graded all submitted participants
+     */
+    public function canJudgeCompleteGrading($judgeUserId)
+    {
+        // Get all participants with submissions
+        $participantsWithSubmissions = $this->participants()
+                                        ->whereNotNull('submission_url')
+                                        ->pluck('id');
+        
+        if ($participantsWithSubmissions->isEmpty()) {
+            return false;
+        }
+        
+        // Check if judge has graded all submitted participants
+        $gradedByJudge = \App\Models\JudgeScore::where('judge_user_id', $judgeUserId)
+                                            ->whereIn('tournament_participant_id', $participantsWithSubmissions)
+                                            ->count();
+        
+        return $gradedByJudge === $participantsWithSubmissions->count();
+    }
+
+    /**
+     * Mark a judge as having completed grading
+     */
+    public function markJudgeGradingComplete($judgeUserId)
+    {
+        $this->judges()->updateExistingPivot($judgeUserId, [
+            'grading_completed' => true,
+            'grading_completed_at' => now()
+        ]);
+    }
 }
