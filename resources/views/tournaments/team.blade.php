@@ -130,132 +130,163 @@
                         </div>
                     </div>
                     
-                    <!-- Add Members Section (for team leaders) -->
+                    <!-- Add Members Section - CONSISTENT UI WITH CREATE TEAM -->
                     @if($isLeader && !$tournament->hasEnded() && !$isTeamComplete)
                         <div id="add-members" class="bg-blue-900/10 rounded-lg p-6 mb-8 border border-blue-800/20" style="display: none;">
                             <h4 class="font-semibold text-lg mb-4 text-blue-400">Add Team Members</h4>
                             
-                            <form action="{{ route('tournaments.team.add-members', $tournament) }}" method="POST">
-                                @csrf
-                                
-                                <div class="mb-4">
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">
-                                        Search for eligible users to add to your team:
-                                    </label>
+                            <div class="bg-gray-700/50 p-4 rounded-lg mb-6">
+                                <p class="mb-2">Search and add eligible users to your team.</p>
+                                <p class="mb-2">You can add up to <span class="text-blue-400 font-medium">{{ $tournament->team_size - $allTeamMembers->count() }}</span> more members.</p>
+                            </div>
+                            
+                            <!-- Search and Add Members Form -->
+                            <div class="mb-4" x-data="{ 
+                                searchQuery: '', 
+                                selectedUsers: [],
+                                availableUsers: [],
+                                maxMembers: {{ $tournament->team_size - $allTeamMembers->count() }},
+                                async searchUsers() {
+                                    if (this.searchQuery.length < 2) {
+                                        this.availableUsers = [];
+                                        return;
+                                    }
                                     
-                                    <div class="space-y-4" x-data="{ 
-                                        searchQuery: '', 
-                                        selectedUsers: [],
-                                        availableUsers: [],
-                                        maxMembers: {{ $tournament->team_size - $allTeamMembers->count() }},
-                                        async searchUsers() {
-                                            if (this.searchQuery.length < 2) {
-                                                this.availableUsers = [];
-                                                return;
-                                            }
-                                            
-                                            try {
-                                                const response = await fetch(`/tournaments/{{ $tournament->id }}/search-eligible-users?search=${encodeURIComponent(this.searchQuery)}`);
-                                                const data = await response.json();
-                                                this.availableUsers = data.users || [];
-                                            } catch (error) {
-                                                console.error('Search failed:', error);
-                                                this.availableUsers = [];
-                                            }
-                                        },
-                                        addUser(user) {
-                                            if (this.selectedUsers.length >= this.maxMembers) return;
-                                            if (this.selectedUsers.find(u => u.id === user.id)) return;
-                                            
-                                            this.selectedUsers.push(user);
-                                            this.availableUsers = this.availableUsers.filter(u => u.id !== user.id);
-                                        },
-                                        removeUser(userId) {
-                                            this.selectedUsers = this.selectedUsers.filter(u => u.id !== userId);
-                                        }
-                                    }">
-                                        
-                                        <div>
-                                            <input type="text" 
-                                                   x-model="searchQuery"
-                                                   @input.debounce.500ms="searchUsers()"
-                                                   placeholder="Search by username or name..."
-                                                   class="w-full p-3 border border-gray-600 rounded-md bg-gray-700 text-white">
-                                        </div>
-                                        
-                                        <!-- Available Users -->
-                                        <div x-show="availableUsers.length > 0" class="bg-gray-700/50 rounded-lg p-4">
-                                            <h6 class="text-sm font-medium text-gray-300 mb-2">Available Users:</h6>
-                                            <div class="space-y-2">
-                                                <template x-for="user in availableUsers" :key="user.id">
-                                                    <div class="flex items-center justify-between p-2 bg-gray-800 rounded">
-                                                        <div class="flex items-center">
-                                                            <div class="w-8 h-8 rounded-full bg-amber-600 flex items-center justify-center text-white text-sm font-bold mr-3" x-text="user.name.charAt(0)"></div>
-                                                            <div>
-                                                                <p class="text-white text-sm" x-text="user.username"></p>
-                                                                <p class="text-gray-400 text-xs" x-text="user.name + ' • ' + user.rank"></p>
-                                                            </div>
-                                                        </div>
-                                                        <button type="button" 
-                                                                @click="addUser(user)"
-                                                                :disabled="selectedUsers.length >= maxMembers"
-                                                                class="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-xs rounded">
-                                                            Add
-                                                        </button>
+                                    try {
+                                        const response = await fetch(`/tournaments/{{ $tournament->id }}/search-eligible-users?search=${encodeURIComponent(this.searchQuery)}`);
+                                        const data = await response.json();
+                                        this.availableUsers = data.users || [];
+                                    } catch (error) {
+                                        console.error('Search failed:', error);
+                                        this.availableUsers = [];
+                                    }
+                                },
+                                addUser(user) {
+                                    if (this.selectedUsers.length >= this.maxMembers) return;
+                                    if (this.selectedUsers.find(u => u.id === user.id)) return;
+                                    
+                                    this.selectedUsers.push(user);
+                                    this.availableUsers = this.availableUsers.filter(u => u.id !== user.id);
+                                },
+                                removeUser(userId) {
+                                    this.selectedUsers = this.selectedUsers.filter(u => u.id !== userId);
+                                },
+                                clearSelection() {
+                                    this.selectedUsers = [];
+                                }
+                            }">
+                                
+                                <!-- Search input -->
+                                <div class="mb-4">
+                                    <input 
+                                        type="text" 
+                                        x-model="searchQuery"
+                                        @input.debounce.500ms="searchUsers()"
+                                        placeholder="Search users by username or name" 
+                                        class="w-full p-2 border border-gray-600 rounded-md bg-gray-700 text-white"
+                                    >
+                                </div>
+                                
+                                <!-- Available Users Section -->
+                                <div x-show="availableUsers.length > 0" class="mb-6">
+                                    <h5 class="text-sm font-medium text-gray-300 mb-2">Select Team Members</h5>
+                                    
+                                    <div class="bg-gray-700 rounded-md border border-blue-800/20">
+                                        <template x-for="user in availableUsers" :key="user.id">
+                                            <div class="flex items-center justify-between p-3 border-b border-blue-800/10 last:border-b-0">
+                                                <div class="flex items-center">
+                                                    <div class="mr-3 bg-blue-900/50 w-8 h-8 rounded-full flex items-center justify-center text-blue-400 font-bold" x-text="user.name.charAt(0)">
                                                     </div>
-                                                </template>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Selected Users -->
-                                        <div x-show="selectedUsers.length > 0" class="bg-green-900/20 rounded-lg p-4">
-                                            <h6 class="text-sm font-medium text-green-400 mb-2">Selected Members:</h6>
-                                            <div class="space-y-2">
-                                                <template x-for="user in selectedUsers" :key="user.id">
-                                                    <div class="flex items-center justify-between p-2 bg-gray-800 rounded">
-                                                        <div class="flex items-center">
-                                                            <div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-bold mr-3" x-text="user.name.charAt(0)"></div>
-                                                            <div>
-                                                                <p class="text-white text-sm" x-text="user.username"></p>
-                                                                <p class="text-gray-400 text-xs" x-text="user.name + ' • ' + user.rank"></p>
-                                                            </div>
-                                                        </div>
-                                                        <button type="button" 
-                                                                @click="removeUser(user.id)"
-                                                                class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded">
-                                                            Remove
-                                                        </button>
+                                                    <div>
+                                                        <p class="font-medium text-white" x-text="user.username"></p>
+                                                        <p class="text-sm text-gray-400" x-text="user.name + ' • ' + user.rank"></p>
                                                     </div>
-                                                </template>
-                                            </div>
-                                            
-                                            <!-- Hidden inputs for form submission -->
-                                            <template x-for="user in selectedUsers" :key="user.id">
-                                                <input type="hidden" name="user_ids[]" :value="user.id">
-                                            </template>
-                                        </div>
-                                        
-                                        <div class="flex justify-between items-center">
-                                            <p class="text-sm text-gray-400">
-                                                <span x-text="selectedUsers.length"></span> of <span x-text="maxMembers"></span> members selected
-                                            </p>
-                                            
-                                            <div class="flex gap-2">
-                                                <button type="button" 
-                                                        onclick="toggleAddMembersForm()"
-                                                        class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded">
-                                                    Cancel
-                                                </button>
-                                                <button type="submit" 
-                                                        :disabled="selectedUsers.length === 0"
-                                                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded">
-                                                    Add Selected Members
+                                                </div>
+                                                
+                                                <button 
+                                                    type="button"
+                                                    @click="addUser(user)"
+                                                    :disabled="selectedUsers.length >= maxMembers"
+                                                    class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-1 px-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    Add
                                                 </button>
                                             </div>
-                                        </div>
+                                        </template>
                                     </div>
                                 </div>
-                            </form>
+                                
+                                <!-- Selected Users Section -->
+                                <div x-show="selectedUsers.length > 0" class="mb-6">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h5 class="text-sm font-medium text-gray-300">Selected Team Members</h5>
+                                        <button 
+                                            type="button"
+                                            @click="clearSelection()"
+                                            class="text-red-400 hover:text-red-300 text-sm underline"
+                                        >
+                                            Clear All
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="bg-gray-700 rounded-md border border-blue-800/20">
+                                        <template x-for="user in selectedUsers" :key="user.id">
+                                            <div class="flex items-center justify-between p-3 border-b border-blue-800/10 last:border-b-0">
+                                                <div class="flex items-center">
+                                                    <div class="mr-3 bg-blue-900/50 w-8 h-8 rounded-full flex items-center justify-center text-blue-400 font-bold" x-text="user.name.charAt(0)">
+                                                    </div>
+                                                    <div>
+                                                        <p class="font-medium text-white" x-text="user.username"></p>
+                                                        <p class="text-sm text-gray-400" x-text="user.name + ' • ' + user.rank"></p>
+                                                    </div>
+                                                </div>
+                                                
+                                                <button 
+                                                    type="button"
+                                                    @click="removeUser(user.id)"
+                                                    class="text-red-400 hover:text-red-300"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    
+                                    <div class="mt-2 text-blue-400 text-sm">
+                                        <span x-text="selectedUsers.length"></span> of <span x-text="maxMembers"></span> users selected
+                                    </div>
+                                </div>
+                                
+                                <!-- Submit Form -->
+                                <form action="{{ route('tournaments.teams.create', $tournament) }}" method="POST" x-show="selectedUsers.length > 0">
+                                    @csrf
+                                    
+                                    <!-- Hidden inputs for selected users -->
+                                    <template x-for="user in selectedUsers" :key="user.id">
+                                        <input type="hidden" name="user_ids[]" :value="user.id">
+                                    </template>
+                                    
+                                    <div class="flex justify-between items-center">
+                                        <button 
+                                            type="button" 
+                                            onclick="toggleAddMembersForm()"
+                                            class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded cursor-pointer"
+                                        >
+                                            Cancel
+                                        </button>
+                                        
+                                        <button 
+                                            type="submit" 
+                                            :disabled="selectedUsers.length === 0"
+                                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Add Selected Members
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     @endif
                     
@@ -277,7 +308,6 @@
                         </div>
                     @endif
                     
-                    <!-- Rest of the existing content (project submission, tournament info, etc.) -->
                     <!-- Project Submission Form (for team leader only) -->
                     @if(!$tournament->hasEnded())
                         @if($isLeader)

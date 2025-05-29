@@ -206,7 +206,6 @@ class TournamentController extends Controller
     
     /**
      * Submit a project for a tournament.
-     * Modified to handle team submissions and synchronize scores.
      */
     public function submit(Request $request, Tournament $tournament)
     {
@@ -313,10 +312,7 @@ class TournamentController extends Controller
     }
     
     /**
-     * Show the form for creating a new team with the option to select members from a list.
-     * 
-     * @param Tournament $tournament
-     * @return \Illuminate\View\View
+     * Show the form for creating a new team with user selection.
      */
     public function createTeamForm(Tournament $tournament, Request $request)
     {
@@ -334,34 +330,29 @@ class TournamentController extends Controller
                         ->with('error', 'You do not meet the eligibility criteria for this tournament.');
         }
         
-        // Check if already participating in this tournament (including if they have a team)
+        // Check if already participating
         $existingParticipation = TournamentParticipant::where('tournament_id', $tournament->id)
                                                     ->where('user_id', $user->id)
                                                     ->first();
                                                     
         if ($existingParticipation) {
             if ($existingParticipation->team_id) {
-                // User already has a team
                 return redirect()->route('tournaments.team', $tournament)
                             ->with('error', 'You are already part of a team in this tournament.');
             } else {
-                // User is registered solo, redirect to show page
                 return redirect()->route('tournaments.show', $tournament)
                             ->with('error', 'You are already registered for this tournament as an individual participant.');
             }
         }
         
-        // Get a filtered list of eligible users for team members
+        // Get search parameters
         $searchQuery = $request->input('search', '');
         $selectedUserIds = $request->session()->get('selected_team_members', []);
         
-        // Add user to selected list if requested
+        // Handle adding/removing users from selection
         if ($request->has('add_user_id')) {
             $userIdToAdd = $request->input('add_user_id');
-            
-            // Make sure we don't exceed the team size limit
             if (count($selectedUserIds) < ($tournament->team_size - 1)) {
-                // Only add if not already in the list
                 if (!in_array($userIdToAdd, $selectedUserIds)) {
                     $selectedUserIds[] = $userIdToAdd;
                     $request->session()->put('selected_team_members', $selectedUserIds);
@@ -369,32 +360,28 @@ class TournamentController extends Controller
             }
         }
         
-        // Remove user from selected list if requested
         if ($request->has('remove_user_id')) {
             $userIdToRemove = $request->input('remove_user_id');
             $selectedUserIds = array_diff($selectedUserIds, [$userIdToRemove]);
             $request->session()->put('selected_team_members', $selectedUserIds);
         }
         
-        // Clear selection if requested
         if ($request->has('clear_selection')) {
             $selectedUserIds = [];
             $request->session()->put('selected_team_members', $selectedUserIds);
         }
         
-        // Query for eligible student users (FIXED: exclude users already in teams for this tournament)
+        // Get eligible users
         $eligibleUsersQuery = User::where('id', '!=', $user->id)
-            ->where('role', 'student')  // Only student role
-            ->whereNotIn('id', $selectedUserIds) // Exclude already selected users
+            ->where('role', 'student')
+            ->whereNotIn('id', $selectedUserIds)
             ->whereNotIn('id', function($query) use ($tournament) {
-                // Exclude users who are already in teams for this tournament
                 $query->select('user_id')
                       ->from('tournament_participants')
                       ->where('tournament_id', $tournament->id)
-                      ->whereNotNull('team_id'); // Only exclude if they have a team
+                      ->whereNotNull('team_id');
             });
         
-        // Apply search filter if provided
         if (!empty($searchQuery)) {
             $eligibleUsersQuery->where(function($query) use ($searchQuery) {
                 $query->where('username', 'like', "%{$searchQuery}%")
@@ -402,14 +389,12 @@ class TournamentController extends Controller
             });
         }
         
-        // Get the eligible users and limit to 5 max
         $eligibleUsers = $eligibleUsersQuery->limit(5)->get()
             ->filter(function($potentialMember) use ($tournament) {
-                // Check if user meets rank requirement
                 return $tournament->isEligible($potentialMember);
             });
         
-        // Get the selected users' details
+        // Get selected users' details
         $selectedUsers = [];
         if (!empty($selectedUserIds)) {
             $selectedUsers = User::whereIn('id', $selectedUserIds)->get();
@@ -425,30 +410,35 @@ class TournamentController extends Controller
     }
 
     /**
-     * Create team and directly add members for a tournament
+     * Create team and add selected members.
      */
     public function createTeam(Request $request, Tournament $tournament)
     {
         $user = auth()->user();
         
-        // Check if tournament has already ended
+        // Basic checks
         if (Carbon::parse($tournament->date_time)->isPast()) {
             return redirect()->route('tournaments.show', $tournament)
                            ->with('error', 'This tournament has already ended.');
         }
         
-        // Check eligibility
         if (!$tournament->isEligible($user)) {
             return redirect()->route('tournaments.show', $tournament)
                            ->with('error', 'You do not meet the eligibility criteria for this tournament.');
         }
         
-        // Check if already participating
         if ($user->isInTournamentTeam($tournament->id)) {
             return redirect()->route('tournaments.show', $tournament)
                            ->with('error', 'You are already part of a team in this tournament.');
         }
         
+        // Check if this is adding members to existing team or creating new team
+        if ($request->has('user_ids')) {
+            // This is adding members to existing team
+            return $this->addTeamMembers($request, $tournament);
+        }
+        
+        // This is creating a new team
         // Get selected team members from session
         $selectedUserIds = $request->session()->get('selected_team_members', []);
         
@@ -464,7 +454,7 @@ class TournamentController extends Controller
             ]
         ]);
         
-        // Validate that we have the right number of team members
+        // Validate team member count
         if (count($selectedUserIds) != ($tournament->team_size - 1)) {
             return redirect()->route('tournaments.create-team-form', $tournament)
                 ->with('error', 'You need to select exactly ' . ($tournament->team_size - 1) . ' team members.');
@@ -488,9 +478,8 @@ class TournamentController extends Controller
                 'role' => 'leader'
             ]);
             
-            // Create participant records for all selected team members
+            // Create participant records for selected team members
             foreach ($selectedUserIds as $memberId) {
-                // Create the participant record directly
                 TournamentParticipant::create([
                     'tournament_id' => $tournament->id,
                     'user_id' => $memberId,
@@ -501,7 +490,7 @@ class TournamentController extends Controller
             
             DB::commit();
             
-            // Clear the session data after successful creation
+            // Clear session data
             $request->session()->forget('selected_team_members');
             
             return redirect()->route('tournaments.team', $tournament)
@@ -513,272 +502,13 @@ class TournamentController extends Controller
                            ->with('error', 'Failed to create team. ' . $e->getMessage());
         }
     }
-    
-    /**
-     * View team details for a tournament
-     */
-    public function team(Tournament $tournament)
-    {
-        $user = Auth::user();
-        
-        // Find the user's team for this tournament
-        $participant = TournamentParticipant::where('tournament_id', $tournament->id)
-                                        ->where('user_id', $user->id)
-                                        ->whereNotNull('team_id')
-                                        ->with('team.leader')
-                                        ->first();
-        
-        // If no participant found or no team, check if user was removed and redirect appropriately
-        if (!$participant || !$participant->team) {
-            // Check if user is still registered for tournament (might be solo now)
-            $soloParticipant = TournamentParticipant::where('tournament_id', $tournament->id)
-                                                  ->where('user_id', $user->id)
-                                                  ->whereNull('team_id')
-                                                  ->first();
-            
-            if ($soloParticipant) {
-                return redirect()->route('tournaments.show', $tournament)
-                            ->with('error', 'You are registered as an individual participant, not part of a team.');
-            }
-            
-            return redirect()->route('tournaments.show', $tournament)
-                        ->with('error', 'You are not part of a team in this tournament. You may need to create a new team or join an existing one.');
-        }
-        
-        $team = $participant->team;
-        $isLeader = $team->leader_id === $user->id;
-        
-        // Get all team members
-        $teamMembers = TournamentParticipant::where('team_id', $team->id)
-                                        ->with('user')
-                                        ->get();
-        
-        // Check if team is complete (all required members are present)
-        $isTeamComplete = $teamMembers->count() >= $tournament->team_size;
-        
-        // Format team members for display
-        $allTeamMembers = collect();
-        
-        // First add the team leader
-        $leaderParticipant = $teamMembers->where('user_id', $team->leader_id)->first();
-        if ($leaderParticipant) {
-            $allTeamMembers->push([
-                'user' => $leaderParticipant->user,
-                'status' => 'member', // Everyone is a full member now
-                'is_leader' => true,
-                'is_current_user' => $leaderParticipant->user_id === $user->id,
-                'participant_id' => $leaderParticipant->id
-            ]);
-        }
-        
-        // Add other members (non-leaders)
-        foreach ($teamMembers->where('user_id', '!=', $team->leader_id) as $member) {
-            $allTeamMembers->push([
-                'user' => $member->user,
-                'status' => 'member', // Everyone is a full member now
-                'is_leader' => false,
-                'is_current_user' => $member->user_id === $user->id,
-                'participant_id' => $member->id
-            ]);
-        }
-        
-        return view('tournaments.team', compact(
-            'tournament', 
-            'team', 
-            'isLeader', 
-            'allTeamMembers', 
-            'isTeamComplete'
-        ));
-    }
-    
-    /**
-     * Remove a member from a team (leader only)
-     */
-    public function removeMember(Request $request, Tournament $tournament, TournamentParticipant $participant)
-    {
-        $user = Auth::user();
-        
-        // Get the user's team
-        $userParticipant = TournamentParticipant::where('tournament_id', $tournament->id)
-                                           ->where('user_id', $user->id)
-                                           ->whereNotNull('team_id')
-                                           ->first();
-        
-        if (!$userParticipant) {
-            return redirect()->route('tournaments.show', $tournament)
-                           ->with('error', 'You are not part of a team in this tournament.');
-        }
-        
-        $team = TournamentTeam::find($userParticipant->team_id);
-        
-        // Check if the user is the team leader
-        if ($team->leader_id !== $user->id) {
-            return redirect()->route('tournaments.team', $tournament)
-                           ->with('error', 'Only the team leader can remove members.');
-        }
-        
-        // Cannot remove yourself (the leader) this way
-        if ($participant->user_id === $user->id) {
-            return redirect()->route('tournaments.team', $tournament)
-                           ->with('error', 'As a leader, you cannot remove yourself from the team.');
-        }
-        
-        // Check if the participant belongs to this team
-        if ($participant->team_id !== $team->id) {
-            return redirect()->route('tournaments.team', $tournament)
-                           ->with('error', 'This member is not part of your team.');
-        }
-        
-        // Check if the tournament has already started
-        if (Carbon::parse($tournament->date_time)->isPast()) {
-            return redirect()->route('tournaments.team', $tournament)
-                           ->with('error', 'You cannot modify the team after the tournament has started.');
-        }
-        
-        // Remove the member by deleting their participant record
-        $participant->delete();
-        
-        return redirect()->route('tournaments.team', $tournament)
-                       ->with('success', 'Team member has been removed successfully.');
-    }
-    
-    /**
-     * Leave a team (member only)
-     */
-    public function leaveTeam(Request $request, Tournament $tournament)
-    {
-        $user = Auth::user();
-        
-        // Get the user's participation record
-        $participant = TournamentParticipant::where('tournament_id', $tournament->id)
-                                      ->where('user_id', $user->id)
-                                      ->whereNotNull('team_id')
-                                      ->first();
-        
-        if (!$participant) {
-            return redirect()->route('tournaments.show', $tournament)
-                           ->with('error', 'You are not part of a team in this tournament.');
-        }
-        
-        $team = TournamentTeam::find($participant->team_id);
-        
-        // Check if the user is the team leader
-        if ($team->leader_id === $user->id) {
-            return redirect()->route('tournaments.team', $tournament)
-                           ->with('error', 'As the team leader, you cannot leave the team. You must either find a new leader or disband the team.');
-        }
-        
-        // Check if the tournament has already started
-        if (Carbon::parse($tournament->date_time)->isPast()) {
-            return redirect()->route('tournaments.team', $tournament)
-                           ->with('error', 'You cannot leave the team after the tournament has started.');
-        }
-        
-        // Leave the team by deleting the participant record
-        $participant->delete();
-        
-        return redirect()->route('tournaments.show', $tournament)
-                       ->with('success', 'You have successfully left the team.');
-    }
-    
-    /**
-     * Disband a team (leader only)
-     */
-    public function disbandTeam(Request $request, Tournament $tournament)
-    {
-        $user = Auth::user();
-        
-        // Get the user's team
-        $participant = TournamentParticipant::where('tournament_id', $tournament->id)
-                                      ->where('user_id', $user->id)
-                                      ->whereNotNull('team_id')
-                                      ->first();
-        
-        if (!$participant) {
-            return redirect()->route('tournaments.show', $tournament)
-                           ->with('error', 'You are not part of a team in this tournament.');
-        }
-        
-        $team = TournamentTeam::find($participant->team_id);
-        
-        // Check if the user is the team leader
-        if ($team->leader_id !== $user->id) {
-            return redirect()->route('tournaments.team', $tournament)
-                           ->with('error', 'Only the team leader can disband the team.');
-        }
-        
-        // Check if the tournament has already started
-        if (Carbon::parse($tournament->date_time)->isPast()) {
-            return redirect()->route('tournaments.team', $tournament)
-                           ->with('error', 'You cannot disband the team after the tournament has started.');
-        }
-        
-        try {
-            DB::beginTransaction();
-            
-            // Delete all participant records associated with this team
-            TournamentParticipant::where('team_id', $team->id)->delete();
-            
-            // Delete the team
-            $team->delete();
-            
-            DB::commit();
-            
-            return redirect()->route('tournaments.show', $tournament)
-                           ->with('success', 'Team has been disbanded successfully.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            return redirect()->route('tournaments.team', $tournament)
-                           ->with('error', 'Failed to disband team: ' . $e->getMessage());
-        }
-    }
-
-        /**
-     * View team results for a tournament
-     */
-    public function teamResults(Tournament $tournament)
-    {
-        $user = Auth::user();
-        
-        // Find the user's team for this tournament
-        $participant = TournamentParticipant::where('tournament_id', $tournament->id)
-                                        ->where('user_id', $user->id)
-                                        ->whereNotNull('team_id')
-                                        ->with('team.leader')
-                                        ->first();
-        
-        if (!$participant || !$participant->team) {
-            return redirect()->route('tournaments.show', $tournament)
-                        ->with('error', 'You are not part of a team in this tournament.');
-        }
-        
-        $team = $participant->team;
-        
-        // Get all team members with their results
-        $teamMembers = TournamentParticipant::where('team_id', $team->id)
-                                        ->with('user')
-                                        ->get();
-        
-        return view('tournaments.team-results', compact(
-            'tournament', 
-            'team', 
-            'teamMembers'
-        ));
-    }
 
     /**
-     * Add a member to an existing team (for team leaders)
+     * Add members to existing team.
      */
-    public function addTeamMember(Request $request, Tournament $tournament)
+    private function addTeamMembers(Request $request, Tournament $tournament)
     {
-        $user = Auth::user();
-        
-        // Check if tournament has already ended
-        if (Carbon::parse($tournament->date_time)->isPast()) {
-            return redirect()->route('tournaments.team', $tournament)
-                        ->with('error', 'This tournament has already ended.');
-        }
+        $user = auth()->user();
         
         // Get the user's team for this tournament
         $participant = TournamentParticipant::where('tournament_id', $tournament->id)
@@ -882,9 +612,241 @@ class TournamentController extends Controller
                         ->with('error', 'Failed to add team members: ' . $e->getMessage());
         }
     }
+    
+    /**
+     * View team details for a tournament.
+     */
+    public function team(Tournament $tournament)
+    {
+        $user = Auth::user();
+        
+        // Find the user's team for this tournament
+        $participant = TournamentParticipant::where('tournament_id', $tournament->id)
+                                        ->where('user_id', $user->id)
+                                        ->whereNotNull('team_id')
+                                        ->with('team.leader')
+                                        ->first();
+        
+        if (!$participant || !$participant->team) {
+            $soloParticipant = TournamentParticipant::where('tournament_id', $tournament->id)
+                                                  ->where('user_id', $user->id)
+                                                  ->whereNull('team_id')
+                                                  ->first();
+            
+            if ($soloParticipant) {
+                return redirect()->route('tournaments.show', $tournament)
+                            ->with('error', 'You are registered as an individual participant, not part of a team.');
+            }
+            
+            return redirect()->route('tournaments.show', $tournament)
+                        ->with('error', 'You are not part of a team in this tournament.');
+        }
+        
+        $team = $participant->team;
+        $isLeader = $team->leader_id === $user->id;
+        
+        // Get all team members
+        $teamMembers = TournamentParticipant::where('team_id', $team->id)
+                                        ->with('user')
+                                        ->get();
+        
+        $isTeamComplete = $teamMembers->count() >= $tournament->team_size;
+        
+        // Format team members for display
+        $allTeamMembers = collect();
+        
+        // Add the team leader first
+        $leaderParticipant = $teamMembers->where('user_id', $team->leader_id)->first();
+        if ($leaderParticipant) {
+            $allTeamMembers->push([
+                'user' => $leaderParticipant->user,
+                'status' => 'member',
+                'is_leader' => true,
+                'is_current_user' => $leaderParticipant->user_id === $user->id,
+                'participant_id' => $leaderParticipant->id
+            ]);
+        }
+        
+        // Add other members
+        foreach ($teamMembers->where('user_id', '!=', $team->leader_id) as $member) {
+            $allTeamMembers->push([
+                'user' => $member->user,
+                'status' => 'member',
+                'is_leader' => false,
+                'is_current_user' => $member->user_id === $user->id,
+                'participant_id' => $member->id
+            ]);
+        }
+        
+        return view('tournaments.team', compact(
+            'tournament', 
+            'team', 
+            'isLeader', 
+            'allTeamMembers', 
+            'isTeamComplete'
+        ));
+    }
+    
+    /**
+     * Remove a member from a team (leader only).
+     */
+    public function removeMember(Request $request, Tournament $tournament, TournamentParticipant $participant)
+    {
+        $user = Auth::user();
+        
+        $userParticipant = TournamentParticipant::where('tournament_id', $tournament->id)
+                                           ->where('user_id', $user->id)
+                                           ->whereNotNull('team_id')
+                                           ->first();
+        
+        if (!$userParticipant) {
+            return redirect()->route('tournaments.show', $tournament)
+                           ->with('error', 'You are not part of a team in this tournament.');
+        }
+        
+        $team = TournamentTeam::find($userParticipant->team_id);
+        
+        if ($team->leader_id !== $user->id) {
+            return redirect()->route('tournaments.team', $tournament)
+                           ->with('error', 'Only the team leader can remove members.');
+        }
+        
+        if ($participant->user_id === $user->id) {
+            return redirect()->route('tournaments.team', $tournament)
+                           ->with('error', 'As a leader, you cannot remove yourself from the team.');
+        }
+        
+        if ($participant->team_id !== $team->id) {
+            return redirect()->route('tournaments.team', $tournament)
+                           ->with('error', 'This member is not part of your team.');
+        }
+        
+        if (Carbon::parse($tournament->date_time)->isPast()) {
+            return redirect()->route('tournaments.team', $tournament)
+                           ->with('error', 'You cannot modify the team after the tournament has started.');
+        }
+        
+        $participant->delete();
+        
+        return redirect()->route('tournaments.team', $tournament)
+                       ->with('success', 'Team member has been removed successfully.');
+    }
+    
+    /**
+     * Leave a team (member only).
+     */
+    public function leaveTeam(Request $request, Tournament $tournament)
+    {
+        $user = Auth::user();
+        
+        $participant = TournamentParticipant::where('tournament_id', $tournament->id)
+                                      ->where('user_id', $user->id)
+                                      ->whereNotNull('team_id')
+                                      ->first();
+        
+        if (!$participant) {
+            return redirect()->route('tournaments.show', $tournament)
+                           ->with('error', 'You are not part of a team in this tournament.');
+        }
+        
+        $team = TournamentTeam::find($participant->team_id);
+        
+        if ($team->leader_id === $user->id) {
+            return redirect()->route('tournaments.team', $tournament)
+                           ->with('error', 'As the team leader, you cannot leave the team. You must either find a new leader or disband the team.');
+        }
+        
+        if (Carbon::parse($tournament->date_time)->isPast()) {
+            return redirect()->route('tournaments.team', $tournament)
+                           ->with('error', 'You cannot leave the team after the tournament has started.');
+        }
+        
+        $participant->delete();
+        
+        return redirect()->route('tournaments.show', $tournament)
+                       ->with('success', 'You have successfully left the team.');
+    }
+    
+    /**
+     * Disband a team (leader only).
+     */
+    public function disbandTeam(Request $request, Tournament $tournament)
+    {
+        $user = Auth::user();
+        
+        $participant = TournamentParticipant::where('tournament_id', $tournament->id)
+                                      ->where('user_id', $user->id)
+                                      ->whereNotNull('team_id')
+                                      ->first();
+        
+        if (!$participant) {
+            return redirect()->route('tournaments.show', $tournament)
+                           ->with('error', 'You are not part of a team in this tournament.');
+        }
+        
+        $team = TournamentTeam::find($participant->team_id);
+        
+        if ($team->leader_id !== $user->id) {
+            return redirect()->route('tournaments.team', $tournament)
+                           ->with('error', 'Only the team leader can disband the team.');
+        }
+        
+        if (Carbon::parse($tournament->date_time)->isPast()) {
+            return redirect()->route('tournaments.team', $tournament)
+                           ->with('error', 'You cannot disband the team after the tournament has started.');
+        }
+        
+        try {
+            DB::beginTransaction();
+            
+            TournamentParticipant::where('team_id', $team->id)->delete();
+            $team->delete();
+            
+            DB::commit();
+            
+            return redirect()->route('tournaments.show', $tournament)
+                           ->with('success', 'Team has been disbanded successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->route('tournaments.team', $tournament)
+                           ->with('error', 'Failed to disband team: ' . $e->getMessage());
+        }
+    }
 
     /**
-     * Search for eligible users that can be added to a team
+     * View team results for a tournament.
+     */
+    public function teamResults(Tournament $tournament)
+    {
+        $user = Auth::user();
+        
+        $participant = TournamentParticipant::where('tournament_id', $tournament->id)
+                                        ->where('user_id', $user->id)
+                                        ->whereNotNull('team_id')
+                                        ->with('team.leader')
+                                        ->first();
+        
+        if (!$participant || !$participant->team) {
+            return redirect()->route('tournaments.show', $tournament)
+                        ->with('error', 'You are not part of a team in this tournament.');
+        }
+        
+        $team = $participant->team;
+        
+        $teamMembers = TournamentParticipant::where('team_id', $team->id)
+                                        ->with('user')
+                                        ->get();
+        
+        return view('tournaments.team-results', compact(
+            'tournament', 
+            'team', 
+            'teamMembers'
+        ));
+    }
+
+    /**
+     * Search for eligible users that can be added to a team.
      */
     public function searchEligibleUsers(Request $request, Tournament $tournament)
     {
@@ -915,22 +877,20 @@ class TournamentController extends Controller
         
         // Query for eligible student users
         $eligibleUsers = User::where('id', '!=', $user->id)
-            ->where('role', 'student')  // Only student role
+            ->where('role', 'student')
             ->where(function($query) use ($searchQuery) {
                 $query->where('username', 'like', "%{$searchQuery}%")
                       ->orWhere('name', 'like', "%{$searchQuery}%");
             })
             ->whereNotIn('id', function($query) use ($tournament) {
-                // Exclude users who are already in teams for this tournament
                 $query->select('user_id')
                       ->from('tournament_participants')
                       ->where('tournament_id', $tournament->id)
-                      ->whereNotNull('team_id'); // Only exclude if they have a team
+                      ->whereNotNull('team_id');
             })
             ->limit(10)
             ->get()
             ->filter(function($potentialMember) use ($tournament) {
-                // Check if user meets rank requirement
                 return $tournament->isEligible($potentialMember);
             })
             ->map(function($user) {

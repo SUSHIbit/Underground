@@ -6,7 +6,6 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\QuizController; 
 use App\Http\Controllers\AdminController; 
 use App\Http\Controllers\ExtrasController;
-use App\Http\Controllers\LegionController;
 use App\Http\Controllers\SkillsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ResultController; 
@@ -44,12 +43,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/quizzes/{set}', [QuizController::class, 'show'])->name('quizzes.show');
     Route::get('/quizzes/{set}/attempt', [QuizController::class, 'attempt'])->name('quizzes.attempt');
     Route::post('/quizzes/{set}/submit', [QuizController::class, 'submit'])->name('quizzes.submit');
+    Route::post('/quizzes/{set}/retake', [QuizController::class, 'retake'])->name('quizzes.retake');
     
     // Challenge Routes
     Route::get('/challenges', [ChallengeController::class, 'index'])->name('challenges.index');
     Route::get('/challenges/{set}', [ChallengeController::class, 'show'])->name('challenges.show');
     Route::get('/challenges/{set}/attempt', [ChallengeController::class, 'attempt'])->name('challenges.attempt');
     Route::post('/challenges/{set}/submit', [ChallengeController::class, 'submit'])->name('challenges.submit');
+    Route::post('/challenges/{set}/retake', [ChallengeController::class, 'retake'])->name('challenges.retake');
     
     // Results Routes
     Route::get('/results/{attempt}', [ResultController::class, 'show'])->name('results.show');
@@ -59,10 +60,18 @@ Route::middleware(['auth'])->group(function () {
     
     // Settings and Extras Routes
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
-    Route::get('/extras', [ExtrasController::class, 'index'])->name('extras'); // Add this line
+    Route::get('/extras', [ExtrasController::class, 'index'])->name('extras');
     Route::post('/settings/update-theme', [SettingsController::class, 'updateTheme'])->name('settings.update-theme');
+    
+    // Ranks and Skills Routes
+    Route::get('/ranks', [RankController::class, 'index'])->name('ranks.index');
+    Route::get('/skills', [SkillsController::class, 'index'])->name('skills.index');
+    
+    // UEPoints Routes
+    Route::get('/uepoints', [UEPointsController::class, 'index'])->name('uepoints.index');
 });
 
+// Profile Routes
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -71,30 +80,36 @@ Route::middleware('auth')->group(function () {
 
 // Tournament Routes
 Route::middleware(['auth'])->group(function () {
+    // Basic tournament routes
     Route::get('/tournaments', [TournamentController::class, 'index'])->name('tournaments.index');
     Route::get('/tournaments/{tournament}', [TournamentController::class, 'show'])->name('tournaments.show');
+    Route::get('/tournaments/{tournament}/participants', [TournamentController::class, 'participants'])->name('tournaments.participants');
     Route::post('/tournaments/{tournament}/join', [TournamentController::class, 'join'])->name('tournaments.join');
     Route::post('/tournaments/{tournament}/submit', [TournamentController::class, 'submit'])->name('tournaments.submit');
-});
-
-// Lecturer Tournament Routes
-Route::middleware(['auth', 'lecturer'])->prefix('lecturer')->name('lecturer.')->group(function () {
-    Route::get('/tournaments', [LecturerDashboardController::class, 'tournaments'])->name('tournaments');
-    Route::get('/tournaments/{tournament}/edit', [LecturerDashboardController::class, 'editTournament'])->name('tournaments.edit');
-    Route::put('/tournaments/{tournament}', [LecturerDashboardController::class, 'updateTournament'])->name('tournaments.update');
-    Route::post('/tournaments/{tournament}/submit', [LecturerDashboardController::class, 'submitTournamentForApproval'])->name('tournaments.submit');
-    Route::get('/tournaments/{tournament}/submissions', [LecturerDashboardController::class, 'tournamentSubmissions'])->name('tournaments.submissions');
-    Route::post('/tournaments/{tournament}/publish', [LecturerDashboardController::class, 'publishTournament'])->name('tournaments.publish');
-    Route::post('/sets/{set}/publish', [LecturerDashboardController::class, 'publishSet'])->name('sets.publish');
-});
-
-// Accessor Tournament Routes  
-Route::middleware(['auth', 'accessor'])->prefix('accessor')->name('accessor.')->group(function () {
-    Route::get('/tournaments', [AccessorDashboardController::class, 'tournaments'])->name('tournaments');
-    Route::get('/tournaments/{tournament}/review', [AccessorDashboardController::class, 'reviewTournament'])->name('tournaments.review');
-    Route::post('/tournaments/{tournament}/comment', [TournamentApprovalController::class, 'addComment'])->name('tournaments.comment');
-    Route::post('/tournaments/{tournament}/approve', [TournamentApprovalController::class, 'approve'])->name('tournaments.approve');
-    Route::post('/tournaments/{tournament}/reject', [TournamentApprovalController::class, 'reject'])->name('tournaments.reject');
+    
+    // Team creation routes
+    Route::get('/tournaments/{tournament}/create-team', [TournamentController::class, 'createTeamForm'])
+        ->name('tournaments.create-team-form');
+    Route::post('/tournaments/{tournament}/teams', [TournamentController::class, 'createTeam'])
+        ->name('tournaments.teams.create');
+    
+    // Team management routes
+    Route::get('/tournaments/{tournament}/team', [TournamentController::class, 'team'])
+        ->name('tournaments.team');
+    Route::get('/tournaments/{tournament}/team/results', [TournamentController::class, 'teamResults'])
+        ->name('tournaments.team.results');
+    
+    // Team member management
+    Route::delete('/tournaments/{tournament}/team/members/{participant}', [TournamentController::class, 'removeMember'])
+        ->name('tournaments.team.remove-member');
+    Route::post('/tournaments/{tournament}/team/leave', [TournamentController::class, 'leaveTeam'])
+        ->name('tournaments.team.leave');
+    Route::post('/tournaments/{tournament}/team/disband', [TournamentController::class, 'disbandTeam'])
+        ->name('tournaments.team.disband');
+    
+    // AJAX search for eligible users
+    Route::get('/tournaments/{tournament}/search-eligible-users', [TournamentController::class, 'searchEligibleUsers'])
+        ->name('tournaments.search-eligible-users');
 });
 
 // Lecturer Routes
@@ -103,6 +118,15 @@ Route::middleware(['auth', 'lecturer'])->prefix('lecturer')->name('lecturer.')->
     Route::get('/sets/{set}/edit', [LecturerDashboardController::class, 'edit'])->name('sets.edit');
     Route::put('/sets/{set}', [LecturerDashboardController::class, 'update'])->name('sets.update');
     Route::post('/sets/{set}/submit', [LecturerDashboardController::class, 'submitForApproval'])->name('sets.submit');
+    Route::post('/sets/{set}/publish', [LecturerDashboardController::class, 'publishSet'])->name('sets.publish');
+    
+    // Lecturer Tournament Routes
+    Route::get('/tournaments', [LecturerDashboardController::class, 'tournaments'])->name('tournaments');
+    Route::get('/tournaments/{tournament}/edit', [LecturerDashboardController::class, 'editTournament'])->name('tournaments.edit');
+    Route::put('/tournaments/{tournament}', [LecturerDashboardController::class, 'updateTournament'])->name('tournaments.update');
+    Route::post('/tournaments/{tournament}/submit', [LecturerDashboardController::class, 'submitTournamentForApproval'])->name('tournaments.submit');
+    Route::get('/tournaments/{tournament}/submissions', [LecturerDashboardController::class, 'tournamentSubmissions'])->name('tournaments.submissions');
+    Route::post('/tournaments/{tournament}/publish', [LecturerDashboardController::class, 'publishTournament'])->name('tournaments.publish');
 });
 
 // Accessor Routes
@@ -112,6 +136,13 @@ Route::middleware(['auth', 'accessor'])->prefix('accessor')->name('accessor.')->
     Route::post('/sets/{set}/comment', [SetApprovalController::class, 'addComment'])->name('sets.comment');
     Route::post('/sets/{set}/approve', [SetApprovalController::class, 'approve'])->name('sets.approve');
     Route::post('/sets/{set}/reject', [SetApprovalController::class, 'reject'])->name('sets.reject');
+    
+    // Accessor Tournament Routes  
+    Route::get('/tournaments', [AccessorDashboardController::class, 'tournaments'])->name('tournaments');
+    Route::get('/tournaments/{tournament}/review', [AccessorDashboardController::class, 'reviewTournament'])->name('tournaments.review');
+    Route::post('/tournaments/{tournament}/comment', [TournamentApprovalController::class, 'addComment'])->name('tournaments.comment');
+    Route::post('/tournaments/{tournament}/approve', [TournamentApprovalController::class, 'approve'])->name('tournaments.approve');
+    Route::post('/tournaments/{tournament}/reject', [TournamentApprovalController::class, 'reject'])->name('tournaments.reject');
 });
 
 // Admin Routes
@@ -121,24 +152,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::put('/users/{user}/update-role', [AdminController::class, 'updateRole'])->name('update-role');
 });
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('/ranks', [RankController::class, 'index'])->name('ranks.index');
-    Route::get('/skills', [SkillsController::class, 'index'])->name('skills.index');
-});
-
-Route::middleware(['auth'])->group(function () {
-    // Quiz retake routes
-    Route::post('/quizzes/{set}/retake', [QuizController::class, 'retake'])->name('quizzes.retake');
-
-    // Challenge retake routes
-    Route::post('/challenges/{set}/retake', [ChallengeController::class, 'retake'])->name('challenges.retake');
-
-    // UEPoints management route
-    Route::get('/uepoints', [UEPointsController::class, 'index'])->name('uepoints.index');
-
-    Route::put('/tournaments/{tournament}/update-team', [TournamentController::class, 'updateTeam'])->name('tournaments.update-team');
-});
-
 // Judge Routes
 Route::middleware(['auth', 'judge'])->prefix('judge')->name('judge.')->group(function () {
     Route::get('/dashboard', [JudgeDashboardController::class, 'index'])->name('dashboard');
@@ -146,103 +159,5 @@ Route::middleware(['auth', 'judge'])->prefix('judge')->name('judge.')->group(fun
     Route::get('/tournaments/{tournament}/submissions/{participant}', [JudgeDashboardController::class, 'submission'])->name('submission');
     Route::post('/tournaments/{tournament}/submissions/{participant}/grade', [JudgeDashboardController::class, 'submitScore'])->name('submit-score');
 });
-
-Route::middleware(['auth'])->group(function () {
-    Route::get('/tournaments', [TournamentController::class, 'index'])->name('tournaments.index');
-    Route::get('/tournaments/{tournament}', [TournamentController::class, 'show'])->name('tournaments.show');
-    Route::get('/tournaments/{tournament}/participants', [TournamentController::class, 'participants'])->name('tournaments.participants');  // Add this line
-    Route::post('/tournaments/{tournament}/join', [TournamentController::class, 'join'])->name('tournaments.join');
-    Route::post('/tournaments/{tournament}/submit', [TournamentController::class, 'submit'])->name('tournaments.submit');
-});
-
-// Tournament Team Routes
-Route::middleware(['auth'])->group(function () {
-    // Team creation and invitation routes
-    Route::post('/tournaments/{tournament}/teams', [TournamentController::class, 'createTeam'])
-        ->name('tournaments.teams.create');
-    
-    // View user's team for a tournament
-    Route::get('/tournaments/{tournament}/team', [TournamentController::class, 'team'])
-        ->name('tournaments.team');
-    
-    // Invitations management
-    Route::get('/tournament-invitations', [TournamentController::class, 'invitations'])
-        ->name('tournaments.invitations');
-    
-    Route::post('/tournament-invitations/{invitation}/accept', [TournamentController::class, 'acceptInvitation'])
-        ->name('tournaments.invitations.accept');
-    
-    Route::post('/tournament-invitations/{invitation}/decline', [TournamentController::class, 'declineInvitation'])
-        ->name('tournaments.invitations.decline');
-
-    // Updated team creation route with improved user selection process
-    Route::get('/tournaments/{tournament}/create-team', [TournamentController::class, 'createTeamForm'])
-        ->name('tournaments.create-team-form');
-
-    Route::get('/tournaments/{tournament}/search-eligible-users', [TournamentController::class, 'searchEligibleUsers'])
-    ->name('tournaments.search-eligible-users');
-    Route::post('/tournaments/{tournament}/team/add-members', [TournamentController::class, 'addTeamMember'])
-        ->name('tournaments.team.add-members');
-});
-
-
-Route::middleware(['auth'])->group(function () {
-    // Team management routes
-    Route::delete('/tournaments/{tournament}/team/members/{participant}', [TournamentController::class, 'removeMember'])
-        ->name('tournaments.team.remove-member');
-    
-    Route::post('/tournaments/{tournament}/team/leave', [TournamentController::class, 'leaveTeam'])
-        ->name('tournaments.team.leave');
-    
-    Route::post('/tournaments/{tournament}/team/disband', [TournamentController::class, 'disbandTeam'])
-        ->name('tournaments.team.disband');
-});
-
-// Tournament Team Results Route (must be before other tournament routes)
-Route::middleware(['auth'])->group(function () {
-    // Tournament Team Results Route
-    Route::get('/tournaments/{tournament}/team/results', [TournamentController::class, 'teamResults'])
-        ->name('tournaments.team.results');
-});
-
-
-// Add these routes to your existing tournament routes in routes/web.php
-
-// Route::middleware(['auth'])->group(function () {
-//     // Existing tournament routes...
-//     Route::get('/tournaments', [TournamentController::class, 'index'])->name('tournaments.index');
-//     Route::get('/tournaments/{tournament}', [TournamentController::class, 'show'])->name('tournaments.show');
-//     Route::get('/tournaments/{tournament}/participants', [TournamentController::class, 'participants'])->name('tournaments.participants');
-//     Route::post('/tournaments/{tournament}/join', [TournamentController::class, 'join'])->name('tournaments.join');
-//     Route::post('/tournaments/{tournament}/submit', [TournamentController::class, 'submit'])->name('tournaments.submit');
-    
-//     // Team creation and management routes
-//     Route::get('/tournaments/{tournament}/create-team', [TournamentController::class, 'createTeamForm'])
-//         ->name('tournaments.create-team-form');
-//     Route::post('/tournaments/{tournament}/teams', [TournamentController::class, 'createTeam'])
-//         ->name('tournaments.teams.create');
-    
-//     // View user's team for a tournament
-//     Route::get('/tournaments/{tournament}/team', [TournamentController::class, 'team'])
-//         ->name('tournaments.team');
-    
-//     // Team member management
-//     Route::delete('/tournaments/{tournament}/team/members/{participant}', [TournamentController::class, 'removeMember'])
-//         ->name('tournaments.team.remove-member');
-//     Route::post('/tournaments/{tournament}/team/leave', [TournamentController::class, 'leaveTeam'])
-//         ->name('tournaments.team.leave');
-//     Route::post('/tournaments/{tournament}/team/disband', [TournamentController::class, 'disbandTeam'])
-//         ->name('tournaments.team.disband');
-    
-//     // NEW ROUTES FOR ADDING TEAM MEMBERS
-//     Route::get('/tournaments/{tournament}/search-eligible-users', [TournamentController::class, 'searchEligibleUsers'])
-//         ->name('tournaments.search-eligible-users');
-//     Route::post('/tournaments/{tournament}/team/add-members', [TournamentController::class, 'addTeamMember'])
-//         ->name('tournaments.team.add-members');
-    
-//     // Tournament Team Results Route
-//     Route::get('/tournaments/{tournament}/team/results', [TournamentController::class, 'teamResults'])
-//         ->name('tournaments.team.results');
-// });
 
 require __DIR__.'/auth.php';
