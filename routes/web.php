@@ -93,6 +93,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/tournaments/{tournament}/teams', [TournamentController::class, 'createTeam'])
         ->name('tournaments.teams.create');
     
+    // NEW: Add members to existing team route
+    Route::post('/tournaments/{tournament}/teams/add-members', [TournamentController::class, 'addTeamMembers'])
+        ->name('tournaments.teams.add-members');
+    
     // Team management routes
     Route::get('/tournaments/{tournament}/team', [TournamentController::class, 'team'])
         ->name('tournaments.team');

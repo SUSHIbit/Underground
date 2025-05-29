@@ -506,9 +506,15 @@ class TournamentController extends Controller
     /**
      * Add members to existing team.
      */
-    private function addTeamMembers(Request $request, Tournament $tournament)
+    public function addTeamMembers(Request $request, Tournament $tournament)
     {
         $user = auth()->user();
+        
+        // Check if tournament has already ended
+        if (Carbon::parse($tournament->date_time)->isPast()) {
+            return redirect()->route('tournaments.team', $tournament)
+                        ->with('error', 'Cannot add members after the tournament has ended.');
+        }
         
         // Get the user's team for this tournament
         $participant = TournamentParticipant::where('tournament_id', $tournament->id)
@@ -583,6 +589,9 @@ class TournamentController extends Controller
                     'team_id' => $team->id,
                     'role' => 'member'
                 ]);
+                
+                // Award 2 UEPoints for successfully joining the tournament
+                $userToAdd->addUEPoints(2);
                 
                 $addedCount++;
             }

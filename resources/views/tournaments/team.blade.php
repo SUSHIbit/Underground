@@ -259,8 +259,8 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Submit Form -->
-                                <form action="{{ route('tournaments.teams.create', $tournament) }}" method="POST" x-show="selectedUsers.length > 0">
+                                <!-- Submit Form - FIXED TO USE CORRECT ROUTE -->
+                                <form action="{{ route('tournaments.teams.add-members', $tournament) }}" method="POST" x-show="selectedUsers.length > 0">
                                     @csrf
                                     
                                     <!-- Hidden inputs for selected users -->
