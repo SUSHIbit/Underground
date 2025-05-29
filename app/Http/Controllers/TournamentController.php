@@ -113,7 +113,7 @@ class TournamentController extends Controller
     public function show(Tournament $tournament)
     {
         // Load relationships
-        $tournament->load(['judges', 'creator']);
+        $tournament->load(['judges', 'creator', 'rubrics']);
         $user = auth()->user();
         
         // Check if the user is already participating
@@ -334,10 +334,21 @@ class TournamentController extends Controller
                         ->with('error', 'You do not meet the eligibility criteria for this tournament.');
         }
         
-        // Check if already participating
-        if ($user->isInTournamentTeam($tournament->id)) {
-            return redirect()->route('tournaments.show', $tournament)
-                        ->with('error', 'You are already part of a team in this tournament.');
+        // Check if already participating in this tournament (including if they have a team)
+        $existingParticipation = TournamentParticipant::where('tournament_id', $tournament->id)
+                                                    ->where('user_id', $user->id)
+                                                    ->first();
+                                                    
+        if ($existingParticipation) {
+            if ($existingParticipation->team_id) {
+                // User already has a team
+                return redirect()->route('tournaments.team', $tournament)
+                            ->with('error', 'You are already part of a team in this tournament.');
+            } else {
+                // User is registered solo, redirect to show page
+                return redirect()->route('tournaments.show', $tournament)
+                            ->with('error', 'You are already registered for this tournament as an individual participant.');
+            }
         }
         
         // Get a filtered list of eligible users for team members
@@ -371,10 +382,17 @@ class TournamentController extends Controller
             $request->session()->put('selected_team_members', $selectedUserIds);
         }
         
-        // Query for eligible student users
+        // Query for eligible student users (FIXED: exclude users already in teams for this tournament)
         $eligibleUsersQuery = User::where('id', '!=', $user->id)
             ->where('role', 'student')  // Only student role
-            ->whereNotIn('id', $selectedUserIds); // Exclude already selected users
+            ->whereNotIn('id', $selectedUserIds) // Exclude already selected users
+            ->whereNotIn('id', function($query) use ($tournament) {
+                // Exclude users who are already in teams for this tournament
+                $query->select('user_id')
+                      ->from('tournament_participants')
+                      ->where('tournament_id', $tournament->id)
+                      ->whereNotNull('team_id'); // Only exclude if they have a team
+            });
         
         // Apply search filter if provided
         if (!empty($searchQuery)) {
@@ -387,9 +405,8 @@ class TournamentController extends Controller
         // Get the eligible users and limit to 5 max
         $eligibleUsers = $eligibleUsersQuery->limit(5)->get()
             ->filter(function($potentialMember) use ($tournament) {
-                // Check if user meets rank requirement and is not already in a team
-                return $tournament->isEligible($potentialMember) && 
-                       !$potentialMember->isInTournamentTeam($tournament->id);
+                // Check if user meets rank requirement
+                return $tournament->isEligible($potentialMember);
             });
         
         // Get the selected users' details
@@ -511,9 +528,21 @@ class TournamentController extends Controller
                                         ->with('team.leader')
                                         ->first();
         
+        // If no participant found or no team, check if user was removed and redirect appropriately
         if (!$participant || !$participant->team) {
+            // Check if user is still registered for tournament (might be solo now)
+            $soloParticipant = TournamentParticipant::where('tournament_id', $tournament->id)
+                                                  ->where('user_id', $user->id)
+                                                  ->whereNull('team_id')
+                                                  ->first();
+            
+            if ($soloParticipant) {
+                return redirect()->route('tournaments.show', $tournament)
+                            ->with('error', 'You are registered as an individual participant, not part of a team.');
+            }
+            
             return redirect()->route('tournaments.show', $tournament)
-                        ->with('error', 'You are not part of a team in this tournament.');
+                        ->with('error', 'You are not part of a team in this tournament. You may need to create a new team or join an existing one.');
         }
         
         $team = $participant->team;
@@ -736,5 +765,184 @@ class TournamentController extends Controller
             'team', 
             'teamMembers'
         ));
+    }
+
+    /**
+     * Add a member to an existing team (for team leaders)
+     */
+    public function addTeamMember(Request $request, Tournament $tournament)
+    {
+        $user = Auth::user();
+        
+        // Check if tournament has already ended
+        if (Carbon::parse($tournament->date_time)->isPast()) {
+            return redirect()->route('tournaments.team', $tournament)
+                        ->with('error', 'This tournament has already ended.');
+        }
+        
+        // Get the user's team for this tournament
+        $participant = TournamentParticipant::where('tournament_id', $tournament->id)
+                                          ->where('user_id', $user->id)
+                                          ->whereNotNull('team_id')
+                                          ->with('team')
+                                          ->first();
+        
+        if (!$participant || !$participant->team) {
+            return redirect()->route('tournaments.show', $tournament)
+                        ->with('error', 'You are not part of a team in this tournament.');
+        }
+        
+        $team = $participant->team;
+        
+        // Check if user is team leader
+        if ($team->leader_id !== $user->id) {
+            return redirect()->route('tournaments.team', $tournament)
+                        ->with('error', 'Only team leaders can add members to the team.');
+        }
+        
+        // Check team capacity
+        $currentMemberCount = TournamentParticipant::where('team_id', $team->id)->count();
+        if ($currentMemberCount >= $tournament->team_size) {
+            return redirect()->route('tournaments.team', $tournament)
+                        ->with('error', 'Team is already full.');
+        }
+        
+        $validated = $request->validate([
+            'user_ids' => 'required|array|min:1',
+            'user_ids.*' => 'required|exists:users,id',
+        ]);
+        
+        $usersToAdd = User::whereIn('id', $validated['user_ids'])->get();
+        $addedCount = 0;
+        $errors = [];
+        
+        try {
+            DB::beginTransaction();
+            
+            foreach ($usersToAdd as $userToAdd) {
+                // Check if we've reached team capacity
+                if ($currentMemberCount + $addedCount >= $tournament->team_size) {
+                    $errors[] = "Team capacity reached. Could not add {$userToAdd->name}.";
+                    break;
+                }
+                
+                // Check if user is eligible for tournament
+                if (!$tournament->isEligible($userToAdd)) {
+                    $errors[] = "{$userToAdd->name} does not meet the tournament eligibility requirements.";
+                    continue;
+                }
+                
+                // Check if user is already in a team for this tournament
+                $existingParticipation = TournamentParticipant::where('tournament_id', $tournament->id)
+                                                            ->where('user_id', $userToAdd->id)
+                                                            ->first();
+                
+                if ($existingParticipation) {
+                    if ($existingParticipation->team_id) {
+                        $errors[] = "{$userToAdd->name} is already part of another team.";
+                    } else {
+                        $errors[] = "{$userToAdd->name} is already registered as individual participant.";
+                    }
+                    continue;
+                }
+                
+                // Add user to team
+                TournamentParticipant::create([
+                    'tournament_id' => $tournament->id,
+                    'user_id' => $userToAdd->id,
+                    'team_id' => $team->id,
+                    'role' => 'member'
+                ]);
+                
+                $addedCount++;
+            }
+            
+            DB::commit();
+            
+            $message = '';
+            if ($addedCount > 0) {
+                $message = "Successfully added {$addedCount} member(s) to the team.";
+            }
+            
+            if (!empty($errors)) {
+                $message .= ' However, some users could not be added: ' . implode(' ', $errors);
+            }
+            
+            if ($addedCount === 0 && !empty($errors)) {
+                return redirect()->route('tournaments.team', $tournament)
+                            ->with('error', 'No users could be added. ' . implode(' ', $errors));
+            }
+            
+            return redirect()->route('tournaments.team', $tournament)
+                        ->with('success', $message);
+                        
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->route('tournaments.team', $tournament)
+                        ->with('error', 'Failed to add team members: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Search for eligible users that can be added to a team
+     */
+    public function searchEligibleUsers(Request $request, Tournament $tournament)
+    {
+        $user = Auth::user();
+        $searchQuery = $request->input('search', '');
+        
+        if (strlen($searchQuery) < 2) {
+            return response()->json(['users' => []]);
+        }
+        
+        // Get the user's team for this tournament
+        $participant = TournamentParticipant::where('tournament_id', $tournament->id)
+                                          ->where('user_id', $user->id)
+                                          ->whereNotNull('team_id')
+                                          ->with('team')
+                                          ->first();
+        
+        if (!$participant || !$participant->team) {
+            return response()->json(['error' => 'You are not part of a team in this tournament.'], 403);
+        }
+        
+        $team = $participant->team;
+        
+        // Check if user is team leader
+        if ($team->leader_id !== $user->id) {
+            return response()->json(['error' => 'Only team leaders can search for members.'], 403);
+        }
+        
+        // Query for eligible student users
+        $eligibleUsers = User::where('id', '!=', $user->id)
+            ->where('role', 'student')  // Only student role
+            ->where(function($query) use ($searchQuery) {
+                $query->where('username', 'like', "%{$searchQuery}%")
+                      ->orWhere('name', 'like', "%{$searchQuery}%");
+            })
+            ->whereNotIn('id', function($query) use ($tournament) {
+                // Exclude users who are already in teams for this tournament
+                $query->select('user_id')
+                      ->from('tournament_participants')
+                      ->where('tournament_id', $tournament->id)
+                      ->whereNotNull('team_id'); // Only exclude if they have a team
+            })
+            ->limit(10)
+            ->get()
+            ->filter(function($potentialMember) use ($tournament) {
+                // Check if user meets rank requirement
+                return $tournament->isEligible($potentialMember);
+            })
+            ->map(function($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'username' => $user->username,
+                    'rank' => $user->getRank()
+                ];
+            })
+            ->values();
+        
+        return response()->json(['users' => $eligibleUsers]);
     }
 }

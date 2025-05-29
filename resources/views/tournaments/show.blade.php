@@ -117,9 +117,86 @@
                             <h4 class="font-semibold text-lg mb-4 text-amber-400">Your Participation</h4>
                             
                             @if($tournament->team_size > 1)
-                                <!-- For team tournaments -->
-                                <p class="text-white mb-4">You are part of a team for this tournament. You can view your team details, manage members, and submit your project through the team page.</p>
-                                <!-- REMOVED THE REDUNDANT "View Team" BUTTON FROM HERE -->
+                                <!-- For team tournaments - Enhanced team management -->
+                                <p class="text-white mb-4">You are registered for this tournament as part of a team.</p>
+                                
+                                @php
+                                    // Get user's team information
+                                    $userParticipant = $tournament->participants()->where('user_id', auth()->id())->first();
+                                    $team = $userParticipant ? $userParticipant->team : null;
+                                    $isTeamLeader = $team && $team->leader_id === auth()->id();
+                                    $teamMemberCount = $team ? $team->participants()->count() : 0;
+                                    $isTeamComplete = $teamMemberCount >= $tournament->team_size;
+                                @endphp
+                                
+                                @if($team)
+                                    <div class="bg-gray-800/50 p-4 rounded-lg mb-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <h5 class="font-medium text-lg text-white">{{ $team->name }}</h5>
+                                            @if($isTeamLeader)
+                                                <span class="px-2 py-1 bg-amber-900/30 text-amber-400 text-xs rounded-full">Team Leader</span>
+                                            @else
+                                                <span class="px-2 py-1 bg-gray-700/50 text-gray-300 text-xs rounded-full">Team Member</span>
+                                            @endif
+                                        </div>
+                                        
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <p class="text-sm text-gray-400">Team Size: <span class="text-amber-400">{{ $tournament->team_size }} required</span></p>
+                                                <p class="text-sm text-gray-400">Current Members: <span class="text-white">{{ $teamMemberCount }}</span></p>
+                                            </div>
+                                            <div>
+                                                @if($isTeamComplete)
+                                                    <p class="text-sm text-green-400">✓ Team is complete!</p>
+                                                @else
+                                                    <p class="text-sm text-amber-400">⚠ Need {{ $tournament->team_size - $teamMemberCount }} more members</p>
+                                                @endif
+                                                
+                                                @if($userParticipant && $userParticipant->submission_url)
+                                                    <p class="text-sm text-green-400">✓ Project submitted</p>
+                                                @elseif(!$deadlinePassed && $isTeamComplete)
+                                                    <p class="text-sm text-blue-400">Ready to submit project</p>
+                                                @elseif(!$deadlinePassed)
+                                                    <p class="text-sm text-gray-400">Complete team to submit</p>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Team Management Actions -->
+                                        <div class="flex flex-wrap gap-3 mt-4">
+                                            <a href="{{ route('tournaments.team', $tournament) }}" 
+                                               class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                                Manage Team
+                                            </a>
+                                            
+                                            @if(!$hasEnded)
+                                                @if($isTeamLeader && !$isTeamComplete)
+                                                    <a href="{{ route('tournaments.team', $tournament) }}#add-members" 
+                                                       class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                                        Add Members
+                                                    </a>
+                                                @endif
+                                                
+                                                @if($isTeamLeader && $isTeamComplete && !$deadlinePassed)
+                                                    <a href="{{ route('tournaments.team', $tournament) }}#submit-project" 
+                                                       class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                                        Submit Project
+                                                    </a>
+                                                @endif
+                                            @else
+                                                <a href="{{ route('tournaments.team.results', $tournament) }}" 
+                                                   class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                                    View Results
+                                                </a>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @else
+                                    <!-- Fallback if team data is missing -->
+                                    <div class="bg-red-900/20 p-4 rounded-lg border border-red-800/20 text-red-400 mb-4">
+                                        <p>⚠ There seems to be an issue with your team registration. Please contact support.</p>
+                                    </div>
+                                @endif
                             @else
                                 <!-- For solo tournaments - include submission form here -->
                                 <p class="text-white mb-4">You are registered for this tournament as an individual participant.</p>

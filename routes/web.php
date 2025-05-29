@@ -178,6 +178,11 @@ Route::middleware(['auth'])->group(function () {
     // Updated team creation route with improved user selection process
     Route::get('/tournaments/{tournament}/create-team', [TournamentController::class, 'createTeamForm'])
         ->name('tournaments.create-team-form');
+
+    Route::get('/tournaments/{tournament}/search-eligible-users', [TournamentController::class, 'searchEligibleUsers'])
+    ->name('tournaments.search-eligible-users');
+    Route::post('/tournaments/{tournament}/team/add-members', [TournamentController::class, 'addTeamMember'])
+        ->name('tournaments.team.add-members');
 });
 
 
@@ -195,8 +200,49 @@ Route::middleware(['auth'])->group(function () {
 
 // Tournament Team Results Route (must be before other tournament routes)
 Route::middleware(['auth'])->group(function () {
+    // Tournament Team Results Route
     Route::get('/tournaments/{tournament}/team/results', [TournamentController::class, 'teamResults'])
         ->name('tournaments.team.results');
 });
+
+
+// Add these routes to your existing tournament routes in routes/web.php
+
+// Route::middleware(['auth'])->group(function () {
+//     // Existing tournament routes...
+//     Route::get('/tournaments', [TournamentController::class, 'index'])->name('tournaments.index');
+//     Route::get('/tournaments/{tournament}', [TournamentController::class, 'show'])->name('tournaments.show');
+//     Route::get('/tournaments/{tournament}/participants', [TournamentController::class, 'participants'])->name('tournaments.participants');
+//     Route::post('/tournaments/{tournament}/join', [TournamentController::class, 'join'])->name('tournaments.join');
+//     Route::post('/tournaments/{tournament}/submit', [TournamentController::class, 'submit'])->name('tournaments.submit');
+    
+//     // Team creation and management routes
+//     Route::get('/tournaments/{tournament}/create-team', [TournamentController::class, 'createTeamForm'])
+//         ->name('tournaments.create-team-form');
+//     Route::post('/tournaments/{tournament}/teams', [TournamentController::class, 'createTeam'])
+//         ->name('tournaments.teams.create');
+    
+//     // View user's team for a tournament
+//     Route::get('/tournaments/{tournament}/team', [TournamentController::class, 'team'])
+//         ->name('tournaments.team');
+    
+//     // Team member management
+//     Route::delete('/tournaments/{tournament}/team/members/{participant}', [TournamentController::class, 'removeMember'])
+//         ->name('tournaments.team.remove-member');
+//     Route::post('/tournaments/{tournament}/team/leave', [TournamentController::class, 'leaveTeam'])
+//         ->name('tournaments.team.leave');
+//     Route::post('/tournaments/{tournament}/team/disband', [TournamentController::class, 'disbandTeam'])
+//         ->name('tournaments.team.disband');
+    
+//     // NEW ROUTES FOR ADDING TEAM MEMBERS
+//     Route::get('/tournaments/{tournament}/search-eligible-users', [TournamentController::class, 'searchEligibleUsers'])
+//         ->name('tournaments.search-eligible-users');
+//     Route::post('/tournaments/{tournament}/team/add-members', [TournamentController::class, 'addTeamMember'])
+//         ->name('tournaments.team.add-members');
+    
+//     // Tournament Team Results Route
+//     Route::get('/tournaments/{tournament}/team/results', [TournamentController::class, 'teamResults'])
+//         ->name('tournaments.team.results');
+// });
 
 require __DIR__.'/auth.php';

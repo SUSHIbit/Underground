@@ -102,25 +102,26 @@
                                     <p class="text-sm text-gray-400">Team Leader: <span class="text-amber-400">{{ $team->leader->name }}</span></p>
                                     
                                     @if($isTeamComplete)
-                                        <p class="text-sm text-green-400">Team is complete!</p>
+                                        <p class="text-sm text-green-400">✓ Team is complete!</p>
                                     @else
-                                        <p class="text-sm text-amber-400">Team needs {{ $tournament->team_size - $allTeamMembers->count() }} more members</p>
+                                        <p class="text-sm text-amber-400">⚠ Team needs {{ $tournament->team_size - $allTeamMembers->count() }} more members</p>
                                     @endif
                                 </div>
                             </div>
                             
                             <!-- Only show team management actions if tournament hasn't ended -->
                             @if($isLeader && !$tournament->hasEnded())
-                                <div class="mt-4">
+                                <div class="mt-4 flex flex-wrap gap-2">
                                     @if(!$isTeamComplete)
-                                        <a href="{{ route('tournaments.create-team-form', $tournament) }}" class="inline-block bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold py-1 px-3 rounded">
-                                            Add More Members
-                                        </a>
+                                        <button onclick="toggleAddMembersForm()" 
+                                                class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 px-4 rounded transition-colors">
+                                            Add Members
+                                        </button>
                                     @endif
                                     
-                                    <form action="{{ route('tournaments.team.disband', $tournament) }}" method="POST" class="inline-block ml-2">
+                                    <form action="{{ route('tournaments.team.disband', $tournament) }}" method="POST" class="inline-block">
                                         @csrf
-                                        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white text-sm font-bold py-1 px-3 rounded" onclick="return confirm('Are you sure you want to disband this team? This action cannot be undone.')">
+                                        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white text-sm font-bold py-2 px-4 rounded transition-colors" onclick="return confirm('Are you sure you want to disband this team? This action cannot be undone.')">
                                             Disband Team
                                         </button>
                                     </form>
@@ -129,6 +130,154 @@
                         </div>
                     </div>
                     
+                    <!-- Add Members Section (for team leaders) -->
+                    @if($isLeader && !$tournament->hasEnded() && !$isTeamComplete)
+                        <div id="add-members" class="bg-blue-900/10 rounded-lg p-6 mb-8 border border-blue-800/20" style="display: none;">
+                            <h4 class="font-semibold text-lg mb-4 text-blue-400">Add Team Members</h4>
+                            
+                            <form action="{{ route('tournaments.team.add-members', $tournament) }}" method="POST">
+                                @csrf
+                                
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">
+                                        Search for eligible users to add to your team:
+                                    </label>
+                                    
+                                    <div class="space-y-4" x-data="{ 
+                                        searchQuery: '', 
+                                        selectedUsers: [],
+                                        availableUsers: [],
+                                        maxMembers: {{ $tournament->team_size - $allTeamMembers->count() }},
+                                        async searchUsers() {
+                                            if (this.searchQuery.length < 2) {
+                                                this.availableUsers = [];
+                                                return;
+                                            }
+                                            
+                                            try {
+                                                const response = await fetch(`/tournaments/{{ $tournament->id }}/search-eligible-users?search=${encodeURIComponent(this.searchQuery)}`);
+                                                const data = await response.json();
+                                                this.availableUsers = data.users || [];
+                                            } catch (error) {
+                                                console.error('Search failed:', error);
+                                                this.availableUsers = [];
+                                            }
+                                        },
+                                        addUser(user) {
+                                            if (this.selectedUsers.length >= this.maxMembers) return;
+                                            if (this.selectedUsers.find(u => u.id === user.id)) return;
+                                            
+                                            this.selectedUsers.push(user);
+                                            this.availableUsers = this.availableUsers.filter(u => u.id !== user.id);
+                                        },
+                                        removeUser(userId) {
+                                            this.selectedUsers = this.selectedUsers.filter(u => u.id !== userId);
+                                        }
+                                    }">
+                                        
+                                        <div>
+                                            <input type="text" 
+                                                   x-model="searchQuery"
+                                                   @input.debounce.500ms="searchUsers()"
+                                                   placeholder="Search by username or name..."
+                                                   class="w-full p-3 border border-gray-600 rounded-md bg-gray-700 text-white">
+                                        </div>
+                                        
+                                        <!-- Available Users -->
+                                        <div x-show="availableUsers.length > 0" class="bg-gray-700/50 rounded-lg p-4">
+                                            <h6 class="text-sm font-medium text-gray-300 mb-2">Available Users:</h6>
+                                            <div class="space-y-2">
+                                                <template x-for="user in availableUsers" :key="user.id">
+                                                    <div class="flex items-center justify-between p-2 bg-gray-800 rounded">
+                                                        <div class="flex items-center">
+                                                            <div class="w-8 h-8 rounded-full bg-amber-600 flex items-center justify-center text-white text-sm font-bold mr-3" x-text="user.name.charAt(0)"></div>
+                                                            <div>
+                                                                <p class="text-white text-sm" x-text="user.username"></p>
+                                                                <p class="text-gray-400 text-xs" x-text="user.name + ' • ' + user.rank"></p>
+                                                            </div>
+                                                        </div>
+                                                        <button type="button" 
+                                                                @click="addUser(user)"
+                                                                :disabled="selectedUsers.length >= maxMembers"
+                                                                class="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-xs rounded">
+                                                            Add
+                                                        </button>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Selected Users -->
+                                        <div x-show="selectedUsers.length > 0" class="bg-green-900/20 rounded-lg p-4">
+                                            <h6 class="text-sm font-medium text-green-400 mb-2">Selected Members:</h6>
+                                            <div class="space-y-2">
+                                                <template x-for="user in selectedUsers" :key="user.id">
+                                                    <div class="flex items-center justify-between p-2 bg-gray-800 rounded">
+                                                        <div class="flex items-center">
+                                                            <div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-bold mr-3" x-text="user.name.charAt(0)"></div>
+                                                            <div>
+                                                                <p class="text-white text-sm" x-text="user.username"></p>
+                                                                <p class="text-gray-400 text-xs" x-text="user.name + ' • ' + user.rank"></p>
+                                                            </div>
+                                                        </div>
+                                                        <button type="button" 
+                                                                @click="removeUser(user.id)"
+                                                                class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded">
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            
+                                            <!-- Hidden inputs for form submission -->
+                                            <template x-for="user in selectedUsers" :key="user.id">
+                                                <input type="hidden" name="user_ids[]" :value="user.id">
+                                            </template>
+                                        </div>
+                                        
+                                        <div class="flex justify-between items-center">
+                                            <p class="text-sm text-gray-400">
+                                                <span x-text="selectedUsers.length"></span> of <span x-text="maxMembers"></span> members selected
+                                            </p>
+                                            
+                                            <div class="flex gap-2">
+                                                <button type="button" 
+                                                        onclick="toggleAddMembersForm()"
+                                                        class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded">
+                                                    Cancel
+                                                </button>
+                                                <button type="submit" 
+                                                        :disabled="selectedUsers.length === 0"
+                                                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded">
+                                                    Add Selected Members
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    @endif
+                    
+                    <!-- For non-leaders when team is incomplete -->
+                    @if(!$isLeader && !$isTeamComplete)
+                        <div class="bg-amber-900/10 rounded-lg p-6 mb-8 border border-amber-800/20">
+                            <h4 class="font-semibold text-lg mb-4 text-amber-400">Team Status</h4>
+                            <div class="flex items-center space-x-4">
+                                <div class="flex-shrink-0">
+                                    <svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-white font-medium">Team is not complete</p>
+                                    <p class="text-gray-400 text-sm">Your team needs {{ $tournament->team_size - $allTeamMembers->count() }} more members before you can participate in this tournament. Only the team leader can add new members.</p>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                    
+                    <!-- Rest of the existing content (project submission, tournament info, etc.) -->
                     <!-- Project Submission Form (for team leader only) -->
                     @if(!$tournament->hasEnded())
                         @if($isLeader)
@@ -169,7 +318,7 @@
                                             $submissionUrl = $participant ? $participant->submission_url : null;
                                         @endphp
                                         
-                                        <form action="{{ route('tournaments.submit', $tournament) }}" method="POST">
+                                        <form action="{{ route('tournaments.submit', $tournament) }}" method="POST" id="submit-project">
                                             @csrf
                                             <div class="mb-4">
                                                 <label for="submission_url" class="block mb-2 text-sm font-medium text-gray-300">
@@ -334,4 +483,23 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function toggleAddMembersForm() {
+            const form = document.getElementById('add-members');
+            if (form.style.display === 'none' || form.style.display === '') {
+                form.style.display = 'block';
+                form.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                form.style.display = 'none';
+            }
+        }
+        
+        // Show the form if URL has #add-members hash
+        if (window.location.hash === '#add-members') {
+            document.addEventListener('DOMContentLoaded', function() {
+                toggleAddMembersForm();
+            });
+        }
+    </script>
 </x-app-layout>
