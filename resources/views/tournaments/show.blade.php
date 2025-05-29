@@ -164,10 +164,17 @@
                                         
                                         <!-- Team Management Actions -->
                                         <div class="flex flex-wrap gap-3 mt-4">
-                                            <a href="{{ route('tournaments.team', $tournament) }}" 
-                                               class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded transition-colors">
-                                                Manage Team
-                                            </a>
+                                            @if($hasEnded)
+                                                <a href="{{ route('tournaments.team', $tournament) }}" 
+                                                   class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                                    View Team
+                                                </a>
+                                            @else
+                                                <a href="{{ route('tournaments.team', $tournament) }}" 
+                                                   class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                                    Manage Team
+                                                </a>
+                                            @endif
                                             
                                             @if(!$hasEnded)
                                                 @if($isTeamLeader && !$isTeamComplete)
@@ -376,47 +383,6 @@
                             <p class="mb-4 text-gray-300">You do not currently meet the eligibility requirements for this tournament.</p>
                             <p class="text-gray-300">Minimum rank required: <strong class="text-amber-400">{{ $tournament->minimum_rank }}</strong></p>
                             <p class="text-gray-300">Your current rank: <strong class="text-gray-400">{{ auth()->user()->getRank() }}</strong></p>
-                        </div>
-                    @endif
-                    
-                    <!-- Participants Section (Only show when tournament is ongoing) -->
-                    @if(!$hasEnded)
-                        <div class="mt-8 border-t border-amber-800/20 pt-6">
-                            <div class="bg-gray-700/30 p-4 rounded-lg border border-amber-800/20">
-                                <h4 class="font-semibold text-lg mb-4 text-amber-400">View Participants</h4>
-                                <p class="text-gray-300 mb-4">See who else is participating in this tournament.</p>
-                                <a href="{{ route('tournaments.participants', $tournament) }}" class="inline-block bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded transition-colors">
-                                    View All Participants
-                                </a>
-                            </div>
-                        </div>
-                    @endif
-                    
-                    <!-- Tournament Results Section (Only show when tournament has ended) -->
-                    @if($hasEnded)
-                        <div class="mt-8 border-t border-amber-800/20 pt-6">
-                            <div class="bg-gray-700/30 p-4 rounded-lg border border-amber-800/20">
-                                @if($tournament->team_size > 1)
-                                    <!-- For team tournaments, show only team button -->
-                                    @if($isParticipating)
-                                        <h4 class="font-semibold text-lg mb-4 text-amber-400">Your Team</h4>
-                                        <p class="text-gray-300 mb-4">View your team details and results.</p>
-                                        <a href="{{ route('tournaments.team', $tournament) }}" class="inline-block bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded transition-colors">
-                                            View Team
-                                        </a>
-                                    @else
-                                        <h4 class="font-semibold text-lg mb-4 text-amber-400">Tournament Completed</h4>
-                                        <p class="text-gray-300">This tournament has ended. You did not participate in this tournament.</p>
-                                    @endif
-                                @else
-                                    <!-- For solo tournaments, show results button -->
-                                    <h4 class="font-semibold text-lg mb-4 text-amber-400">Tournament Results</h4>
-                                    <p class="text-gray-300 mb-4">View the final results for this tournament.</p>
-                                    <a href="{{ route('tournaments.participants', $tournament) }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
-                                        View Results
-                                    </a>
-                                @endif
-                            </div>
                         </div>
                     @endif
                     
