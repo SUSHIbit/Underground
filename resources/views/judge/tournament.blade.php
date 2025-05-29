@@ -39,6 +39,16 @@
                             <p class="text-gray-400 mb-1">Judging Date: {{ $judgingDate->format('F j, Y, g:i a') }}</p>
                             <p class="text-gray-400">Event Date: {{ \Carbon\Carbon::parse($tournament->date_time)->format('F j, Y, g:i a') }}</p>
                             <p class="text-gray-400">Location: {{ $tournament->location }}</p>
+                            @if($tournament->team_size > 1)
+                                <p class="text-amber-400 text-sm mt-1">
+                                    <span class="inline-flex items-center">
+                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"></path>
+                                        </svg>
+                                        Team Tournament ({{ $tournament->team_size }} members per team)
+                                    </span>
+                                </p>
+                            @endif
                         </div>
                         
                         <div class="mt-4 md:mt-0 flex flex-col items-end">
@@ -64,6 +74,26 @@
                             </p>
                         </div>
                     </div>
+
+                    <!-- Team Scoring Notice -->
+                    @if($tournament->team_size > 1)
+                        <div class="mb-8 bg-blue-900/20 p-4 rounded-lg border border-blue-800/20">
+                            <div class="flex items-start space-x-3">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-blue-400 mb-1">Team Tournament Scoring</h4>
+                                    <p class="text-gray-300 text-sm">
+                                        When you grade any team member, all members of that team will receive the same score from you. 
+                                        You only need to grade one member per team.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
 
                     @if(!$canJudgeNow)
                         <div class="mb-8 bg-amber-900/20 p-4 rounded-lg border border-amber-800/20">
@@ -111,14 +141,18 @@
                     </div>
 
                     <!-- Submissions -->
-                    <h4 class="font-medium text-lg mb-4 text-amber-400">Participant Submissions</h4>
+                    <h4 class="font-medium text-lg mb-4 text-amber-400">
+                        {{ $tournament->team_size > 1 ? 'Team Submissions' : 'Participant Submissions' }}
+                    </h4>
                     
                     @if($participants->count() > 0)
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-amber-800/20">
                                 <thead class="bg-gray-900">
                                     <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Participant</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            {{ $tournament->team_size > 1 ? 'Team Member' : 'Participant' }}
+                                        </th>
                                         @if($tournament->team_size > 1)
                                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Team</th>
                                         @endif
@@ -131,18 +165,37 @@
                                 </thead>
                                 <tbody class="bg-gray-800 divide-y divide-amber-800/20">
                                     @foreach($participants as $participant)
-                                        <tr>
+                                        <tr class="{{ $tournament->team_size > 1 && $participant->currentJudgeScore ? 'bg-green-900/10' : '' }}">
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-300">
-                                                {{ $participant->user->name }}
+                                                <div class="flex items-center space-x-2">
+                                                    <span>{{ $participant->user->name }}</span>
+                                                    @if($tournament->team_size > 1 && $participant->role === 'leader')
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-900/30 text-amber-400">
+                                                            Leader
+                                                        </span>
+                                                    @endif
+                                                </div>
                                                 <div class="text-xs text-gray-500">{{ $participant->user->email }}</div>
                                             </td>
                                             
                                             @if($tournament->team_size > 1)
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                                                     @if($participant->team)
-                                                        <p>{{ $participant->team->name }}</p>
-                                                        <div class="text-xs text-gray-500 mt-1">
-                                                            {{ $participant->role }}
+                                                        <div>
+                                                            <p class="font-medium">{{ $participant->team->name }}</p>
+                                                            <div class="text-xs text-gray-500 mt-1">
+                                                                {{ $participant->team->participants()->count() }} member(s)
+                                                            </div>
+                                                            @if($participant->currentJudgeScore)
+                                                                <div class="text-xs text-green-400 mt-1">
+                                                                    <span class="inline-flex items-center">
+                                                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                                                        </svg>
+                                                                        Team Scored
+                                                                    </span>
+                                                                </div>
+                                                            @endif
                                                         </div>
                                                     @else
                                                         <span class="text-gray-500">No team</span>
@@ -167,7 +220,7 @@
                                                     </span>
                                                 @elseif($participant->currentJudgeScore)
                                                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-900/30 text-green-400">
-                                                        Graded by You
+                                                        {{ $tournament->team_size > 1 ? 'Team Graded' : 'Graded by You' }}
                                                     </span>
                                                 @elseif($participant->judgeCount > 0)
                                                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-900/30 text-blue-400">
@@ -175,7 +228,7 @@
                                                     </span>
                                                 @else
                                                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-900/30 text-yellow-400">
-                                                        Needs Your Grading
+                                                        {{ $tournament->team_size > 1 ? 'Team Needs Grading' : 'Needs Your Grading' }}
                                                     </span>
                                                 @endif
                                             </td>
@@ -183,6 +236,11 @@
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                                                 @if($participant->currentJudgeScore)
                                                     <span class="font-medium text-amber-400">{{ $participant->currentJudgeScore->score }}/10</span>
+                                                    @if($tournament->team_size > 1)
+                                                        <div class="text-xs text-green-400">
+                                                            (All team members)
+                                                        </div>
+                                                    @endif
                                                 @else
                                                     <span class="text-gray-500">Not graded</span>
                                                 @endif
@@ -204,9 +262,9 @@
                                                     @if($canJudgeNow)
                                                         <a href="{{ route('judge.submission', ['tournament' => $tournament, 'participant' => $participant]) }}" class="text-amber-400 hover:text-amber-300">
                                                             @if($participant->currentJudgeScore)
-                                                                Update Grade
+                                                                {{ $tournament->team_size > 1 ? 'Update Team Grade' : 'Update Grade' }}
                                                             @else
-                                                                Grade
+                                                                {{ $tournament->team_size > 1 ? 'Grade Team' : 'Grade' }}
                                                             @endif
                                                         </a>
                                                     @else

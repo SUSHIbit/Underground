@@ -230,7 +230,7 @@ class JudgeDashboardController extends Controller
             
             $currentJudgeId = auth()->id();
             
-            // Create or update the judge's individual score
+            // Create or update the judge's individual score for the main participant
             $judgeScore = JudgeScore::updateOrCreate(
                 [
                     'tournament_participant_id' => $participant->id,
@@ -243,7 +243,34 @@ class JudgeDashboardController extends Controller
                 ]
             );
             
-            // Update the participant's average score
+            // **NEW: Team Scoring Synchronization**
+            // If this is a team tournament and participant has a team, sync scores across all team members
+            if ($tournament->team_size > 1 && $participant->team_id) {
+                // Get all other team members (excluding the current participant)
+                $teamMembers = TournamentParticipant::where('team_id', $participant->team_id)
+                                                  ->where('id', '!=', $participant->id)
+                                                  ->get();
+                
+                foreach ($teamMembers as $member) {
+                    // Create/update judge score for each team member with identical scoring
+                    JudgeScore::updateOrCreate(
+                        [
+                            'tournament_participant_id' => $member->id,
+                            'judge_user_id' => $currentJudgeId,
+                        ],
+                        [
+                            'score' => $validated['score'],
+                            'feedback' => $validated['feedback'] ?? null,
+                            'rubric_scores' => isset($validated['rubric_scores']) ? $validated['rubric_scores'] : null,
+                        ]
+                    );
+                    
+                    // Update the average score for each team member
+                    $member->updateAverageScore();
+                }
+            }
+            
+            // Update the participant's average score (main participant)
             $participant->updateAverageScore();
             
             // Award points only when the FIRST judge grades (to avoid duplicate awards)
@@ -268,16 +295,14 @@ class JudgeDashboardController extends Controller
                 $participant->user->addPoints($pointsToAward);
                 $participant->update(['points_awarded' => $pointsToAward]);
                 
-                // For team tournaments, synchronize the score, feedback, and points for all team members
-                if ($participant->team_id) {
+                // For team tournaments, award the same points to all team members
+                if ($tournament->team_size > 1 && $participant->team_id) {
                     $teamMembers = TournamentParticipant::where('team_id', $participant->team_id)
                                                     ->where('id', '!=', $participant->id)
                                                     ->get();
                     
                     foreach ($teamMembers as $member) {
-                        // Update average score and feedback
-                        $member->updateAverageScore();
-                        
+                        // Update average score and feedback (already done above)
                         // Award the same points
                         if ($member->points_awarded === null || $member->points_awarded === 0) {
                             $member->user->addPoints($pointsToAward);
@@ -286,22 +311,20 @@ class JudgeDashboardController extends Controller
                     }
                 }
             } else {
-                // If this is not the first judge, just update average for team members
-                if ($participant->team_id) {
-                    $teamMembers = TournamentParticipant::where('team_id', $participant->team_id)
-                                                    ->where('id', '!=', $participant->id)
-                                                    ->get();
-                    
-                    foreach ($teamMembers as $member) {
-                        $member->updateAverageScore();
-                    }
-                }
+                // If this is not the first judge, just update average for team members (already done above)
+                // No additional point awarding needed
             }
             
             DB::commit();
             
+            // Determine success message based on team vs individual
+            $successMessage = 'Your score has been submitted successfully.';
+            if ($tournament->team_size > 1 && $participant->team_id) {
+                $successMessage = 'Your score has been submitted successfully for the entire team.';
+            }
+            
             return redirect()->route('judge.tournament', $tournament)
-                        ->with('success', 'Your score has been submitted successfully.');
+                        ->with('success', $successMessage);
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'An error occurred: ' . $e->getMessage());

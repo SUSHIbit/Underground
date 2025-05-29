@@ -19,6 +19,9 @@
                         <div>
                             <h3 class="text-xl font-bold mb-2 text-amber-400">{{ $tournament->title }}</h3>
                             <p class="text-gray-400">Submission by: {{ $participant->user->name }}</p>
+                            @if($tournament->team_size > 1 && $participant->team)
+                                <p class="text-gray-400">Team: {{ $participant->team->name }}</p>
+                            @endif
                         </div>
                         
                         <div class="mt-4 md:mt-0 flex flex-col items-end space-y-2">
@@ -36,6 +39,43 @@
                             @endif
                         </div>
                     </div>
+
+                    <!-- Team Scoring Notice -->
+                    @if($tournament->team_size > 1 && $participant->team)
+                        <div class="mb-8 bg-amber-900/20 p-4 rounded-lg border border-amber-800/30">
+                            <div class="flex items-start space-x-3">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-amber-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-amber-400 mb-1">Team Tournament Scoring</h4>
+                                    <p class="text-gray-300 text-sm">
+                                        This is a team tournament. When you submit your score for <strong>{{ $participant->user->name }}</strong>, 
+                                        all team members will receive the same score from you.
+                                    </p>
+                                    @if($participant->team->participants()->count() > 1)
+                                        <div class="mt-2">
+                                            <p class="text-gray-400 text-xs">Team members who will receive this score:</p>
+                                            <ul class="text-gray-400 text-xs mt-1 space-y-1">
+                                                @foreach($participant->team->participants as $member)
+                                                    <li class="flex items-center space-x-2">
+                                                        <span class="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
+                                                        <span>{{ $member->user->name }}
+                                                            @if($member->user->id === $participant->user->id)
+                                                                <span class="text-amber-400">(current)</span>
+                                                            @endif
+                                                        </span>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @endif
 
                     <!-- Other Judges' Scores (if any) -->
                     @if($allJudgeScores->count() > 0)
@@ -93,7 +133,12 @@
                                         <span class="text-amber-400 font-medium">Team Members:</span>
                                         <ul class="list-disc list-inside mt-2 text-gray-300 ml-2">
                                             @foreach($participant->team->participants as $member)
-                                                <li>{{ $member->user->name }}</li>
+                                                <li>
+                                                    {{ $member->user->name }}
+                                                    @if($member->role === 'leader')
+                                                        <span class="text-amber-400 text-xs">(Leader)</span>
+                                                    @endif
+                                                </li>
                                             @endforeach
                                         </ul>
                                     </div>
@@ -111,6 +156,9 @@
                         <div class="bg-gray-900/20 p-4 rounded-lg">
                             <h4 class="font-medium text-lg mb-4 text-amber-400">
                                 {{ $existingJudgeScore ? 'Update Your Score' : 'Submit Your Score' }}
+                                @if($tournament->team_size > 1 && $participant->team)
+                                    <span class="text-sm text-gray-400 font-normal">(for entire team)</span>
+                                @endif
                             </h4>
                             
                             <form action="{{ route('judge.submit-score', ['tournament' => $tournament, 'participant' => $participant]) }}" method="POST" id="grading-form">
@@ -186,12 +234,15 @@
                                 <div class="mb-4">
                                     <label for="feedback" class="block text-sm font-medium text-gray-300 mb-2">
                                         Feedback <span class="text-gray-500">(Optional)</span>
+                                        @if($tournament->team_size > 1 && $participant->team)
+                                            <span class="text-amber-400 text-xs">(will be shared with all team members)</span>
+                                        @endif
                                     </label>
                                     <textarea 
                                         name="feedback" 
                                         id="feedback" 
                                         rows="6" 
-                                        placeholder="Provide feedback for the participant (optional)..."
+                                        placeholder="Provide feedback for the {{ $tournament->team_size > 1 && $participant->team ? 'team' : 'participant' }} (optional)..."
                                         class="w-full p-2 border border-gray-700 rounded-md bg-gray-800 text-white"
                                     >{{ old('feedback', $existingJudgeScore ? $existingJudgeScore->feedback : '') }}</textarea>
                                     @error('feedback')
@@ -202,6 +253,9 @@
                                 <div class="flex justify-end">
                                     <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md">
                                         {{ $existingJudgeScore ? 'Update Your Grade' : 'Submit Your Grade' }}
+                                        @if($tournament->team_size > 1 && $participant->team)
+                                            (for entire team)
+                                        @endif
                                     </button>
                                 </div>
                             </form>
