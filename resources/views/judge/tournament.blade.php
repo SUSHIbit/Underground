@@ -47,12 +47,20 @@
                                 {{ $tournament->judges()->where('user_id', auth()->id())->first()->pivot->role ?? 'Judge' }}
                             </p>
                             <p class="text-sm text-gray-400 mt-1">
+                                <span class="font-medium text-amber-400">Total Participants:</span> 
+                                {{ $totalParticipants }}
+                            </p>
+                            <p class="text-sm text-gray-400 mt-1">
                                 <span class="font-medium text-amber-400">Submissions:</span> 
                                 {{ $submittedCount }}/{{ $totalParticipants }}
                             </p>
                             <p class="text-sm text-gray-400 mt-1">
-                                <span class="font-medium text-amber-400">Graded:</span> 
-                                {{ $gradedCount }}/{{ $submittedCount }}
+                                <span class="font-medium text-amber-400">Graded by You:</span> 
+                                {{ $gradedByCurrentJudgeCount }}/{{ $submittedCount }}
+                            </p>
+                            <p class="text-sm text-green-400 mt-1">
+                                <span class="font-medium">Fully Graded:</span> 
+                                {{ $fullyGradedCount }}/{{ $submittedCount }}
                             </p>
                         </div>
                     </div>
@@ -116,7 +124,8 @@
                                         @endif
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Submission</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Score</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Your Score</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Average Score</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
@@ -135,13 +144,6 @@
                                                         <div class="text-xs text-gray-500 mt-1">
                                                             {{ $participant->role }}
                                                         </div>
-                                                    @elseif(isset($participant->team_name) && $participant->team_name)
-                                                        <p>{{ $participant->team_name }}</p>
-                                                        @if(isset($participant->team_members) && count($participant->team_members) > 0)
-                                                            <div class="text-xs text-gray-500 mt-1">
-                                                                {{ count($participant->team_members) }} members
-                                                            </div>
-                                                        @endif
                                                     @else
                                                         <span class="text-gray-500">No team</span>
                                                     @endif
@@ -163,22 +165,37 @@
                                                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-900/30 text-red-400">
                                                         No Submission
                                                     </span>
-                                                @elseif($participant->score !== null)
+                                                @elseif($participant->currentJudgeScore)
                                                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-900/30 text-green-400">
-                                                        Graded
+                                                        Graded by You
+                                                    </span>
+                                                @elseif($participant->judgeCount > 0)
+                                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-900/30 text-blue-400">
+                                                        Partially Graded ({{ $participant->judgeCount }}/{{ $participant->totalJudges }})
                                                     </span>
                                                 @else
                                                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-900/30 text-yellow-400">
-                                                        Needs Grading
+                                                        Needs Your Grading
                                                     </span>
                                                 @endif
                                             </td>
                                             
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                                                @if($participant->score !== null)
-                                                    <span class="font-medium text-amber-400">{{ $participant->score }}/10</span>
+                                                @if($participant->currentJudgeScore)
+                                                    <span class="font-medium text-amber-400">{{ $participant->currentJudgeScore->score }}/10</span>
                                                 @else
-                                                    <span class="text-gray-500">-</span>
+                                                    <span class="text-gray-500">Not graded</span>
+                                                @endif
+                                            </td>
+                                            
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                                                @if($participant->judgeCount > 0)
+                                                    <div class="flex flex-col">
+                                                        <span class="font-medium text-green-400">{{ $participant->score }}/10</span>
+                                                        <span class="text-xs text-gray-500">({{ $participant->judgeCount }}/{{ $participant->totalJudges }} judges)</span>
+                                                    </div>
+                                                @else
+                                                    <span class="text-gray-500">No scores yet</span>
                                                 @endif
                                             </td>
                                             
@@ -186,7 +203,11 @@
                                                 @if($participant->submission_url)
                                                     @if($canJudgeNow)
                                                         <a href="{{ route('judge.submission', ['tournament' => $tournament, 'participant' => $participant]) }}" class="text-amber-400 hover:text-amber-300">
-                                                            {{ $participant->score !== null ? 'Review' : 'Grade' }}
+                                                            @if($participant->currentJudgeScore)
+                                                                Update Grade
+                                                            @else
+                                                                Grade
+                                                            @endif
                                                         </a>
                                                     @else
                                                         <span class="text-gray-500">Waiting for judging date</span>

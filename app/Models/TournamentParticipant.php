@@ -36,6 +36,50 @@ class TournamentParticipant extends Model
     }
 
     /**
+     * Get all judge scores for this participant.
+     */
+    public function judgeScores()
+    {
+        return $this->hasMany(JudgeScore::class, 'tournament_participant_id');
+    }
+
+    /**
+     * Get the judge score for a specific judge.
+     */
+    public function getJudgeScore($judgeUserId)
+    {
+        return $this->judgeScores()->where('judge_user_id', $judgeUserId)->first();
+    }
+
+    /**
+     * Calculate and update the average score from all judge scores.
+     */
+    public function updateAverageScore()
+    {
+        $judgeScores = $this->judgeScores;
+        
+        if ($judgeScores->count() > 0) {
+            $averageScore = $judgeScores->avg('score');
+            $this->score = round($averageScore, 1);
+            
+            // For feedback, we could concatenate all feedback or just use the most recent
+            // For now, let's use the most recent feedback
+            $latestFeedback = $judgeScores->sortByDesc('created_at')->first()->feedback;
+            $this->feedback = $latestFeedback;
+            
+            $this->save();
+        }
+    }
+
+    /**
+     * Get the rubric scores for this participant.
+     */
+    public function rubricScores()
+    {
+        return $this->hasMany(RubricScore::class, 'tournament_participant_id');
+    }
+
+    /**
      * Override the score attribute setter to synchronize scores for team members
      * 
      * @param float|null $value
@@ -59,13 +103,5 @@ class TournamentParticipant extends Model
                 unset($this->syncingScore);
             }
         }
-    }
-
-    /**
-     * Get the rubric scores for this participant.
-     */
-    public function rubricScores()
-    {
-        return $this->hasMany(RubricScore::class, 'tournament_participant_id');
     }
 }

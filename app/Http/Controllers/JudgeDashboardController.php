@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Tournament;
 use App\Models\TournamentParticipant;
+use App\Models\JudgeScore;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -51,7 +52,7 @@ class JudgeDashboardController extends Controller
         return view('judge.dashboard', compact('readyToJudgeTournaments', 'waitingPeriodTournaments', 'upcomingTournaments'));
     }
     
-        /**
+    /**
      * Display the tournament's details and submissions.
      */
     public function tournament(Tournament $tournament)
@@ -73,23 +74,48 @@ class JudgeDashboardController extends Controller
         // No waiting period needed if judging date has already passed
         $waitingPeriodEnd = $judgingDate;
         
-        // Get all participants with their submissions
+        // Get all participants with their submissions and judge scores
         $participants = $tournament->participants()
-                                 ->with('user')
+                                 ->with(['user', 'judgeScores.judge'])
                                  ->orderBy('created_at')
                                  ->get();
+        
+        // Get the current judge's user ID
+        $currentJudgeId = auth()->id();
+        
+        // Add judge-specific information to participants
+        $participants->each(function ($participant) use ($currentJudgeId) {
+            // Get this judge's score for this participant
+            $participant->currentJudgeScore = $participant->getJudgeScore($currentJudgeId);
+            
+            // Count how many judges have scored this participant
+            $participant->judgeCount = $participant->judgeScores->count();
+            
+            // Get total number of judges for this tournament
+            $participant->totalJudges = $participant->tournament->judges->count();
+        });
         
         // Get counts for different submission statuses
         $totalParticipants = $participants->count();
         $submittedCount = $participants->where('submission_url', '!=', null)->count();
-        $gradedCount = $participants->where('score', '!=', null)->count();
+        
+        // Count participants graded by current judge
+        $gradedByCurrentJudgeCount = $participants->filter(function ($participant) {
+            return $participant->currentJudgeScore !== null;
+        })->count();
+        
+        // Count participants fully graded by all judges
+        $fullyGradedCount = $participants->filter(function ($participant) {
+            return $participant->judgeCount >= $participant->totalJudges;
+        })->count();
         
         return view('judge.tournament', compact(
             'tournament', 
             'participants', 
             'totalParticipants', 
             'submittedCount', 
-            'gradedCount',
+            'gradedByCurrentJudgeCount',
+            'fullyGradedCount',
             'canJudge',
             'waitingPeriodEnd',
             'judgingDate'
@@ -125,18 +151,28 @@ class JudgeDashboardController extends Controller
             return redirect()->route('judge.tournament', $tournament)->with('error', 'Invalid participant for this tournament.');
         }
         
-        // Load related user data and rubric scores
+        // Load related user data and get current judge's score
         $participant->load('user', 'team.participants.user');
         
-        // Get existing rubric scores if available
-        $rubricScores = [];
-        $existingScores = $participant->rubricScores()->get();
+        $currentJudgeId = auth()->id();
+        $existingJudgeScore = $participant->getJudgeScore($currentJudgeId);
         
-        foreach ($existingScores as $score) {
-            $rubricScores[$score->tournament_rubric_id] = $score->score;
+        // Get existing rubric scores from judge's individual scoring
+        $rubricScores = [];
+        if ($existingJudgeScore && $existingJudgeScore->rubric_scores) {
+            $rubricScores = $existingJudgeScore->rubric_scores;
         }
         
-        return view('judge.submission', compact('tournament', 'participant', 'rubricScores'));
+        // Get all judge scores for this participant (for display)
+        $allJudgeScores = $participant->judgeScores()->with('judge')->get();
+        
+        return view('judge.submission', compact(
+            'tournament', 
+            'participant', 
+            'rubricScores', 
+            'existingJudgeScore',
+            'allJudgeScores'
+        ));
     }
     
     /**
@@ -178,57 +214,57 @@ class JudgeDashboardController extends Controller
             
             $validated = $request->validate(array_merge([
                 'score' => 'required|numeric|min:0|max:10',
-                'feedback' => 'required|string|max:1000',
+                'feedback' => 'nullable|string|max:1000', // Made nullable
                 'rubric_scores' => 'required|array',
             ], $rubricRules));
         } else {
             // Simple validation without rubrics
             $validated = $request->validate([
                 'score' => 'required|numeric|min:0|max:10',
-                'feedback' => 'required|string|max:1000',
+                'feedback' => 'nullable|string|max:1000', // Made nullable
             ]);
         }
         
         try {
             DB::beginTransaction();
             
-            // Update the participant's score and feedback
-            $participant->update([
-                'score' => $validated['score'],
-                'feedback' => $validated['feedback'],
-            ]);
+            $currentJudgeId = auth()->id();
             
-            // Save individual rubric scores if they exist
-            if (isset($validated['rubric_scores']) && is_array($validated['rubric_scores'])) {
-                // Remove old scores first
-                $participant->rubricScores()->delete();
+            // Create or update the judge's individual score
+            $judgeScore = JudgeScore::updateOrCreate(
+                [
+                    'tournament_participant_id' => $participant->id,
+                    'judge_user_id' => $currentJudgeId,
+                ],
+                [
+                    'score' => $validated['score'],
+                    'feedback' => $validated['feedback'] ?? null,
+                    'rubric_scores' => isset($validated['rubric_scores']) ? $validated['rubric_scores'] : null,
+                ]
+            );
+            
+            // Update the participant's average score
+            $participant->updateAverageScore();
+            
+            // Award points only when the FIRST judge grades (to avoid duplicate awards)
+            $judgeScoresCount = $participant->judgeScores()->count();
+            if ($judgeScoresCount == 1 && ($participant->points_awarded === null || $participant->points_awarded === 0)) {
+                // Calculate points based on average score
+                $pointsToAward = 0;
+                $averageScore = $participant->score;
                 
-                // Add new scores
-                foreach ($validated['rubric_scores'] as $rubricId => $score) {
-                    $participant->rubricScores()->create([
-                        'tournament_rubric_id' => $rubricId,
-                        'score' => $score,
-                    ]);
+                if ($averageScore >= 9) {
+                    $pointsToAward = 20; // Excellent submission
+                } elseif ($averageScore >= 7) {
+                    $pointsToAward = 15; // Great submission
+                } elseif ($averageScore >= 5) {
+                    $pointsToAward = 10; // Good submission
+                } elseif ($averageScore >= 3) {
+                    $pointsToAward = 5;  // Average submission
+                } else {
+                    $pointsToAward = 2;  // Participation points
                 }
-            }
-            
-            // Award points to the user based on their score
-            // Calculate points based on score out of 10
-            $pointsToAward = 0;
-            if ($validated['score'] >= 9) {
-                $pointsToAward = 20; // Excellent submission
-            } elseif ($validated['score'] >= 7) {
-                $pointsToAward = 15; // Great submission
-            } elseif ($validated['score'] >= 5) {
-                $pointsToAward = 10; // Good submission
-            } elseif ($validated['score'] >= 3) {
-                $pointsToAward = 5;  // Average submission
-            } else {
-                $pointsToAward = 2;  // Participation points
-            }
-            
-            // Only award points if they haven't already been awarded
-            if ($participant->points_awarded === null || $participant->points_awarded === 0) {
+                
                 $participant->user->addPoints($pointsToAward);
                 $participant->update(['points_awarded' => $pointsToAward]);
                 
@@ -239,11 +275,8 @@ class JudgeDashboardController extends Controller
                                                     ->get();
                     
                     foreach ($teamMembers as $member) {
-                        // Update score and feedback
-                        $member->update([
-                            'score' => $validated['score'],
-                            'feedback' => $validated['feedback'],
-                        ]);
+                        // Update average score and feedback
+                        $member->updateAverageScore();
                         
                         // Award the same points
                         if ($member->points_awarded === null || $member->points_awarded === 0) {
@@ -252,12 +285,23 @@ class JudgeDashboardController extends Controller
                         }
                     }
                 }
+            } else {
+                // If this is not the first judge, just update average for team members
+                if ($participant->team_id) {
+                    $teamMembers = TournamentParticipant::where('team_id', $participant->team_id)
+                                                    ->where('id', '!=', $participant->id)
+                                                    ->get();
+                    
+                    foreach ($teamMembers as $member) {
+                        $member->updateAverageScore();
+                    }
+                }
             }
             
             DB::commit();
             
             return redirect()->route('judge.tournament', $tournament)
-                        ->with('success', 'Score and feedback submitted successfully.');
+                        ->with('success', 'Your score has been submitted successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'An error occurred: ' . $e->getMessage());

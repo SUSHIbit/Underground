@@ -21,12 +21,54 @@
                             <p class="text-gray-400">Submission by: {{ $participant->user->name }}</p>
                         </div>
                         
-                        @if($participant->score !== null)
-                            <div class="mt-4 md:mt-0 p-2 bg-green-900/20 rounded-lg border border-green-800/30">
-                                <p class="font-medium text-green-400">Current Score: {{ $participant->score }}/10</p>
-                            </div>
-                        @endif
+                        <div class="mt-4 md:mt-0 flex flex-col items-end space-y-2">
+                            @if($existingJudgeScore)
+                                <div class="p-2 bg-green-900/20 rounded-lg border border-green-800/30">
+                                    <p class="font-medium text-green-400">Your Score: {{ $existingJudgeScore->score }}/10</p>
+                                </div>
+                            @endif
+                            
+                            @if($participant->score && $allJudgeScores->count() > 0)
+                                <div class="p-2 bg-blue-900/20 rounded-lg border border-blue-800/30">
+                                    <p class="font-medium text-blue-400">Average Score: {{ $participant->score }}/10</p>
+                                    <p class="text-xs text-gray-400">({{ $allJudgeScores->count() }} judges)</p>
+                                </div>
+                            @endif
+                        </div>
                     </div>
+
+                    <!-- Other Judges' Scores (if any) -->
+                    @if($allJudgeScores->count() > 0)
+                        <div class="mb-8 bg-gray-900/40 p-4 rounded-lg">
+                            <h4 class="font-medium text-lg mb-4 text-amber-400">Judge Scores</h4>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                @foreach($allJudgeScores as $judgeScore)
+                                    <div class="p-3 bg-gray-800/50 rounded-lg border {{ $judgeScore->judge_user_id === auth()->id() ? 'border-green-800/30 bg-green-900/10' : 'border-gray-700/30' }}">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <p class="font-medium {{ $judgeScore->judge_user_id === auth()->id() ? 'text-green-400' : 'text-gray-300' }}">
+                                                {{ $judgeScore->judge->name }}
+                                                @if($judgeScore->judge_user_id === auth()->id())
+                                                    <span class="text-xs">(You)</span>
+                                                @endif
+                                            </p>
+                                            <span class="font-bold text-amber-400">{{ $judgeScore->score }}/10</span>
+                                        </div>
+                                        
+                                        @if($judgeScore->feedback)
+                                            <p class="text-sm text-gray-400 truncate">{{ Str::limit($judgeScore->feedback, 50) }}</p>
+                                        @else
+                                            <p class="text-sm text-gray-500 italic">No feedback provided</p>
+                                        @endif
+                                        
+                                        <p class="text-xs text-gray-500 mt-1">
+                                            Graded {{ $judgeScore->created_at->diffForHumans() }}
+                                        </p>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
 
                     <!-- Submission Details -->
                     <div class="mb-8">
@@ -68,7 +110,7 @@
                         <!-- Grading Form -->
                         <div class="bg-gray-900/20 p-4 rounded-lg">
                             <h4 class="font-medium text-lg mb-4 text-amber-400">
-                                {{ $participant->score !== null ? 'Update Score' : 'Submit Score' }}
+                                {{ $existingJudgeScore ? 'Update Your Score' : 'Submit Your Score' }}
                             </h4>
                             
                             <form action="{{ route('judge.submit-score', ['tournament' => $tournament, 'participant' => $participant]) }}" method="POST" id="grading-form">
@@ -133,7 +175,7 @@
                                                     max="10" 
                                                     step="0.1"
                                                     required
-                                                    value="{{ old('score', $participant->score) }}" 
+                                                    value="{{ old('score', $existingJudgeScore ? $existingJudgeScore->score : '') }}" 
                                                     class="w-full md:w-1/4 p-2 border border-gray-700 rounded-md bg-gray-800 text-white"
                                                 >
                                             </div>
@@ -143,15 +185,15 @@
                                 
                                 <div class="mb-4">
                                     <label for="feedback" class="block text-sm font-medium text-gray-300 mb-2">
-                                        Feedback
+                                        Feedback <span class="text-gray-500">(Optional)</span>
                                     </label>
                                     <textarea 
                                         name="feedback" 
                                         id="feedback" 
                                         rows="6" 
-                                        required
+                                        placeholder="Provide feedback for the participant (optional)..."
                                         class="w-full p-2 border border-gray-700 rounded-md bg-gray-800 text-white"
-                                    >{{ old('feedback', $participant->feedback) }}</textarea>
+                                    >{{ old('feedback', $existingJudgeScore ? $existingJudgeScore->feedback : '') }}</textarea>
                                     @error('feedback')
                                         <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
                                     @enderror
@@ -159,7 +201,7 @@
                                 
                                 <div class="flex justify-end">
                                     <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md">
-                                        {{ $participant->score !== null ? 'Update Grade' : 'Submit Grade' }}
+                                        {{ $existingJudgeScore ? 'Update Your Grade' : 'Submit Your Grade' }}
                                     </button>
                                 </div>
                             </form>
@@ -200,8 +242,10 @@
                 }
                 
                 // Update the displayed score and hidden input
-                calculatedScore.textContent = finalScore;
-                finalScoreInput.value = finalScore;
+                if (calculatedScore && finalScoreInput) {
+                    calculatedScore.textContent = finalScore;
+                    finalScoreInput.value = finalScore;
+                }
             }
             
             // Add event listeners to all rubric score inputs
