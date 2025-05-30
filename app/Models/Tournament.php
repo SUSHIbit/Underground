@@ -279,6 +279,7 @@ class Tournament extends Model
 
     /**
      * Calculate rankings and award both regular points and UEPoints for tournament participants
+     * FIXED VERSION: Properly handles both team and individual tournaments
      */
     public function calculateRankingsAndAwardUEPoints()
     {
@@ -299,32 +300,85 @@ class Tournament extends Model
         DB::beginTransaction();
         
         try {
-            // Get all participants with scores, ordered by score (highest first)
-            $participants = $this->participants()
-                              ->whereNotNull('score')
-                              ->orderBy('score', 'desc')
-                              ->orderBy('created_at', 'asc') // Tiebreaker: earlier registration
-                              ->get();
+            if ($this->team_size > 1) {
+                // TEAM TOURNAMENT RANKING
+                return $this->calculateTeamRankings();
+            } else {
+                // INDIVIDUAL TOURNAMENT RANKING
+                return $this->calculateIndividualRankings();
+            }
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Failed to calculate tournament rankings: ' . $e->getMessage());
+            return false;
+        }
+    }
 
-            if ($participants->isEmpty()) {
-                DB::rollBack();
-                return false;
+    /**
+     * Calculate rankings for team tournaments
+     * Teams are ranked, and all team members get the same rank
+     */
+    private function calculateTeamRankings()
+    {
+        // Get all teams with at least one participant that has a score
+        $teamsWithScores = DB::table('tournament_teams')
+            ->join('tournament_participants', 'tournament_teams.id', '=', 'tournament_participants.team_id')
+            ->where('tournament_teams.tournament_id', $this->id)
+            ->whereNotNull('tournament_participants.score')
+            ->select('tournament_teams.id as team_id', 'tournament_teams.name as team_name')
+            ->groupBy('tournament_teams.id', 'tournament_teams.name')
+            ->get();
+
+        if ($teamsWithScores->isEmpty()) {
+            DB::rollBack();
+            return false;
+        }
+
+        // Get team scores (should be identical for all team members)
+        $teamRankings = [];
+        foreach ($teamsWithScores as $team) {
+            $teamScore = $this->participants()
+                           ->where('team_id', $team->team_id)
+                           ->whereNotNull('score')
+                           ->first();
+            
+            if ($teamScore) {
+                $teamRankings[] = [
+                    'team_id' => $team->team_id,
+                    'team_name' => $team->team_name,
+                    'score' => $teamScore->score,
+                    'created_at' => $teamScore->created_at // For tiebreaker
+                ];
+            }
+        }
+
+        // Sort teams by score (highest first), then by creation time (earlier first) for tiebreaker
+        usort($teamRankings, function($a, $b) {
+            if ($a['score'] == $b['score']) {
+                return $a['created_at'] <=> $b['created_at']; // Earlier team wins tiebreaker
+            }
+            return $b['score'] <=> $a['score']; // Higher score wins
+        });
+
+        // Assign ranks to teams and their members
+        $currentRank = 1;
+        $previousScore = null;
+
+        foreach ($teamRankings as $index => $teamData) {
+            // Handle ties - if score is different from previous, update rank
+            if ($previousScore !== null && $teamData['score'] < $previousScore) {
+                $currentRank = $index + 1;
             }
 
-            $currentRank = 1;
-            $previousScore = null;
+            // Calculate points based on team rank
+            $pointsForRank = $this->getPointsForRank($currentRank);
 
-            foreach ($participants as $index => $participant) {
-                // Handle ties - if score is different from previous, update rank
-                if ($previousScore !== null && $participant->score < $previousScore) {
-                    $currentRank = $index + 1;
-                }
+            // Get all team members
+            $teamMembers = $this->participants()->where('team_id', $teamData['team_id'])->get();
 
-                // Calculate points based on rank (unified system for both regular points and UEPoints)
-                $pointsForRank = $this->getPointsForRank($currentRank);
-
-                // Update participant with both point types
-                $participant->update([
+            // Update all team members with the same rank and points
+            foreach ($teamMembers as $member) {
+                $member->update([
                     'tournament_rank' => $currentRank,
                     'points_awarded' => $pointsForRank,      // Regular points for leaderboard
                     'ue_points_awarded' => $pointsForRank,   // UEPoints for retakes (same amount)
@@ -332,43 +386,70 @@ class Tournament extends Model
                 ]);
 
                 // Award both point types to user
-                $participant->user->addPoints($pointsForRank);      // For leaderboard ranking
-                $participant->user->addUEPoints($pointsForRank);    // For quiz/challenge retakes
-
-                // For team tournaments, update all team members with same rank and points
-                if ($this->team_size > 1 && $participant->team_id) {
-                    $teamMembers = TournamentParticipant::where('team_id', $participant->team_id)
-                                                       ->where('id', '!=', $participant->id)
-                                                       ->get();
-
-                    foreach ($teamMembers as $teamMember) {
-                        $teamMember->update([
-                            'tournament_rank' => $currentRank,
-                            'points_awarded' => $pointsForRank,      // Regular points
-                            'ue_points_awarded' => $pointsForRank,   // UEPoints (same amount)
-                            'ranking_calculated' => true
-                        ]);
-
-                        // Award both point types to team member
-                        $teamMember->user->addPoints($pointsForRank);      // For leaderboard
-                        $teamMember->user->addUEPoints($pointsForRank);    // For retakes
-                    }
-                }
-
-                $previousScore = $participant->score;
+                $member->user->addPoints($pointsForRank);      // For leaderboard ranking
+                $member->user->addUEPoints($pointsForRank);    // For quiz/challenge retakes
             }
 
-            // Note: No participation points for participants without scores
-            // Only ranked participants (those with submissions and scores) receive rewards
+            $previousScore = $teamData['score'];
 
-            DB::commit();
-            return true;
+            \Log::info("Team tournament ranking: Team '{$teamData['team_name']}' (ID: {$teamData['team_id']}) ranked #{$currentRank} with score {$teamData['score']} - {$teamMembers->count()} members awarded {$pointsForRank} points each");
+        }
 
-        } catch (\Exception $e) {
+        DB::commit();
+        \Log::info("Team tournament rankings calculated successfully for tournament ID: {$this->id}");
+        return true;
+    }
+
+    /**
+     * Calculate rankings for individual tournaments
+     * Each participant is ranked individually
+     */
+    private function calculateIndividualRankings()
+    {
+        // Get all participants with scores, ordered by score (highest first)
+        $participants = $this->participants()
+                          ->whereNotNull('score')
+                          ->orderBy('score', 'desc')
+                          ->orderBy('created_at', 'asc') // Tiebreaker: earlier registration
+                          ->get();
+
+        if ($participants->isEmpty()) {
             DB::rollBack();
-            \Log::error('Failed to calculate tournament rankings: ' . $e->getMessage());
             return false;
         }
+
+        $currentRank = 1;
+        $previousScore = null;
+
+        foreach ($participants as $index => $participant) {
+            // Handle ties - if score is different from previous, update rank
+            if ($previousScore !== null && $participant->score < $previousScore) {
+                $currentRank = $index + 1;
+            }
+
+            // Calculate points based on individual rank
+            $pointsForRank = $this->getPointsForRank($currentRank);
+
+            // Update participant with rank and points
+            $participant->update([
+                'tournament_rank' => $currentRank,
+                'points_awarded' => $pointsForRank,      // Regular points for leaderboard
+                'ue_points_awarded' => $pointsForRank,   // UEPoints for retakes (same amount)
+                'ranking_calculated' => true
+            ]);
+
+            // Award both point types to user
+            $participant->user->addPoints($pointsForRank);      // For leaderboard ranking
+            $participant->user->addUEPoints($pointsForRank);    // For quiz/challenge retakes
+
+            $previousScore = $participant->score;
+
+            \Log::info("Individual tournament ranking: Participant '{$participant->user->name}' (ID: {$participant->id}) ranked #{$currentRank} with score {$participant->score} - awarded {$pointsForRank} points");
+        }
+
+        DB::commit();
+        \Log::info("Individual tournament rankings calculated successfully for tournament ID: {$this->id}");
+        return true;
     }
 
     /**
@@ -390,19 +471,40 @@ class Tournament extends Model
 
     /**
      * Get the top 3 participants with their ranks
+     * UPDATED: Works correctly for both team and individual tournaments
      */
     public function getTopThreeParticipants()
     {
-        return $this->participants()
-                   ->whereNotNull('tournament_rank')
-                   ->where('tournament_rank', '<=', 3)
-                   ->orderBy('tournament_rank')
-                   ->with('user', 'team')
-                   ->get();
+        if ($this->team_size > 1) {
+            // For team tournaments, get one representative from each of the top 3 teams
+            return $this->participants()
+                       ->whereNotNull('tournament_rank')
+                       ->where('tournament_rank', '<=', 3)
+                       ->with('user', 'team')
+                       ->get()
+                       ->groupBy('tournament_rank')
+                       ->map(function($participants) {
+                           // Return the team leader as representative, or first member if no leader specified
+                           return $participants->sortBy(function($participant) {
+                               return $participant->role === 'leader' ? 0 : 1;
+                           })->first();
+                       })
+                       ->sortBy('tournament_rank')
+                       ->values();
+        } else {
+            // For individual tournaments, get top 3 individuals
+            return $this->participants()
+                       ->whereNotNull('tournament_rank')
+                       ->where('tournament_rank', '<=', 3)
+                       ->orderBy('tournament_rank')
+                       ->with('user')
+                       ->get();
+        }
     }
 
     /**
      * Get all ranked participants ordered by rank
+     * UPDATED: Works correctly for both team and individual tournaments
      */
     public function getRankedParticipants()
     {

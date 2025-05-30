@@ -22,9 +22,22 @@
                     <div class="mb-6">
                         <h3 class="text-xl font-bold mb-2">{{ $tournament->title }} - @if($hasEnded) Results @else Participants @endif</h3>
                         <div class="flex items-center gap-4">
-                            <p class="text-gray-400">
-                                Total Participants: <span class="text-amber-400">{{ $participants->count() }}</span>
-                            </p>
+                            @if($tournament->team_size > 1)
+                                @php
+                                    $totalTeams = $participants->where('team_id', '!=', null)->groupBy('team_id')->count();
+                                    $totalIndividualParticipants = $participants->count();
+                                @endphp
+                                <p class="text-gray-400">
+                                    Total Teams: <span class="text-amber-400">{{ $totalTeams }}</span>
+                                </p>
+                                <p class="text-gray-400">
+                                    Total Participants: <span class="text-amber-400">{{ $totalIndividualParticipants }}</span>
+                                </p>
+                            @else
+                                <p class="text-gray-400">
+                                    Total Participants: <span class="text-amber-400">{{ $participants->count() }}</span>
+                                </p>
+                            @endif
                             @if($hasEnded)
                                 <span class="px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-sm">Tournament Completed</span>
                                 @if($tournament->isGradingComplete())
@@ -53,13 +66,31 @@
                                         <p class="font-medium text-amber-400">{{ auth()->user()->name }}</p>
                                         <p class="text-sm text-gray-400">{{ auth()->user()->getRank() }}</p>
                                         @if($hasEnded && $tournament->isGradingComplete() && $userParticipant->tournament_rank)
-                                            <p class="text-sm {{ $userParticipant->rank_color }} font-medium">
-                                                @if($userParticipant->tournament_rank <= 3)
-                                                    🎉 Congratulations! You placed {{ $userParticipant->rank_display }}!
-                                                @else
-                                                    You placed {{ $userParticipant->rank_display }}
-                                                @endif
-                                            </p>
+                                            @if($tournament->team_size > 1)
+                                                <p class="text-sm {{ $userParticipant->rank_color }} font-medium">
+                                                    @if($userParticipant->tournament_rank <= 3)
+                                                        🎉 Your team placed {{ $userParticipant->rank_display }}!
+                                                    @else
+                                                        Your team placed {{ $userParticipant->rank_display }}
+                                                    @endif
+                                                    @php
+                                                        $totalTeamsRanked = $tournament->participants()->whereNotNull('tournament_rank')->groupBy('team_id')->count();
+                                                    @endphp
+                                                    <span class="text-gray-400 text-xs">(out of {{ $totalTeamsRanked }} teams)</span>
+                                                </p>
+                                            @else
+                                                <p class="text-sm {{ $userParticipant->rank_color }} font-medium">
+                                                    @if($userParticipant->tournament_rank <= 3)
+                                                        🎉 Congratulations! You placed {{ $userParticipant->rank_display }}!
+                                                    @else
+                                                        You placed {{ $userParticipant->rank_display }}
+                                                    @endif
+                                                    @php
+                                                        $totalParticipantsRanked = $tournament->participants()->whereNotNull('tournament_rank')->count();
+                                                    @endphp
+                                                    <span class="text-gray-400 text-xs">(out of {{ $totalParticipantsRanked }} participants)</span>
+                                                </p>
+                                            @endif
                                         @endif
                                     </div>
                                 </div>
@@ -85,7 +116,7 @@
                                 
                                 @if($hasEnded && $userParticipant->score !== null)
                                     <div class="mt-4 p-4 bg-gray-800 rounded-lg">
-                                        <p class="font-medium text-gray-300 mb-2">Your Score: 
+                                        <p class="font-medium text-gray-300 mb-2">{{ $tournament->team_size > 1 ? 'Team' : 'Your' }} Score: 
                                             <span class="text-2xl font-bold {{ $userParticipant->score >= 7 ? 'text-green-400' : ($userParticipant->score >= 5 ? 'text-amber-400' : 'text-gray-400') }}">
                                                 {{ $userParticipant->score }}/10
                                             </span>
@@ -118,7 +149,7 @@
                                 
                                 @if($userParticipant->submission_url)
                                     <div class="mt-4">
-                                        <p class="font-medium text-gray-300">Your Submission:</p>
+                                        <p class="font-medium text-gray-300">{{ $tournament->team_size > 1 ? 'Team' : 'Your' }} Submission:</p>
                                         <a href="{{ $userParticipant->submission_url }}" target="_blank" class="text-blue-400 hover:underline break-all">
                                             {{ $userParticipant->submission_url }}
                                         </a>
@@ -140,7 +171,12 @@
                             @if($topThree->count() > 0)
                                 <!-- Top 3 Podium Display -->
                                 <div class="mb-8">
-                                    <h4 class="font-semibold text-lg mb-6 text-amber-400 text-center">🏆 Tournament Champions 🏆</h4>
+                                    <h4 class="font-semibold text-lg mb-6 text-amber-400 text-center">
+                                        🏆 Tournament Champions 🏆
+                                        @if($tournament->team_size > 1)
+                                            <span class="block text-sm text-gray-400 mt-1">(Team Rankings)</span>
+                                        @endif
+                                    </h4>
                                     
                                     <div class="flex justify-center items-end space-x-4 mb-8">
                                         @foreach([2, 1, 3] as $position)
@@ -154,9 +190,11 @@
                                                             <div class="w-16 h-16 rounded-full {{ $winner->rank_bg_color }} flex items-center justify-center text-white font-bold text-xl mb-2 mx-auto">
                                                                 {{ $position }}
                                                             </div>
-                                                            <p class="font-bold {{ $winner->rank_color }} text-lg">{{ $winner->user->name }}</p>
                                                             @if($tournament->team_size > 1 && $winner->team)
-                                                                <p class="text-sm text-gray-400">{{ $winner->team->name }}</p>
+                                                                <p class="font-bold {{ $winner->rank_color }} text-lg">{{ $winner->team->name }}</p>
+                                                                <p class="text-sm text-gray-400">{{ $winner->user->name }} (Leader)</p>
+                                                            @else
+                                                                <p class="font-bold {{ $winner->rank_color }} text-lg">{{ $winner->user->name }}</p>
                                                             @endif
                                                             <p class="text-sm text-gray-300">{{ $winner->score }}/10</p>
                                                             <p class="text-xs {{ $winner->rank_color }}">+{{ $winner->ue_points_awarded }} UEPoints</p>
@@ -176,16 +214,23 @@
                             
                             <!-- All Results Table -->
                             @if($otherParticipants->count() > 0)
-                                <h4 class="font-semibold text-lg mb-4 text-amber-400">All Tournament Results</h4>
+                                <h4 class="font-semibold text-lg mb-4 text-amber-400">
+                                    All Tournament Results
+                                    @if($tournament->team_size > 1)
+                                        <span class="text-sm text-gray-400 font-normal">(Showing one representative per team)</span>
+                                    @endif
+                                </h4>
                                 
                                 <div class="overflow-x-auto">
                                     <table class="min-w-full divide-y divide-amber-800/20">
                                         <thead class="bg-gray-900">
                                             <tr>
                                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Rank</th>
-                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Participant</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                                    {{ $tournament->team_size > 1 ? 'Team / Representative' : 'Participant' }}
+                                                </th>
                                                 @if($tournament->team_size > 1)
-                                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Team</th>
+                                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Team Members</th>
                                                 @endif
                                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Score</th>
                                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">UEPoints Earned</th>
@@ -193,7 +238,21 @@
                                             </tr>
                                         </thead>
                                         <tbody class="bg-gray-800 divide-y divide-amber-800/20">
-                                            @foreach($otherParticipants as $participant)
+                                            @php
+                                                // For team tournaments, group by team and show only one representative per team
+                                                if ($tournament->team_size > 1) {
+                                                    $displayParticipants = $otherParticipants->groupBy('team_id')->map(function($teamMembers) {
+                                                        // Show team leader as representative, or first member if no leader
+                                                        return $teamMembers->sortBy(function($participant) {
+                                                            return $participant->role === 'leader' ? 0 : 1;
+                                                        })->first();
+                                                    })->sortBy('tournament_rank')->values();
+                                                } else {
+                                                    $displayParticipants = $otherParticipants;
+                                                }
+                                            @endphp
+                                            
+                                            @foreach($displayParticipants as $participant)
                                                 <tr class="{{ $participant->isTopThree() ? 'bg-amber-900/5' : '' }}">
                                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                         <div class="flex items-center">
@@ -201,6 +260,12 @@
                                                                 {{ $participant->tournament_rank }}
                                                             </div>
                                                             <span class="{{ $participant->rank_color }} font-medium">{{ $participant->rank_display }}</span>
+                                                            @if($tournament->team_size > 1)
+                                                                @php
+                                                                    $totalTeamsRanked = $tournament->participants()->whereNotNull('tournament_rank')->groupBy('team_id')->count();
+                                                                @endphp
+                                                                <span class="text-gray-400 text-xs ml-1">(of {{ $totalTeamsRanked }} teams)</span>
+                                                            @endif
                                                         </div>
                                                     </td>
                                                     <td class="px-6 py-4 whitespace-nowrap">
@@ -209,15 +274,32 @@
                                                                 {{ substr($participant->user->name, 0, 1) }}
                                                             </div>
                                                             <div>
-                                                                <p class="font-medium text-amber-400">{{ $participant->user->name }}</p>
-                                                                <p class="text-sm text-gray-400">{{ $participant->user->getRank() }}</p>
+                                                                @if($tournament->team_size > 1 && $participant->team)
+                                                                    <p class="font-medium text-amber-400">{{ $participant->team->name }}</p>
+                                                                    <p class="text-sm text-gray-400">{{ $participant->user->name }} ({{ $participant->role === 'leader' ? 'Leader' : 'Member' }})</p>
+                                                                @else
+                                                                    <p class="font-medium text-amber-400">{{ $participant->user->name }}</p>
+                                                                    <p class="text-sm text-gray-400">{{ $participant->user->getRank() }}</p>
+                                                                @endif
                                                             </div>
                                                         </div>
                                                     </td>
                                                     @if($tournament->team_size > 1)
-                                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                                                        <td class="px-6 py-4 text-sm text-gray-400">
                                                             @if($participant->team)
-                                                                {{ $participant->team->name }}
+                                                                @php
+                                                                    $teamMembers = $participant->team->participants()->with('user')->get();
+                                                                @endphp
+                                                                <div class="max-w-xs">
+                                                                    @foreach($teamMembers as $index => $member)
+                                                                        @if($index < 3)
+                                                                            <div class="text-xs">{{ $member->user->name }}@if($member->user_id === $participant->team->leader_id) ⭐@endif</div>
+                                                                        @elseif($index === 3)
+                                                                            <div class="text-xs text-gray-500">+{{ $teamMembers->count() - 3 }} more...</div>
+                                                                            @break
+                                                                        @endif
+                                                                    @endforeach
+                                                                </div>
                                                             @else
                                                                 <span class="text-gray-500">No team</span>
                                                             @endif
@@ -232,6 +314,9 @@
                                                         <div class="flex items-center">
                                                             <span class="font-bold text-blue-400">{{ $participant->ue_points_awarded }}</span>
                                                             <span class="text-gray-400 ml-1">UEPoints</span>
+                                                            @if($tournament->team_size > 1)
+                                                                <span class="text-gray-500 text-xs ml-1">(each member)</span>
+                                                            @endif
                                                         </div>
                                                     </td>
                                                     <td class="px-6 py-4 whitespace-nowrap text-sm">
@@ -257,13 +342,65 @@
                             </div>
                         @else
                             <!-- Show current participants for ongoing tournament -->
-                            <h4 class="font-semibold text-lg mb-4 text-amber-400">Current Participants</h4>
+                            <h4 class="font-semibold text-lg mb-4 text-amber-400">Current {{ $tournament->team_size > 1 ? 'Teams' : 'Participants' }}</h4>
                             
                             @php
                                 $otherParticipants = $participants->where('user_id', '!=', auth()->id());
+                                
+                                // For team tournaments, group by teams
+                                if ($tournament->team_size > 1) {
+                                    $teams = $otherParticipants->groupBy('team_id')->map(function($teamMembers, $teamId) {
+                                        if ($teamId) {
+                                            return [
+                                                'team' => $teamMembers->first()->team,
+                                                'members' => $teamMembers,
+                                                'leader' => $teamMembers->where('role', 'leader')->first(),
+                                                'submission_url' => $teamMembers->first()->submission_url
+                                            ];
+                                        }
+                                        return null;
+                                    })->filter();
+                                }
                             @endphp
                             
-                            @if($otherParticipants->count() > 0)
+                            @if($tournament->team_size > 1 && isset($teams) && $teams->count() > 0)
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    @foreach($teams as $teamData)
+                                        <div class="p-4 border border-amber-800/20 rounded-md bg-gray-800 shadow-md">
+                                            <div class="mb-3">
+                                                <h5 class="font-medium text-amber-400 text-lg">{{ $teamData['team']->name }}</h5>
+                                                <p class="text-sm text-gray-400">{{ $teamData['members']->count() }} member(s)</p>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <p class="text-sm font-medium text-gray-300 mb-2">Team Members:</p>
+                                                @foreach($teamData['members'] as $member)
+                                                    <div class="flex items-center mb-1">
+                                                        <div class="w-6 h-6 rounded-full {{ $member->role === 'leader' ? 'bg-amber-600' : 'bg-gray-700' }} flex items-center justify-center text-white text-xs font-bold mr-2">
+                                                            {{ substr($member->user->name, 0, 1) }}
+                                                        </div>
+                                                        <span class="text-sm {{ $member->role === 'leader' ? 'text-amber-400' : 'text-gray-300' }}">
+                                                            {{ $member->user->name }}
+                                                            @if($member->role === 'leader') (Leader) @endif
+                                                        </span>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                            
+                                            <div class="border-t border-amber-800/20 pt-3 mt-3">
+                                                @if($teamData['submission_url'])
+                                                    <div>
+                                                        <span class="text-sm font-medium text-gray-300">Submitted: </span>
+                                                        <span class="text-sm text-green-400">✓ Project submitted</span>
+                                                    </div>
+                                                @else
+                                                    <div class="text-sm text-gray-500">No submission yet</div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @elseif($tournament->team_size === 1 && $otherParticipants->count() > 0)
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     @foreach($otherParticipants as $participant)
                                         <div class="p-4 border border-amber-800/20 rounded-md bg-gray-800 shadow-md">
@@ -276,12 +413,6 @@
                                                     <p class="text-sm text-gray-400">{{ $participant->user->getRank() }}</p>
                                                 </div>
                                             </div>
-                                            
-                                            @if($tournament->team_size > 1 && $participant->team)
-                                                <div class="mb-3 border-t border-amber-800/20 pt-3 mt-3">
-                                                    <p class="text-sm font-medium text-gray-300">Team: <span class="text-white">{{ $participant->team->name }}</span></p>
-                                                </div>
-                                            @endif
                                             
                                             <div class="border-t border-amber-800/20 pt-3 mt-3">
                                                 @if($participant->submission_url)
@@ -298,13 +429,13 @@
                                 </div>
                             @else
                                 <div class="bg-gray-700/30 p-4 rounded-lg border border-amber-800/20">
-                                    <p class="text-gray-400">You are the only participant registered for this tournament.</p>
+                                    <p class="text-gray-400">You are the only {{ $tournament->team_size > 1 ? 'team' : 'participant' }} registered for this tournament.</p>
                                 </div>
                             @endif
                         @endif
                     @else
                         <div class="bg-gray-700/30 p-6 rounded-lg border border-amber-800/20">
-                            <p class="text-gray-400">No participants have registered for this tournament yet.</p>
+                            <p class="text-gray-400">No {{ $tournament->team_size > 1 ? 'teams' : 'participants' }} have registered for this tournament yet.</p>
                         </div>
                     @endif
                     
