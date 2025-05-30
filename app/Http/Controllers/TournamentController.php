@@ -108,6 +108,44 @@ class TournamentController extends Controller
     }
     
     /**
+     * Display the user's project archive.
+     */
+    public function archive()
+    {
+        $user = Auth::user();
+        
+        // Get all tournaments where the user participated and submitted something
+        $archivedProjects = TournamentParticipant::where('user_id', $user->id)
+            ->whereNotNull('submission_url')
+            ->with([
+                'tournament' => function($query) {
+                    $query->select('id', 'title', 'date_time', 'location', 'team_size', 'tournament_type');
+                },
+                'team' => function($query) {
+                    $query->select('id', 'name', 'tournament_id');
+                }
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        // Group by tournament type for better organization
+        $groupedProjects = $archivedProjects->groupBy(function($participant) {
+            return $participant->tournament->tournament_type ?? 'other';
+        });
+        
+        // Define tournament types with display names
+        $tournamentTypes = [
+            'web_design' => 'Web Design',
+            'hackathon' => 'Hackathon',
+            'coup_detat' => 'Coup d\'État',
+            'coding_competition' => 'Coding Competition',
+            'mobile' => 'Mobile Development'
+        ];
+        
+        return view('tournaments.archive', compact('archivedProjects', 'groupedProjects', 'tournamentTypes'));
+    }
+    
+    /**
      * Display the specified tournament.
      */
     public function show(Tournament $tournament)

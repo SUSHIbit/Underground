@@ -21,7 +21,25 @@
                         </div>
                     @endif
 
-                    <!-- Upcoming Tournaments Section -->
+                    <!-- Project Archive Section -->
+                    <div class="mb-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-medium text-amber-400">Project Archive</h3>
+                            <a href="{{ route('tournaments.archive') }}" class="inline-flex items-center px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-md transition duration-150">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                </svg>
+                                View My Projects
+                            </a>
+                        </div>
+                        <div class="bg-amber-900/10 p-4 rounded-lg border border-amber-800/20">
+                            <p class="text-gray-300 text-sm">
+                                View all your tournament submissions and projects in one place. Access your portfolio of work from past competitions.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Available Tournaments Section -->
                     <h3 class="text-lg font-medium mb-4 text-amber-400">Available Tournaments</h3>
                     
                     @php

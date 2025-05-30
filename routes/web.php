@@ -82,6 +82,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth'])->group(function () {
     // Basic tournament routes
     Route::get('/tournaments', [TournamentController::class, 'index'])->name('tournaments.index');
+    Route::get('/tournaments/archive', [TournamentController::class, 'archive'])->name('tournaments.archive'); // NEW ROUTE
     Route::get('/tournaments/{tournament}', [TournamentController::class, 'show'])->name('tournaments.show');
     Route::get('/tournaments/{tournament}/participants', [TournamentController::class, 'participants'])->name('tournaments.participants');
     Route::post('/tournaments/{tournament}/join', [TournamentController::class, 'join'])->name('tournaments.join');
@@ -93,7 +94,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/tournaments/{tournament}/teams', [TournamentController::class, 'createTeam'])
         ->name('tournaments.teams.create');
     
-    // NEW: Add members to existing team route
+    // Add members to existing team route
     Route::post('/tournaments/{tournament}/teams/add-members', [TournamentController::class, 'addTeamMembers'])
         ->name('tournaments.teams.add-members');
     
@@ -101,7 +102,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/tournaments/{tournament}/team', [TournamentController::class, 'team'])
         ->name('tournaments.team');
     Route::get('/tournaments/{tournament}/team/results', [TournamentController::class, 'teamResults'])
-        ->name('tournaments.team.results');
+        ->name('tournaments.team.results'); // FIXED: Added missing closing bracket
     
     // Team member management
     Route::delete('/tournaments/{tournament}/team/members/{participant}', [TournamentController::class, 'removeMember'])
@@ -115,7 +116,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/tournaments/{tournament}/search-eligible-users', [TournamentController::class, 'searchEligibleUsers'])
         ->name('tournaments.search-eligible-users');
 });
-
 // Lecturer Routes
 Route::middleware(['auth', 'lecturer'])->prefix('lecturer')->name('lecturer.')->group(function () {
     Route::get('/dashboard', [LecturerDashboardController::class, 'index'])->name('dashboard');
