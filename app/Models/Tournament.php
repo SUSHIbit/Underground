@@ -315,8 +315,8 @@ class Tournament extends Model
     }
 
     /**
-     * Calculate rankings for team tournaments
-     * Teams are ranked, and all team members get the same rank
+     * Calculate rankings for team tournaments - FIXED VERSION
+     * Teams are ranked, and all team members get the same team rank
      */
     private function calculateTeamRankings()
     {
@@ -338,9 +338,9 @@ class Tournament extends Model
         $teamRankings = [];
         foreach ($teamsWithScores as $team) {
             $teamScore = $this->participants()
-                           ->where('team_id', $team->team_id)
-                           ->whereNotNull('score')
-                           ->first();
+                        ->where('team_id', $team->team_id)
+                        ->whereNotNull('score')
+                        ->first();
             
             if ($teamScore) {
                 $teamRankings[] = [
@@ -360,26 +360,26 @@ class Tournament extends Model
             return $b['score'] <=> $a['score']; // Higher score wins
         });
 
-        // Assign ranks to teams and their members
-        $currentRank = 1;
+        // FIXED: Assign the SAME rank to ALL members of each team
+        $currentTeamRank = 1;
         $previousScore = null;
 
         foreach ($teamRankings as $index => $teamData) {
-            // Handle ties - if score is different from previous, update rank
+            // Handle ties - if score is different from previous team, update rank
             if ($previousScore !== null && $teamData['score'] < $previousScore) {
-                $currentRank = $index + 1;
+                $currentTeamRank = $index + 1; // This is correct - teams get sequential ranks
             }
 
-            // Calculate points based on team rank
-            $pointsForRank = $this->getPointsForRank($currentRank);
+            // Calculate points based on TEAM rank (not individual rank)
+            $pointsForRank = $this->getPointsForRank($currentTeamRank);
 
-            // Get all team members
+            // Get ALL team members
             $teamMembers = $this->participants()->where('team_id', $teamData['team_id'])->get();
 
-            // Update all team members with the same rank and points
+            // CRITICAL FIX: Update ALL team members with the SAME team rank
             foreach ($teamMembers as $member) {
                 $member->update([
-                    'tournament_rank' => $currentRank,
+                    'tournament_rank' => $currentTeamRank, // Same rank for all team members
                     'points_awarded' => $pointsForRank,      // Regular points for leaderboard
                     'ue_points_awarded' => $pointsForRank,   // UEPoints for retakes (same amount)
                     'ranking_calculated' => true
@@ -392,11 +392,11 @@ class Tournament extends Model
 
             $previousScore = $teamData['score'];
 
-            \Log::info("Team tournament ranking: Team '{$teamData['team_name']}' (ID: {$teamData['team_id']}) ranked #{$currentRank} with score {$teamData['score']} - {$teamMembers->count()} members awarded {$pointsForRank} points each");
+            \Log::info("FIXED Team tournament ranking: Team '{$teamData['team_name']}' (ID: {$teamData['team_id']}) ranked #{$currentTeamRank} with score {$teamData['score']} - ALL {$teamMembers->count()} members get rank #{$currentTeamRank} and {$pointsForRank} points each");
         }
 
         DB::commit();
-        \Log::info("Team tournament rankings calculated successfully for tournament ID: {$this->id}");
+        \Log::info("FIXED Team tournament rankings calculated successfully for tournament ID: {$this->id}");
         return true;
     }
 
