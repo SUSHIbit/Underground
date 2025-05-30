@@ -27,175 +27,281 @@
                             </p>
                             @if($hasEnded)
                                 <span class="px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-sm">Tournament Completed</span>
+                                @if($tournament->isGradingComplete())
+                                    <span class="px-3 py-1 bg-green-700 text-green-300 rounded-full text-sm">Results Available</span>
+                                @endif
                             @endif
                         </div>
                     </div>
                     
                     @if($participants->count() > 0)
-                        <div class="mb-6">
-                            <!-- Your Participation Section -->
-                            <div class="mb-8 bg-amber-900/10 p-6 rounded-lg border border-amber-800/20">
-                                <h4 class="font-semibold text-lg mb-4 text-amber-400">
-                                    @if($hasEnded) Your Results @else Your Participation @endif
-                                </h4>
-                                @if($userParticipant)
-                                    <div class="flex items-center mb-4">
-                                        <div class="w-10 h-10 rounded-full bg-amber-900/50 flex items-center justify-center text-amber-400 font-bold mr-3">
+                        <!-- Your Results Section -->
+                        <div class="mb-8 bg-amber-900/10 p-6 rounded-lg border border-amber-800/20">
+                            <h4 class="font-semibold text-lg mb-4 text-amber-400">
+                                @if($hasEnded) Your Results @else Your Participation @endif
+                            </h4>
+                            @if($userParticipant)
+                                <div class="flex items-center mb-4">
+                                    <div class="w-12 h-12 rounded-full {{ $userParticipant->isTopThree() ? $userParticipant->rank_bg_color : 'bg-amber-900/50' }} flex items-center justify-center text-white font-bold mr-4">
+                                        @if($userParticipant->tournament_rank)
+                                            {{ $userParticipant->tournament_rank }}
+                                        @else
                                             {{ substr(auth()->user()->name, 0, 1) }}
-                                        </div>
-                                        <div>
-                                            <p class="font-medium text-amber-400">{{ auth()->user()->name }}</p>
-                                            <p class="text-sm text-gray-400">{{ auth()->user()->getRank() }}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    @if($tournament->team_size > 1 && $userParticipant->team)
-                                        <div class="mb-4">
-                                            <p class="font-medium text-gray-300">Team: <span class="text-amber-400">{{ $userParticipant->team->name }}</span></p>
-                                            
-                                            @php
-                                                $teamMembers = $userParticipant->team->participants()->with('user')->get();
-                                            @endphp
-                                            
-                                            @if($teamMembers->count() > 0)
-                                                <p class="font-medium text-gray-300 mt-2">Team Members:</p>
-                                                <ul class="list-disc list-inside ml-4 text-amber-400">
-                                                    @foreach($teamMembers as $member)
-                                                        <li>{{ $member->user->name }} @if($member->user_id === $userParticipant->team->leader_id) (Leader) @endif</li>
-                                                    @endforeach
-                                                </ul>
-                                            @endif
-                                        </div>
-                                    @endif
-                                    
-                                    @if($hasEnded && $userParticipant->score !== null)
-                                        <div class="mt-4 p-4 bg-gray-800 rounded-lg">
-                                            <p class="font-medium text-gray-300 mb-2">Your Score: 
-                                                <span class="text-2xl font-bold {{ $userParticipant->score >= 7 ? 'text-green-400' : ($userParticipant->score >= 5 ? 'text-amber-400' : 'text-gray-400') }}">
-                                                    {{ $userParticipant->score }}/10
-                                                </span>
-                                            </p>
-                                            
-                                            @if($userParticipant->feedback)
-                                                <div class="mt-3">
-                                                    <p class="font-medium text-gray-300 mb-1">Feedback:</p>
-                                                    <p class="text-gray-300 whitespace-pre-line bg-gray-700/50 p-3 rounded">{{ $userParticipant->feedback }}</p>
-                                                </div>
-                                            @endif
-                                        </div>
-                                    @endif
-                                    
-                                    @if($userParticipant->submission_url)
-                                        <div class="mt-4">
-                                            <p class="font-medium text-gray-300">Your Submission:</p>
-                                            <a href="{{ $userParticipant->submission_url }}" target="_blank" class="text-blue-400 hover:underline break-all">
-                                                {{ $userParticipant->submission_url }}
-                                            </a>
-                                        </div>
-                                    @endif
-                                @else
-                                    <p class="text-gray-400">You are not registered for this tournament.</p>
-                                @endif
-                            </div>
-                            
-                            <!-- Other Participants/Results Section - Only show for team tournaments or ongoing solo tournaments -->
-                            @if($tournament->team_size > 1 || !$hasEnded)
-                                <h4 class="font-semibold text-lg mb-4 text-amber-400">
-                                    @if($hasEnded) 
-                                        All Results 
-                                        @if($participants->where('score', '!=', null)->count() > 0)
-                                            (Ranked by Score)
                                         @endif
-                                    @else 
-                                        All Participants 
-                                    @endif
-                                </h4>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-amber-400">{{ auth()->user()->name }}</p>
+                                        <p class="text-sm text-gray-400">{{ auth()->user()->getRank() }}</p>
+                                        @if($hasEnded && $tournament->isGradingComplete() && $userParticipant->tournament_rank)
+                                            <p class="text-sm {{ $userParticipant->rank_color }} font-medium">
+                                                @if($userParticipant->tournament_rank <= 3)
+                                                    🎉 Congratulations! You placed {{ $userParticipant->rank_display }}!
+                                                @else
+                                                    You placed {{ $userParticipant->rank_display }}
+                                                @endif
+                                            </p>
+                                        @endif
+                                    </div>
+                                </div>
                                 
-                                @php
-                                    $otherParticipants = $participants->where('user_id', '!=', auth()->id());
-                                    
-                                    // If tournament has ended, sort by score (descending)
-                                    if($hasEnded) {
-                                        $otherParticipants = $otherParticipants->sortByDesc('score');
-                                    }
-                                @endphp
+                                @if($tournament->team_size > 1 && $userParticipant->team)
+                                    <div class="mb-4">
+                                        <p class="font-medium text-gray-300">Team: <span class="text-amber-400">{{ $userParticipant->team->name }}</span></p>
+                                        
+                                        @php
+                                            $teamMembers = $userParticipant->team->participants()->with('user')->get();
+                                        @endphp
+                                        
+                                        @if($teamMembers->count() > 0)
+                                            <p class="font-medium text-gray-300 mt-2">Team Members:</p>
+                                            <ul class="list-disc list-inside ml-4 text-amber-400">
+                                                @foreach($teamMembers as $member)
+                                                    <li>{{ $member->user->name }} @if($member->user_id === $userParticipant->team->leader_id) (Leader) @endif</li>
+                                                @endforeach
+                                            </ul>
+                                        @endif
+                                    </div>
+                                @endif
                                 
-                                @if($otherParticipants->count() > 0)
-                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        @foreach($otherParticipants as $index => $participant)
-                                            <div class="p-4 border border-amber-800/20 rounded-md bg-gray-800 shadow-md {{ $hasEnded && $participant->score !== null && $participant->score >= 8 ? 'border-green-400/30 bg-green-900/5' : '' }}">
-                                                <!-- Add ranking number if tournament ended and has scores -->
-                                                @if($hasEnded && $participant->score !== null)
-                                                    <div class="flex justify-between items-start mb-3">
-                                                        <span class="text-xs px-2 py-1 rounded-full {{ $index === 0 ? 'bg-yellow-600 text-yellow-100' : ($index === 1 ? 'bg-gray-400 text-gray-900' : ($index === 2 ? 'bg-amber-600 text-amber-100' : 'bg-gray-600 text-gray-300')) }}">
-                                                            #{{ $index + 1 + ($userParticipant && $userParticipant->score !== null && $userParticipant->score > $participant->score ? 0 : 1) }}
+                                @if($hasEnded && $userParticipant->score !== null)
+                                    <div class="mt-4 p-4 bg-gray-800 rounded-lg">
+                                        <p class="font-medium text-gray-300 mb-2">Your Score: 
+                                            <span class="text-2xl font-bold {{ $userParticipant->score >= 7 ? 'text-green-400' : ($userParticipant->score >= 5 ? 'text-amber-400' : 'text-gray-400') }}">
+                                                {{ $userParticipant->score }}/10
+                                            </span>
+                                        </p>
+                                        
+                                        @if($tournament->isGradingComplete() && $userParticipant->ue_points_awarded)
+                                            <div class="mt-3 p-3 bg-blue-900/20 rounded-lg border border-blue-800/20">
+                                                <p class="font-medium text-blue-400 mb-1">UEPoints Earned:</p>
+                                                <div class="flex items-center space-x-4">
+                                                    <span class="text-xl font-bold text-blue-400">{{ $userParticipant->ue_points_awarded }} UEPoints</span>
+                                                    @if($userParticipant->tournament_rank)
+                                                        <span class="text-sm text-gray-400">
+                                                            ({{ $userParticipant->ue_points_awarded - 2 }} for {{ $userParticipant->rank_display }} place + 2 participation)
                                                         </span>
-                                                    </div>
-                                                @endif
-                                                
-                                                <div class="flex items-center mb-3">
-                                                    <div class="w-10 h-10 rounded-full bg-amber-900/50 flex items-center justify-center text-amber-400 font-bold mr-3">
-                                                        {{ substr($participant->user->name, 0, 1) }}
-                                                    </div>
-                                                    <div>
-                                                        <p class="font-medium text-amber-400">{{ $participant->user->name }}</p>
-                                                        <p class="text-sm text-gray-400">{{ $participant->user->getRank() }}</p>
-                                                    </div>
-                                                </div>
-                                                
-                                                @if($tournament->team_size > 1 && $participant->team)
-                                                    <div class="mb-3 border-t border-amber-800/20 pt-3 mt-3">
-                                                        <p class="text-sm font-medium text-gray-300">Team: <span class="text-white">{{ $participant->team->name }}</span></p>
-                                                        
-                                                        @php
-                                                            $teamMembers = $participant->team->participants()->with('user')->get();
-                                                        @endphp
-                                                        
-                                                        @if($teamMembers->count() > 1)
-                                                            <p class="text-sm font-medium text-gray-300 mt-1">Members:</p>
-                                                            <ul class="list-disc list-inside ml-2 text-sm text-gray-400">
-                                                                @foreach($teamMembers->take(3) as $member)
-                                                                    <li>{{ $member->user->name }}@if($member->user_id === $participant->team->leader_id) (L) @endif</li>
-                                                                @endforeach
-                                                                @if($teamMembers->count() > 3)
-                                                                    <li class="text-gray-500">+{{ $teamMembers->count() - 3 }} more</li>
-                                                                @endif
-                                                            </ul>
-                                                        @endif
-                                                    </div>
-                                                @endif
-                                                
-                                                <div class="border-t border-amber-800/20 pt-3 mt-3">
-                                                    @if($hasEnded && $participant->score !== null)
-                                                        <div class="mb-2">
-                                                            <span class="text-sm font-medium text-gray-300">Score: </span>
-                                                            <span class="text-lg font-bold {{ $participant->score >= 7 ? 'text-green-400' : ($participant->score >= 5 ? 'text-amber-400' : 'text-gray-400') }}">
-                                                                {{ $participant->score }}/10
-                                                            </span>
-                                                        </div>
-                                                    @endif
-                                                    
-                                                    @if($participant->submission_url && ($hasEnded || auth()->user()->role === 'judge'))
-                                                        <div>
-                                                            <span class="text-sm font-medium text-gray-300">Project: </span>
-                                                            <a href="{{ $participant->submission_url }}" target="_blank" class="text-sm text-blue-400 hover:underline truncate block">
-                                                                {{ Str::limit($participant->submission_url, 40) }}
-                                                            </a>
-                                                        </div>
-                                                    @elseif($hasEnded)
-                                                        <div class="text-sm text-gray-500">No submission</div>
+                                                    @else
+                                                        <span class="text-sm text-gray-400">(2 participation points)</span>
                                                     @endif
                                                 </div>
                                             </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <div class="bg-gray-700/30 p-4 rounded-lg border border-amber-800/20">
-                                        <p class="text-gray-400">You are the only participant registered for this tournament.</p>
+                                        @endif
+                                        
+                                        @if($userParticipant->feedback)
+                                            <div class="mt-3">
+                                                <p class="font-medium text-gray-300 mb-1">Feedback:</p>
+                                                <p class="text-gray-300 whitespace-pre-line bg-gray-700/50 p-3 rounded">{{ $userParticipant->feedback }}</p>
+                                            </div>
+                                        @endif
                                     </div>
                                 @endif
+                                
+                                @if($userParticipant->submission_url)
+                                    <div class="mt-4">
+                                        <p class="font-medium text-gray-300">Your Submission:</p>
+                                        <a href="{{ $userParticipant->submission_url }}" target="_blank" class="text-blue-400 hover:underline break-all">
+                                            {{ $userParticipant->submission_url }}
+                                        </a>
+                                    </div>
+                                @endif
+                            @else
+                                <p class="text-gray-400">You are not registered for this tournament.</p>
                             @endif
                         </div>
+                        
+                        <!-- Tournament Results Section -->
+                        @if($hasEnded && $tournament->isGradingComplete())
+                            @php
+                                $topThree = $tournament->getTopThreeParticipants();
+                                $allRanked = $tournament->getRankedParticipants();
+                                $otherParticipants = $allRanked->where('user_id', '!=', auth()->id());
+                            @endphp
+                            
+                            @if($topThree->count() > 0)
+                                <!-- Top 3 Podium Display -->
+                                <div class="mb-8">
+                                    <h4 class="font-semibold text-lg mb-6 text-amber-400 text-center">🏆 Tournament Champions 🏆</h4>
+                                    
+                                    <div class="flex justify-center items-end space-x-4 mb-8">
+                                        @foreach([2, 1, 3] as $position)
+                                            @php $winner = $topThree->where('tournament_rank', $position)->first(); @endphp
+                                            @if($winner)
+                                                <div class="text-center {{ $position === 1 ? 'order-2' : ($position === 2 ? 'order-1' : 'order-3') }}">
+                                                    <!-- Podium -->
+                                                    <div class="flex flex-col items-center">
+                                                        <!-- Winner Info -->
+                                                        <div class="mb-4 text-center">
+                                                            <div class="w-16 h-16 rounded-full {{ $winner->rank_bg_color }} flex items-center justify-center text-white font-bold text-xl mb-2 mx-auto">
+                                                                {{ $position }}
+                                                            </div>
+                                                            <p class="font-bold {{ $winner->rank_color }} text-lg">{{ $winner->user->name }}</p>
+                                                            @if($tournament->team_size > 1 && $winner->team)
+                                                                <p class="text-sm text-gray-400">{{ $winner->team->name }}</p>
+                                                            @endif
+                                                            <p class="text-sm text-gray-300">{{ $winner->score }}/10</p>
+                                                            <p class="text-xs {{ $winner->rank_color }}">+{{ $winner->ue_points_awarded }} UEPoints</p>
+                                                        </div>
+                                                        
+                                                        <!-- Podium Base -->
+                                                        <div class="{{ $winner->rank_bg_color }} rounded-t-lg {{ $position === 1 ? 'h-24 w-20' : ($position === 2 ? 'h-20 w-18' : 'h-16 w-16') }} flex items-end justify-center pb-2">
+                                                            <span class="text-white font-bold text-sm">{{ $position === 1 ? '1st' : ($position === 2 ? '2nd' : '3rd') }}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+                            
+                            <!-- All Results Table -->
+                            @if($otherParticipants->count() > 0)
+                                <h4 class="font-semibold text-lg mb-4 text-amber-400">All Tournament Results</h4>
+                                
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-amber-800/20">
+                                        <thead class="bg-gray-900">
+                                            <tr>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Rank</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Participant</th>
+                                                @if($tournament->team_size > 1)
+                                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Team</th>
+                                                @endif
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Score</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">UEPoints Earned</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Submission</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-gray-800 divide-y divide-amber-800/20">
+                                            @foreach($otherParticipants as $participant)
+                                                <tr class="{{ $participant->isTopThree() ? 'bg-amber-900/5' : '' }}">
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                        <div class="flex items-center">
+                                                            <div class="w-8 h-8 rounded-full {{ $participant->isTopThree() ? $participant->rank_bg_color : 'bg-gray-600' }} flex items-center justify-center text-white font-bold text-sm mr-3">
+                                                                {{ $participant->tournament_rank }}
+                                                            </div>
+                                                            <span class="{{ $participant->rank_color }} font-medium">{{ $participant->rank_display }}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <div class="flex items-center">
+                                                            <div class="w-10 h-10 rounded-full bg-amber-900/50 flex items-center justify-center text-amber-400 font-bold mr-3">
+                                                                {{ substr($participant->user->name, 0, 1) }}
+                                                            </div>
+                                                            <div>
+                                                                <p class="font-medium text-amber-400">{{ $participant->user->name }}</p>
+                                                                <p class="text-sm text-gray-400">{{ $participant->user->getRank() }}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    @if($tournament->team_size > 1)
+                                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                                                            @if($participant->team)
+                                                                {{ $participant->team->name }}
+                                                            @else
+                                                                <span class="text-gray-500">No team</span>
+                                                            @endif
+                                                        </td>
+                                                    @endif
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                                        <span class="font-bold {{ $participant->score >= 7 ? 'text-green-400' : ($participant->score >= 5 ? 'text-amber-400' : 'text-gray-400') }}">
+                                                            {{ $participant->score }}/10
+                                                        </span>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                                        <div class="flex items-center">
+                                                            <span class="font-bold text-blue-400">{{ $participant->ue_points_awarded }}</span>
+                                                            <span class="text-gray-400 ml-1">UEPoints</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                                        @if($participant->submission_url)
+                                                            <a href="{{ $participant->submission_url }}" target="_blank" class="text-blue-400 hover:underline">
+                                                                View Project
+                                                            </a>
+                                                        @else
+                                                            <span class="text-gray-500">No submission</span>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+                        @elseif($hasEnded)
+                            <!-- Tournament ended but results not available yet -->
+                            <div class="mb-8 bg-amber-900/20 p-6 rounded-lg border border-amber-800/20">
+                                <h4 class="font-semibold text-lg mb-2 text-amber-400">Tournament Results Pending</h4>
+                                <p class="text-gray-300">The tournament has ended, but judges are still grading submissions. Results will be available once all judges complete their evaluations.</p>
+                            </div>
+                        @else
+                            <!-- Show current participants for ongoing tournament -->
+                            <h4 class="font-semibold text-lg mb-4 text-amber-400">Current Participants</h4>
+                            
+                            @php
+                                $otherParticipants = $participants->where('user_id', '!=', auth()->id());
+                            @endphp
+                            
+                            @if($otherParticipants->count() > 0)
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    @foreach($otherParticipants as $participant)
+                                        <div class="p-4 border border-amber-800/20 rounded-md bg-gray-800 shadow-md">
+                                            <div class="flex items-center mb-3">
+                                                <div class="w-10 h-10 rounded-full bg-amber-900/50 flex items-center justify-center text-amber-400 font-bold mr-3">
+                                                    {{ substr($participant->user->name, 0, 1) }}
+                                                </div>
+                                                <div>
+                                                    <p class="font-medium text-amber-400">{{ $participant->user->name }}</p>
+                                                    <p class="text-sm text-gray-400">{{ $participant->user->getRank() }}</p>
+                                                </div>
+                                            </div>
+                                            
+                                            @if($tournament->team_size > 1 && $participant->team)
+                                                <div class="mb-3 border-t border-amber-800/20 pt-3 mt-3">
+                                                    <p class="text-sm font-medium text-gray-300">Team: <span class="text-white">{{ $participant->team->name }}</span></p>
+                                                </div>
+                                            @endif
+                                            
+                                            <div class="border-t border-amber-800/20 pt-3 mt-3">
+                                                @if($participant->submission_url)
+                                                    <div>
+                                                        <span class="text-sm font-medium text-gray-300">Submitted: </span>
+                                                        <span class="text-sm text-green-400">✓ Project submitted</span>
+                                                    </div>
+                                                @else
+                                                    <div class="text-sm text-gray-500">No submission yet</div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="bg-gray-700/30 p-4 rounded-lg border border-amber-800/20">
+                                    <p class="text-gray-400">You are the only participant registered for this tournament.</p>
+                                </div>
+                            @endif
+                        @endif
                     @else
                         <div class="bg-gray-700/30 p-6 rounded-lg border border-amber-800/20">
                             <p class="text-gray-400">No participants have registered for this tournament yet.</p>

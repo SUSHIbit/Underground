@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB; // Add this line
 use Carbon\Carbon;
 
 class Tournament extends Model
@@ -274,5 +275,156 @@ class Tournament extends Model
             'grading_completed' => true,
             'grading_completed_at' => now()
         ]);
+    }
+
+    /**
+     * Calculate rankings and award UEPoints for tournament participants
+     */
+    public function calculateRankingsAndAwardUEPoints()
+    {
+        // Only calculate if grading is complete and rankings haven't been calculated
+        if (!$this->isGradingComplete()) {
+            return false;
+        }
+
+        // Check if rankings have already been calculated
+        $alreadyCalculated = $this->participants()
+                                ->where('ranking_calculated', true)
+                                ->exists();
+        
+        if ($alreadyCalculated) {
+            return false;
+        }
+
+        DB::beginTransaction();
+        
+        try {
+            // Get all participants with scores, ordered by score (highest first)
+            $participants = $this->participants()
+                              ->whereNotNull('score')
+                              ->orderBy('score', 'desc')
+                              ->orderBy('created_at', 'asc') // Tiebreaker: earlier registration
+                              ->get();
+
+            if ($participants->isEmpty()) {
+                DB::rollBack();
+                return false;
+            }
+
+            $currentRank = 1;
+            $previousScore = null;
+            $participantsAtSameRank = 0;
+
+            foreach ($participants as $index => $participant) {
+                // Handle ties - if score is different from previous, update rank
+                if ($previousScore !== null && $participant->score < $previousScore) {
+                    $currentRank = $index + 1;
+                }
+
+                // Calculate UEPoints based on rank
+                $uePointsForRank = $this->getUEPointsForRank($currentRank);
+                $participationPoints = 2; // Base participation points
+                $totalUEPoints = $uePointsForRank + $participationPoints;
+
+                // Update participant
+                $participant->update([
+                    'tournament_rank' => $currentRank,
+                    'ue_points_awarded' => $totalUEPoints,
+                    'ranking_calculated' => true
+                ]);
+
+                // Award UEPoints to user
+                $participant->user->addUEPoints($totalUEPoints);
+
+                // For team tournaments, update all team members with same rank and points
+                if ($this->team_size > 1 && $participant->team_id) {
+                    $teamMembers = TournamentParticipant::where('team_id', $participant->team_id)
+                                                       ->where('id', '!=', $participant->id)
+                                                       ->get();
+
+                    foreach ($teamMembers as $teamMember) {
+                        $teamMember->update([
+                            'tournament_rank' => $currentRank,
+                            'ue_points_awarded' => $totalUEPoints,
+                            'ranking_calculated' => true
+                        ]);
+
+                        // Award UEPoints to team member
+                        $teamMember->user->addUEPoints($totalUEPoints);
+                    }
+                }
+
+                $previousScore = $participant->score;
+            }
+
+            // Award participation points to participants without scores (if any)
+            $participantsWithoutScores = $this->participants()
+                                            ->whereNull('score')
+                                            ->where('ranking_calculated', false)
+                                            ->get();
+
+            foreach ($participantsWithoutScores as $participant) {
+                $participationPoints = 2;
+                
+                $participant->update([
+                    'tournament_rank' => null, // No rank if no score
+                    'ue_points_awarded' => $participationPoints,
+                    'ranking_calculated' => true
+                ]);
+
+                $participant->user->addUEPoints($participationPoints);
+            }
+
+            DB::commit();
+            return true;
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Failed to calculate tournament rankings: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get UEPoints award amount based on rank
+     */
+    private function getUEPointsForRank($rank)
+    {
+        switch ($rank) {
+            case 1:
+                return 50; // First place
+            case 2:
+                return 30; // Second place
+            case 3:
+                return 20; // Third place
+            default:
+                return 10; // Fourth place and below
+        }
+    }
+
+    /**
+     * Get the top 3 participants with their ranks
+     */
+    public function getTopThreeParticipants()
+    {
+        return $this->participants()
+                   ->whereNotNull('tournament_rank')
+                   ->where('tournament_rank', '<=', 3)
+                   ->orderBy('tournament_rank')
+                   ->with('user', 'team')
+                   ->get();
+    }
+
+    /**
+     * Get all ranked participants ordered by rank
+     */
+    public function getRankedParticipants()
+    {
+        return $this->participants()
+                   ->whereNotNull('tournament_rank')
+                   ->orderBy('tournament_rank')
+                   ->orderBy('score', 'desc')
+                   ->with('user', 'team')
+                   ->get();
     }
 }

@@ -350,50 +350,58 @@ class JudgeDashboardController extends Controller
         return $tournament->judges()->where('user_id', $user->id)->exists();
     }
 
-    /**
- * Mark judge as done with grading for this tournament
- */
-public function completeGrading(Tournament $tournament)
-{
-    $user = Auth::user();
-    
-    // Make sure the authenticated user is a judge for this tournament
-    if (!$this->isJudgeForTournament($tournament)) {
-        return redirect()->route('judge.dashboard')->with('error', 'You are not assigned as a judge for this tournament.');
-    }
-    
-    // Check if judge can complete grading (has graded all submissions)
-    if (!$tournament->canJudgeCompleteGrading($user->id)) {
-        return redirect()->route('judge.tournament', $tournament)
-                    ->with('error', 'You must grade all submitted participants before marking grading as complete.');
-    }
-    
-    // Check if already completed
-    if ($tournament->isJudgeGradingComplete($user->id)) {
-        return redirect()->route('judge.tournament', $tournament)
-                    ->with('info', 'You have already marked your grading as complete for this tournament.');
-    }
-    
-    try {
-        // Mark this judge as completed
-        $tournament->markJudgeGradingComplete($user->id);
+/**
+     * Mark judge as done with grading for this tournament
+     */
+    public function completeGrading(Tournament $tournament)
+    {
+        $user = Auth::user();
         
-        $message = 'You have successfully marked your grading as complete for this tournament.';
-        
-        // Check if all judges are now done
-        if ($tournament->isGradingComplete()) {
-            $message .= ' All judges have now completed grading - participants can view their results.';
-        } else {
-            $remainingJudges = $tournament->judges()->count() - $tournament->getCompletedJudgesCount();
-            $message .= " Waiting for {$remainingJudges} more judge(s) to complete grading.";
+        // Make sure the authenticated user is a judge for this tournament
+        if (!$this->isJudgeForTournament($tournament)) {
+            return redirect()->route('judge.dashboard')->with('error', 'You are not assigned as a judge for this tournament.');
         }
         
-        return redirect()->route('judge.tournament', $tournament)
-                    ->with('success', $message);
+        // Check if judge can complete grading (has graded all submissions)
+        if (!$tournament->canJudgeCompleteGrading($user->id)) {
+            return redirect()->route('judge.tournament', $tournament)
+                        ->with('error', 'You must grade all submitted participants before marking grading as complete.');
+        }
         
-    } catch (\Exception $e) {
-        return redirect()->route('judge.tournament', $tournament)
-                    ->with('error', 'Failed to mark grading as complete: ' . $e->getMessage());
+        // Check if already completed
+        if ($tournament->isJudgeGradingComplete($user->id)) {
+            return redirect()->route('judge.tournament', $tournament)
+                        ->with('info', 'You have already marked your grading as complete for this tournament.');
+        }
+        
+        try {
+            // Mark this judge as completed
+            $tournament->markJudgeGradingComplete($user->id);
+            
+            $message = 'You have successfully marked your grading as complete for this tournament.';
+            
+            // Check if all judges are now done
+            if ($tournament->isGradingComplete()) {
+                // Calculate rankings and award UEPoints
+                $rankingsCalculated = $tournament->calculateRankingsAndAwardUEPoints();
+                
+                if ($rankingsCalculated) {
+                    $message .= ' All judges have now completed grading - rankings have been calculated and UEPoints awarded to participants!';
+                } else {
+                    $message .= ' All judges have now completed grading - participants can view their results.';
+                }
+            } else {
+                $remainingJudges = $tournament->judges()->count() - $tournament->getCompletedJudgesCount();
+                $message .= " Waiting for {$remainingJudges} more judge(s) to complete grading.";
+            }
+            
+            return redirect()->route('judge.tournament', $tournament)
+                        ->with('success', $message);
+            
+        } catch (\Exception $e) {
+            return redirect()->route('judge.tournament', $tournament)
+                        ->with('error', 'Failed to mark grading as complete: ' . $e->getMessage());
+        }
     }
-}
+
 }

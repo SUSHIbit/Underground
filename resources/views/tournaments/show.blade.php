@@ -269,9 +269,36 @@
                                     <div class="mt-6 border-t border-amber-800/20 pt-6">
                                         <h5 class="font-medium text-lg mb-3 text-amber-400">Your Tournament Results</h5>
                                         @if($tournament->isGradingComplete())
-                                            <p class="text-gray-300 mb-4">View your score and see how you ranked against other participants:</p>
+                                            @php
+                                                $userParticipant = $tournament->participants()->where('user_id', auth()->id())->first();
+                                            @endphp
+                                            
+                                            @if($userParticipant && $userParticipant->tournament_rank)
+                                                <div class="bg-blue-900/20 p-4 rounded-lg border border-blue-800/20 mb-4">
+                                                    <div class="flex items-center space-x-4">
+                                                        <div class="w-12 h-12 rounded-full {{ $userParticipant->rank_bg_color }} flex items-center justify-center text-white font-bold">
+                                                            {{ $userParticipant->tournament_rank }}
+                                                        </div>
+                                                        <div>
+                                                            <p class="font-bold {{ $userParticipant->rank_color }} text-lg">
+                                                                @if($userParticipant->tournament_rank <= 3)
+                                                                    🎉 Congratulations! You placed {{ $userParticipant->rank_display }}!
+                                                                @else
+                                                                    You placed {{ $userParticipant->rank_display }}
+                                                                @endif
+                                                            </p>
+                                                            <p class="text-gray-300">Score: <span class="font-bold">{{ $userParticipant->score }}/10</span></p>
+                                                            @if($userParticipant->ue_points_awarded)
+                                                                <p class="text-blue-400">Earned: <span class="font-bold">{{ $userParticipant->ue_points_awarded }} UEPoints</span></p>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endif
+                                            
+                                            <p class="text-gray-300 mb-4">View detailed results and see how you ranked against other participants:</p>
                                             <a href="{{ route('tournaments.participants', $tournament) }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
-                                                View Results
+                                                View Full Results
                                             </a>
                                         @else
                                             <div class="bg-amber-900/20 p-4 rounded-lg border border-amber-800/20">

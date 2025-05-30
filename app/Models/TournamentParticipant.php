@@ -17,7 +17,10 @@ class TournamentParticipant extends Model
         'submission_url', 
         'score', 
         'feedback',
-        'points_awarded'
+        'points_awarded',
+        'tournament_rank',
+        'ue_points_awarded',
+        'ranking_calculated'
     ];
     
     public function tournament()
@@ -103,5 +106,86 @@ class TournamentParticipant extends Model
                 unset($this->syncingScore);
             }
         }
+    }
+
+    /**
+     * Get rank display with ordinal suffix
+     */
+    public function getRankDisplayAttribute()
+    {
+        if (!$this->tournament_rank) {
+            return 'Unranked';
+        }
+
+        $rank = $this->tournament_rank;
+        $suffix = 'th';
+
+        if ($rank % 100 >= 11 && $rank % 100 <= 13) {
+            $suffix = 'th';
+        } else {
+            switch ($rank % 10) {
+                case 1:
+                    $suffix = 'st';
+                    break;
+                case 2:
+                    $suffix = 'nd';
+                    break;
+                case 3:
+                    $suffix = 'rd';
+                    break;
+            }
+        }
+
+        return $rank . $suffix;
+    }
+
+    /**
+     * Get rank color class for styling
+     */
+    public function getRankColorAttribute()
+    {
+        if (!$this->tournament_rank) {
+            return 'text-gray-400';
+        }
+
+        switch ($this->tournament_rank) {
+            case 1:
+                return 'text-yellow-400'; // Gold
+            case 2:
+                return 'text-gray-300'; // Silver
+            case 3:
+                return 'text-amber-600'; // Bronze
+            default:
+                return 'text-blue-400'; // Other ranks
+        }
+    }
+
+    /**
+     * Get rank background color for podium display
+     */
+    public function getRankBgColorAttribute()
+    {
+        if (!$this->tournament_rank) {
+            return 'bg-gray-700';
+        }
+
+        switch ($this->tournament_rank) {
+            case 1:
+                return 'bg-yellow-600'; // Gold
+            case 2:
+                return 'bg-gray-400'; // Silver
+            case 3:
+                return 'bg-amber-600'; // Bronze
+            default:
+                return 'bg-blue-600'; // Other ranks
+        }
+    }
+
+    /**
+     * Check if this participant is in top 3
+     */
+    public function isTopThree()
+    {
+        return $this->tournament_rank && $this->tournament_rank <= 3;
     }
 }

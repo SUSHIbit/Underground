@@ -4,7 +4,7 @@
             {{ __('Team Results') }}
         </h2>
     </x-slot>
-
+ 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-gray-800 border border-amber-800/20 overflow-hidden shadow-lg rounded-lg">
@@ -43,14 +43,27 @@
                                     <h5 class="font-semibold text-lg mb-4 text-amber-400">Your Results</h5>
                                     
                                     <div class="flex items-center mb-4">
-                                        <div class="w-12 h-12 rounded-full bg-amber-600 flex items-center justify-center text-white font-bold mr-4">
-                                            {{ substr($currentUserMember->user->name, 0, 1) }}
+                                        <div class="w-12 h-12 rounded-full {{ $currentUserMember->isTopThree() ? $currentUserMember->rank_bg_color : 'bg-amber-600' }} flex items-center justify-center text-white font-bold mr-4">
+                                            @if($currentUserMember->tournament_rank)
+                                                {{ $currentUserMember->tournament_rank }}
+                                            @else
+                                                {{ substr($currentUserMember->user->name, 0, 1) }}
+                                            @endif
                                         </div>
                                         <div>
                                             <p class="font-medium text-amber-400">{{ $currentUserMember->user->name }} ({{ $currentUserMember->user->username }})</p>
                                             <p class="text-sm text-gray-400">
                                                 {{ $currentUserMember->user_id === $team->leader_id ? 'Team Leader' : 'Team Member' }} • {{ $currentUserMember->user->getRank() }}
                                             </p>
+                                            @if($currentUserMember->tournament_rank && $tournament->isGradingComplete())
+                                                <p class="text-sm {{ $currentUserMember->rank_color }} font-medium">
+                                                    @if($currentUserMember->tournament_rank <= 3)
+                                                        🎉 You placed {{ $currentUserMember->rank_display }}!
+                                                    @else
+                                                        You placed {{ $currentUserMember->rank_display }}
+                                                    @endif
+                                                </p>
+                                            @endif
                                         </div>
                                         <span class="ml-auto px-2 py-1 bg-gray-700/50 text-gray-300 text-xs rounded-full">You</span>
                                     </div>
@@ -62,6 +75,22 @@
                                                     {{ $currentUserMember->score }}/10
                                                 </span>
                                             </p>
+                                            
+                                            @if($tournament->isGradingComplete() && $currentUserMember->ue_points_awarded)
+                                                <div class="mt-3 p-3 bg-blue-900/20 rounded-lg border border-blue-800/20">
+                                                    <p class="font-medium text-blue-400 mb-1">UEPoints Earned:</p>
+                                                    <div class="flex items-center space-x-4">
+                                                        <span class="text-xl font-bold text-blue-400">{{ $currentUserMember->ue_points_awarded }} UEPoints</span>
+                                                        @if($currentUserMember->tournament_rank)
+                                                            <span class="text-sm text-gray-400">
+                                                                ({{ $currentUserMember->ue_points_awarded - 2 }} for {{ $currentUserMember->rank_display }} place + 2 participation)
+                                                            </span>
+                                                        @else
+                                                            <span class="text-sm text-gray-400">(2 participation points)</span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            @endif
                                             
                                             @if($currentUserMember->feedback)
                                                 <div class="mt-3">
@@ -96,14 +125,23 @@
                                         @foreach($otherMembers as $member)
                                             <div class="p-4 border border-amber-800/20 rounded-md bg-gray-800 shadow-md">
                                                 <div class="flex items-center mb-3">
-                                                    <div class="w-10 h-10 rounded-full {{ $member->user_id === $team->leader_id ? 'bg-amber-600' : 'bg-gray-700' }} flex items-center justify-center text-white font-bold mr-3">
-                                                        {{ substr($member->user->name, 0, 1) }}
+                                                    <div class="w-10 h-10 rounded-full {{ $member->isTopThree() ? $member->rank_bg_color : ($member->user_id === $team->leader_id ? 'bg-amber-600' : 'bg-gray-700') }} flex items-center justify-center text-white font-bold mr-3">
+                                                        @if($member->tournament_rank)
+                                                            {{ $member->tournament_rank }}
+                                                        @else
+                                                            {{ substr($member->user->name, 0, 1) }}
+                                                        @endif
                                                     </div>
                                                     <div>
                                                         <p class="font-medium {{ $member->user_id === $team->leader_id ? 'text-amber-400' : 'text-white' }}">{{ $member->user->name }}</p>
                                                         <p class="text-sm text-gray-400">
                                                             {{ $member->user_id === $team->leader_id ? 'Team Leader' : 'Team Member' }} • {{ $member->user->getRank() }}
                                                         </p>
+                                                        @if($member->tournament_rank && $tournament->isGradingComplete())
+                                                            <p class="text-xs {{ $member->rank_color }}">
+                                                                Ranked {{ $member->rank_display }}
+                                                            </p>
+                                                        @endif
                                                     </div>
                                                 </div>
                                                 
@@ -114,6 +152,12 @@
                                                                 {{ $member->score }}/10
                                                             </span>
                                                         </p>
+                                                        
+                                                        @if($tournament->isGradingComplete() && $member->ue_points_awarded)
+                                                            <div class="mt-2">
+                                                                <p class="text-sm font-medium text-blue-400">UEPoints: {{ $member->ue_points_awarded }}</p>
+                                                            </div>
+                                                        @endif
                                                         
                                                         @if($member->feedback)
                                                             <div class="mt-2">
@@ -149,11 +193,35 @@
                         $judgedMembers = $teamMembers->where('score', '!=', null);
                         $averageScore = $judgedMembers->count() > 0 ? $judgedMembers->avg('score') : null;
                         $totalMembers = $teamMembers->count();
+                        $teamRank = $currentUserMember && $currentUserMember->tournament_rank ? $currentUserMember->tournament_rank : null;
+                        $teamUEPoints = $currentUserMember && $currentUserMember->ue_points_awarded ? $currentUserMember->ue_points_awarded : null;
                     @endphp
                     
                     @if($averageScore !== null)
                         <div class="bg-gray-700/20 rounded-lg p-6 mb-6 border border-amber-800/20">
                             <h5 class="font-semibold text-lg mb-4 text-amber-400">Team Summary</h5>
+                            
+                            @if($teamRank && $tournament->isGradingComplete())
+                                <div class="mb-6 p-4 bg-blue-900/20 rounded-lg border border-blue-800/20">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-16 h-16 rounded-full {{ $teamRank <= 3 ? ($teamRank === 1 ? 'bg-yellow-600' : ($teamRank === 2 ? 'bg-gray-400' : 'bg-amber-600')) : 'bg-blue-600' }} flex items-center justify-center text-white font-bold text-xl">
+                                            {{ $teamRank }}
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-lg {{ $teamRank <= 3 ? ($teamRank === 1 ? 'text-yellow-400' : ($teamRank === 2 ? 'text-gray-300' : 'text-amber-600')) : 'text-blue-400' }}">
+                                                @if($teamRank <= 3)
+                                                    🎉 Team placed {{ $teamRank === 1 ? '1st' : ($teamRank === 2 ? '2nd' : '3rd') }}!
+                                                @else
+                                                    Team placed {{ $teamRank }}{{ $teamRank % 10 === 1 && $teamRank % 100 !== 11 ? 'st' : ($teamRank % 10 === 2 && $teamRank % 100 !== 12 ? 'nd' : ($teamRank % 10 === 3 && $teamRank % 100 !== 13 ? 'rd' : 'th')) }}
+                                                @endif
+                                            </p>
+                                            @if($teamUEPoints)
+                                                <p class="text-blue-400">Each member earned: <span class="font-bold">{{ $teamUEPoints }} UEPoints</span></p>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
                             
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div class="text-center">
@@ -186,4 +254,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+ </x-app-layout>
