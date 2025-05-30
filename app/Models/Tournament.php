@@ -278,7 +278,7 @@ class Tournament extends Model
     }
 
     /**
-     * Calculate rankings and award UEPoints for tournament participants
+     * Calculate rankings and award both regular points and UEPoints for tournament participants
      */
     public function calculateRankingsAndAwardUEPoints()
     {
@@ -313,7 +313,6 @@ class Tournament extends Model
 
             $currentRank = 1;
             $previousScore = null;
-            $participantsAtSameRank = 0;
 
             foreach ($participants as $index => $participant) {
                 // Handle ties - if score is different from previous, update rank
@@ -321,20 +320,20 @@ class Tournament extends Model
                     $currentRank = $index + 1;
                 }
 
-                // Calculate UEPoints based on rank
-                $uePointsForRank = $this->getUEPointsForRank($currentRank);
-                $participationPoints = 2; // Base participation points
-                $totalUEPoints = $uePointsForRank + $participationPoints;
+                // Calculate points based on rank (unified system for both regular points and UEPoints)
+                $pointsForRank = $this->getPointsForRank($currentRank);
 
-                // Update participant
+                // Update participant with both point types
                 $participant->update([
                     'tournament_rank' => $currentRank,
-                    'ue_points_awarded' => $totalUEPoints,
+                    'points_awarded' => $pointsForRank,      // Regular points for leaderboard
+                    'ue_points_awarded' => $pointsForRank,   // UEPoints for retakes (same amount)
                     'ranking_calculated' => true
                 ]);
 
-                // Award UEPoints to user
-                $participant->user->addUEPoints($totalUEPoints);
+                // Award both point types to user
+                $participant->user->addPoints($pointsForRank);      // For leaderboard ranking
+                $participant->user->addUEPoints($pointsForRank);    // For quiz/challenge retakes
 
                 // For team tournaments, update all team members with same rank and points
                 if ($this->team_size > 1 && $participant->team_id) {
@@ -345,35 +344,22 @@ class Tournament extends Model
                     foreach ($teamMembers as $teamMember) {
                         $teamMember->update([
                             'tournament_rank' => $currentRank,
-                            'ue_points_awarded' => $totalUEPoints,
+                            'points_awarded' => $pointsForRank,      // Regular points
+                            'ue_points_awarded' => $pointsForRank,   // UEPoints (same amount)
                             'ranking_calculated' => true
                         ]);
 
-                        // Award UEPoints to team member
-                        $teamMember->user->addUEPoints($totalUEPoints);
+                        // Award both point types to team member
+                        $teamMember->user->addPoints($pointsForRank);      // For leaderboard
+                        $teamMember->user->addUEPoints($pointsForRank);    // For retakes
                     }
                 }
 
                 $previousScore = $participant->score;
             }
 
-            // Award participation points to participants without scores (if any)
-            $participantsWithoutScores = $this->participants()
-                                            ->whereNull('score')
-                                            ->where('ranking_calculated', false)
-                                            ->get();
-
-            foreach ($participantsWithoutScores as $participant) {
-                $participationPoints = 2;
-                
-                $participant->update([
-                    'tournament_rank' => null, // No rank if no score
-                    'ue_points_awarded' => $participationPoints,
-                    'ranking_calculated' => true
-                ]);
-
-                $participant->user->addUEPoints($participationPoints);
-            }
+            // Note: No participation points for participants without scores
+            // Only ranked participants (those with submissions and scores) receive rewards
 
             DB::commit();
             return true;
@@ -386,19 +372,19 @@ class Tournament extends Model
     }
 
     /**
-     * Get UEPoints award amount based on rank
+     * Get points award amount based on rank (unified for both regular points and UEPoints)
      */
-    private function getUEPointsForRank($rank)
+    private function getPointsForRank($rank)
     {
         switch ($rank) {
             case 1:
-                return 50; // First place
+                return 50; // First place: 50 points + 50 UEPoints
             case 2:
-                return 30; // Second place
+                return 30; // Second place: 30 points + 30 UEPoints
             case 3:
-                return 20; // Third place
+                return 20; // Third place: 20 points + 20 UEPoints
             default:
-                return 10; // Fourth place and below
+                return 5; // All others: 5 points + 5 UEPoints
         }
     }
 

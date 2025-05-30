@@ -282,47 +282,8 @@ class JudgeDashboardController extends Controller
             // Update the participant's average score (main participant)
             $participant->updateAverageScore();
             
-            // Award points only when the FIRST judge grades (to avoid duplicate awards)
-            $judgeScoresCount = $participant->judgeScores()->count();
-            if ($judgeScoresCount == 1 && ($participant->points_awarded === null || $participant->points_awarded === 0)) {
-                // Calculate points based on average score
-                $pointsToAward = 0;
-                $averageScore = $participant->score;
-                
-                if ($averageScore >= 9) {
-                    $pointsToAward = 20; // Excellent submission
-                } elseif ($averageScore >= 7) {
-                    $pointsToAward = 15; // Great submission
-                } elseif ($averageScore >= 5) {
-                    $pointsToAward = 10; // Good submission
-                } elseif ($averageScore >= 3) {
-                    $pointsToAward = 5;  // Average submission
-                } else {
-                    $pointsToAward = 2;  // Participation points
-                }
-                
-                $participant->user->addPoints($pointsToAward);
-                $participant->update(['points_awarded' => $pointsToAward]);
-                
-                // For team tournaments, award the same points to all team members
-                if ($tournament->team_size > 1 && $participant->team_id) {
-                    $teamMembers = TournamentParticipant::where('team_id', $participant->team_id)
-                                                    ->where('id', '!=', $participant->id)
-                                                    ->get();
-                    
-                    foreach ($teamMembers as $member) {
-                        // Update average score and feedback (already done above)
-                        // Award the same points
-                        if ($member->points_awarded === null || $member->points_awarded === 0) {
-                            $member->user->addPoints($pointsToAward);
-                            $member->update(['points_awarded' => $pointsToAward]);
-                        }
-                    }
-                }
-            } else {
-                // If this is not the first judge, just update average for team members (already done above)
-                // No additional point awarding needed
-            }
+            // Points are now only awarded at the end when all judges complete grading
+            // This ensures fair ranking-based rewards for all participants
             
             DB::commit();
             
@@ -350,7 +311,7 @@ class JudgeDashboardController extends Controller
         return $tournament->judges()->where('user_id', $user->id)->exists();
     }
 
-/**
+    /**
      * Mark judge as done with grading for this tournament
      */
     public function completeGrading(Tournament $tournament)
@@ -386,7 +347,7 @@ class JudgeDashboardController extends Controller
                 $rankingsCalculated = $tournament->calculateRankingsAndAwardUEPoints();
                 
                 if ($rankingsCalculated) {
-                    $message .= ' All judges have now completed grading - rankings have been calculated and UEPoints awarded to participants!';
+                    $message .= ' All judges have now completed grading - rankings have been calculated and both regular points and UEPoints awarded to participants!';
                 } else {
                     $message .= ' All judges have now completed grading - participants can view their results.';
                 }
@@ -403,5 +364,4 @@ class JudgeDashboardController extends Controller
                         ->with('error', 'Failed to mark grading as complete: ' . $e->getMessage());
         }
     }
-
 }
