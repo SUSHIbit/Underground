@@ -91,13 +91,6 @@
                                                     </div>
                                                 </div>
                                             @endif
-                                            
-                                            @if($currentUserMember->feedback)
-                                                <div class="mt-3">
-                                                    <p class="font-medium text-gray-300 mb-1">Feedback:</p>
-                                                    <p class="text-gray-300 whitespace-pre-line bg-gray-700/50 p-3 rounded">{{ $currentUserMember->feedback }}</p>
-                                                </div>
-                                            @endif
                                         </div>
                                     @else
                                         <div class="mt-4 p-4 bg-gray-700/30 rounded-lg">
@@ -156,13 +149,6 @@
                                                         @if($tournament->isGradingComplete() && $member->ue_points_awarded)
                                                             <div class="mt-2">
                                                                 <p class="text-sm font-medium text-blue-400">UEPoints: {{ $member->ue_points_awarded }}</p>
-                                                            </div>
-                                                        @endif
-                                                        
-                                                        @if($member->feedback)
-                                                            <div class="mt-2">
-                                                                <p class="text-sm font-medium text-gray-300">Feedback:</p>
-                                                                <p class="text-sm text-gray-400 mt-1">{{ Str::limit($member->feedback, 100) }}</p>
                                                             </div>
                                                         @endif
                                                     </div>
@@ -242,6 +228,75 @@
                         </div>
                     @endif
                     
+                    <!-- Judge Comments Section -->
+                    @if($tournament->isGradingComplete() && $judgedMembers->count() > 0)
+                        <div class="bg-purple-900/10 rounded-lg p-6 mb-6 border border-purple-800/20">
+                            <h5 class="font-semibold text-lg mb-4 text-purple-400">Judge Comments & Feedback</h5>
+                            
+                            @php
+                                // Get all judge feedback for the team (using any team member since they all have the same feedback)
+                                $representativeMember = $judgedMembers->first();
+                                $allJudgeFeedback = $representativeMember ? $representativeMember->getAllJudgeFeedback() : collect();
+                            @endphp
+                            
+                            @if($allJudgeFeedback->count() > 0)
+                                <div class="mb-4">
+                                    <h6 class="font-medium text-purple-300 mb-4">
+                                        @if($tournament->team_size > 1)
+                                            All Judge Feedback for {{ $team->name }}
+                                        @else
+                                            Judge Feedback
+                                        @endif
+                                    </h6>
+                                    
+                                    <div class="space-y-4">
+                                        @foreach($allJudgeFeedback as $feedback)
+                                            <div class="bg-gray-800/60 p-4 rounded-lg border-l-4 border-purple-500">
+                                                <div class="flex items-center space-x-3 mb-3">
+                                                    <div class="w-10 h-10 rounded-full bg-purple-900/50 flex items-center justify-center text-purple-400 font-bold">
+                                                        {{ substr($feedback['judge_name'], 0, 1) }}
+                                                    </div>
+                                                    <div>
+                                                        <p class="font-medium text-purple-400">{{ $feedback['judge_name'] }}</p>
+                                                        <p class="text-xs text-gray-500">
+                                                            Graded on {{ $feedback['created_at']->format('M j, Y \a\t g:i a') }}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                
+                                                @if($feedback['feedback'])
+                                                    <div>
+                                                        <p class="text-gray-300 whitespace-pre-line bg-gray-700/30 p-3 rounded-lg border border-purple-800/20">{{ $feedback['feedback'] }}</p>
+                                                    </div>
+                                                @else
+                                                    <div>
+                                                        <p class="text-gray-500 italic">No written feedback provided by this judge.</p>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @else
+                                <div class="text-center py-8">
+                                    <div class="w-16 h-16 mx-auto mb-4 bg-gray-700/50 rounded-full flex items-center justify-center">
+                                        <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.418 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.418-8 9-8s9 3.582 9 8z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-gray-400 mb-2">No judge feedback available yet</p>
+                                    <p class="text-gray-500 text-sm">
+                                        @if($tournament->team_size > 1)
+                                            Judges haven't provided written feedback for your team submission.
+                                        @else
+                                            Judges haven't provided written feedback for your submission.
+                                        @endif
+                                    </p>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+                    
                     <div class="mt-6 flex gap-3">
                         <a href="{{ route('tournaments.team', $tournament) }}" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded transition-colors">
                             Back to Team
@@ -254,4 +309,4 @@
             </div>
         </div>
     </div>
- </x-app-layout>
+</x-app-layout>

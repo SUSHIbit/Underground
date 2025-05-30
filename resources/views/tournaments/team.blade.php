@@ -31,7 +31,12 @@
                         <h3 class="text-xl font-bold mb-2 text-amber-400">{{ $team->name }}</h3>
                         <p class="text-gray-400 mb-2">Team for: {{ $tournament->title }}</p>
                         @if($tournament->hasEnded())
-                            <span class="inline-block px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-sm">Tournament Completed</span>
+                            <div class="flex items-center gap-4">
+                                <span class="inline-block px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-sm">Tournament Completed</span>
+                                <a href="{{ route('tournaments.team.results', $tournament) }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                    View Team Results
+                                </a>
+                            </div>
                         @endif
                     </div>
                     
@@ -417,60 +422,6 @@
                                 </div>
                             </div>
                         @endif
-                    @else
-                        <!-- Tournament has ended -->
-                        <div class="bg-gray-700/20 rounded-lg p-6 mb-8 border border-amber-800/20">
-                            <h4 class="font-semibold text-lg mb-4 text-amber-400">Tournament Results</h4>
-                            
-                            @php
-                                $leaderParticipant = $team->participants->where('user_id', $team->leader_id)->first();
-                                $submissionUrl = $leaderParticipant ? $leaderParticipant->submission_url : null;
-                                $score = $leaderParticipant ? $leaderParticipant->score : null;
-                                $feedback = $leaderParticipant ? $leaderParticipant->feedback : null;
-                            @endphp
-                            
-                            @if($submissionUrl)
-                                <div class="mb-4">
-                                    <h5 class="font-medium text-white mb-2">Team Project Submission:</h5>
-                                    <a href="{{ $submissionUrl }}" 
-                                       target="_blank" 
-                                       class="text-blue-400 hover:underline break-all">
-                                        {{ $submissionUrl }}
-                                    </a>
-                                </div>
-                                
-                                @if($score !== null)
-                                    <div class="mt-6 p-4 bg-gray-800 rounded-lg">
-                                        <h5 class="font-medium text-amber-400 mb-2">Team Score:</h5>
-                                        <p class="text-3xl font-bold {{ $score >= 7 ? 'text-green-400' : ($score >= 5 ? 'text-amber-400' : 'text-gray-400') }}">
-                                            {{ $score }}/10
-                                        </p>
-                                        
-                                        @if($feedback)
-                                            <div class="mt-4">
-                                                <h6 class="font-medium text-white mb-1">Feedback:</h6>
-                                                <p class="text-gray-300 whitespace-pre-line">{{ $feedback }}</p>
-                                            </div>
-                                        @endif
-                                    </div>
-                                @else
-                                    <p class="text-gray-400">Your team's submission has not been judged yet.</p>
-                                @endif
-                            @else
-                                <p class="text-gray-400">Your team did not submit a project for this tournament.</p>
-                            @endif
-                        </div>
-                    @endif
-                    
-                    <!-- Tournament Results Section (Only show when tournament has ended) -->
-                    @if($tournament->hasEnded())
-                        <div class="bg-blue-900/10 rounded-lg p-6 mb-8 border border-blue-800/20">
-                            <h4 class="font-semibold text-lg mb-4 text-blue-400">Team Results</h4>
-                            <p class="text-gray-300 mb-4">View individual results for all team members.</p>
-                            <a href="{{ route('tournaments.team.results', $tournament) }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
-                                View Team Results
-                            </a>
-                        </div>
                     @endif
                     
                     <!-- Tournament Information -->
