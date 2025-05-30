@@ -263,85 +263,45 @@
                                         </div>
                                     </div>
                                 @endif
-                            @endif
-                        </div>
-                    @endif
-
-                    <!-- Results Section - Only show if grading is complete and tournament has ended -->
-                    @if($isParticipating && $hasEnded)
-                        <div class="bg-blue-900/10 p-6 rounded-lg mb-6 border border-blue-800/20">
-                            <h4 class="font-semibold text-lg mb-4 text-blue-400">Your Results</h4>
-                            
-                            @if($tournament->isGradingComplete())
-                                @php
-                                    $userParticipant = $tournament->participants()->where('user_id', auth()->id())->first();
-                                @endphp
                                 
-                                @if($userParticipant && $userParticipant->score !== null)
-                                    <div class="bg-gray-800/50 p-4 rounded-lg mb-4">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="text-lg font-medium text-gray-300">Your Final Score:</span>
-                                            <span class="text-3xl font-bold {{ $userParticipant->score >= 7 ? 'text-green-400' : ($userParticipant->score >= 5 ? 'text-amber-400' : 'text-gray-400') }}">
-                                                {{ $userParticipant->score }}/10
-                                            </span>
-                                        </div>
-                                        
-                                        @if($userParticipant->feedback)
-                                            <div class="mt-3 p-3 bg-gray-700/50 rounded-lg">
-                                                <p class="text-sm font-medium text-gray-300 mb-1">Judge Feedback:</p>
-                                                <p class="text-gray-300 whitespace-pre-line">{{ $userParticipant->feedback }}</p>
+                                <!-- Add View Results button for ended tournaments -->
+                                @if($hasEnded)
+                                    <div class="mt-6 border-t border-amber-800/20 pt-6">
+                                        <h5 class="font-medium text-lg mb-3 text-amber-400">Your Tournament Results</h5>
+                                        @if($tournament->isGradingComplete())
+                                            <p class="text-gray-300 mb-4">View your score and see how you ranked against other participants:</p>
+                                            <a href="{{ route('tournaments.participants', $tournament) }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                                View Results
+                                            </a>
+                                        @else
+                                            <div class="bg-amber-900/20 p-4 rounded-lg border border-amber-800/20">
+                                                <div class="flex items-start space-x-3">
+                                                    <div class="flex-shrink-0">
+                                                        <svg class="h-5 w-5 text-amber-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="font-medium text-amber-400 mb-1">Results Not Yet Available</h6>
+                                                        <p class="text-gray-300 text-sm">
+                                                            The judges are still grading submissions for this tournament. 
+                                                            Your results will be available once all judges have completed their evaluations.
+                                                        </p>
+                                                        <div class="mt-2">
+                                                            @php
+                                                                $completedJudges = $tournament->getCompletedJudgesCount();
+                                                                $totalJudges = $tournament->judges()->count();
+                                                            @endphp
+                                                            <p class="text-xs text-gray-400">
+                                                                Judges completed: {{ $completedJudges }}/{{ $totalJudges }}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         @endif
-                                        
-                                        @if($userParticipant->submission_url)
-                                            <div class="mt-3">
-                                                <p class="text-sm font-medium text-gray-300">Your Submission:</p>
-                                                <a href="{{ $userParticipant->submission_url }}" target="_blank" class="text-blue-400 hover:underline break-all text-sm">
-                                                    {{ $userParticipant->submission_url }}
-                                                </a>
-                                            </div>
-                                        @endif
-                                    </div>
-                                    
-                                    @if($tournament->team_size == 1)
-                                        <!-- For solo tournaments, show view all results button -->
-                                        <p class="text-gray-300 mb-4">See how you ranked against other participants:</p>
-                                        <a href="{{ route('tournaments.participants', $tournament) }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
-                                            View All Results
-                                        </a>
-                                    @endif
-                                @else
-                                    <div class="bg-gray-700/30 p-4 rounded-lg">
-                                        <p class="text-gray-400">Your submission was not scored or you did not submit a project.</p>
                                     </div>
                                 @endif
-                            @else
-                                <!-- Grading not complete message -->
-                                <div class="bg-amber-900/20 p-4 rounded-lg border border-amber-800/20">
-                                    <div class="flex items-start space-x-3">
-                                        <div class="flex-shrink-0">
-                                            <svg class="h-5 w-5 text-amber-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <h5 class="font-medium text-amber-400 mb-1">Results Not Yet Available</h5>
-                                            <p class="text-gray-300 text-sm">
-                                                The judges are still grading submissions for this tournament. 
-                                                Your results will be available once all judges have completed their evaluations.
-                                            </p>
-                                            <div class="mt-2">
-                                                @php
-                                                    $completedJudges = $tournament->getCompletedJudgesCount();
-                                                    $totalJudges = $tournament->judges()->count();
-                                                @endphp
-                                                <p class="text-xs text-gray-400">
-                                                    Judges completed: {{ $completedJudges }}/{{ $totalJudges }}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                             @endif
                         </div>
                     @endif
