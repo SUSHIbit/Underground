@@ -116,11 +116,58 @@
                                 
                                 @if($hasEnded && $userParticipant->score !== null)
                                     <div class="mt-4 p-4 bg-gray-800 rounded-lg">
-                                        <p class="font-medium text-gray-300 mb-2">{{ $tournament->team_size > 1 ? 'Team' : 'Your' }} Score: 
-                                            <span class="text-2xl font-bold {{ $userParticipant->score >= 7 ? 'text-green-400' : ($userParticipant->score >= 5 ? 'text-amber-400' : 'text-gray-400') }}">
-                                                {{ $userParticipant->score }}/10
-                                            </span>
-                                        </p>
+                                        @php
+                                            $scoringDetails = $userParticipant->getScoringDetailsSummary();
+                                            $allJudgeFeedback = $userParticipant->getAllJudgeFeedback();
+                                            $judgeBreakdown = $userParticipant->getJudgeScoreBreakdown();
+                                        @endphp
+                                        
+                                        <div class="flex items-center justify-between mb-4">
+                                            <div>
+                                                <p class="font-medium text-gray-300 mb-2">{{ $tournament->team_size > 1 ? 'Team' : 'Your' }} Score: 
+                                                    <span class="text-2xl font-bold {{ $userParticipant->score >= 7 ? 'text-green-400' : ($userParticipant->score >= 5 ? 'text-amber-400' : 'text-gray-400') }}">
+                                                        {{ $userParticipant->score }}/10
+                                                    </span>
+                                                </p>
+                                                @if($scoringDetails)
+                                                    <div class="text-sm text-gray-400">
+                                                        <p>Scored by {{ $scoringDetails['total_judges'] }}/{{ $scoringDetails['expected_judges'] }} judges</p>
+                                                        <p>Score range: {{ $scoringDetails['score_range']['min'] }} - {{ $scoringDetails['score_range']['max'] }}</p>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                            
+                                            @if($judgeBreakdown->count() > 1)
+                                                <div class="text-right">
+                                                    <button onclick="toggleScoreBreakdown()" class="text-blue-400 hover:text-blue-300 text-sm underline">
+                                                        View Score Breakdown
+                                                    </button>
+                                                </div>
+                                            @endif
+                                        </div>
+                                        
+                                        <!-- Judge Score Breakdown (Initially Hidden) -->
+                                        @if($judgeBreakdown->count() > 1)
+                                            <div id="score-breakdown" class="hidden mb-4 p-3 bg-gray-700/50 rounded-lg border border-amber-800/20">
+                                                <h6 class="font-medium text-amber-400 mb-3">Individual Judge Scores:</h6>
+                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    @foreach($judgeBreakdown as $judge)
+                                                        <div class="flex items-center justify-between p-2 bg-gray-800/50 rounded">
+                                                            <div>
+                                                                <p class="font-medium text-white">{{ $judge['judge'] }}</p>
+                                                                <p class="text-xs text-gray-400">{{ $judge['graded_at'] }}</p>
+                                                            </div>
+                                                            <div class="text-right">
+                                                                <span class="font-bold {{ $judge['score'] >= 7 ? 'text-green-400' : ($judge['score'] >= 5 ? 'text-amber-400' : 'text-gray-400') }}">
+                                                                    {{ $judge['score'] }}/10
+                                                                </span>
+                                                                <p class="text-xs text-gray-400">{{ $judge['percentage'] }}%</p>
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endif
                                         
                                         @if($tournament->isGradingComplete() && $userParticipant->ue_points_awarded)
                                             <div class="mt-3 p-3 bg-blue-900/20 rounded-lg border border-blue-800/20">
@@ -138,10 +185,77 @@
                                             </div>
                                         @endif
                                         
-                                        @if($userParticipant->feedback)
+                                        <!-- Enhanced Judge Feedback Section -->
+                                        @if($allJudgeFeedback->count() > 0)
+                                            <div class="mt-4">
+                                                <div class="flex items-center justify-between mb-3">
+                                                    <h6 class="font-medium text-gray-300">Judge Feedback:</h6>
+                                                    @if($allJudgeFeedback->count() > 1)
+                                                        <span class="text-xs bg-amber-900/30 px-2 py-1 rounded text-amber-400">
+                                                            {{ $allJudgeFeedback->count() }} judges provided feedback
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                                
+                                                <div class="space-y-3">
+                                                    @foreach($allJudgeFeedback as $index => $feedback)
+                                                        <div class="bg-gray-700/50 p-3 rounded border-l-4 border-amber-500">
+                                                            <div class="flex items-center justify-between mb-2">
+                                                                <p class="font-medium text-amber-400">{{ $feedback['judge_name'] }}</p>
+                                                                <div class="flex items-center space-x-2">
+                                                                    <span class="text-sm bg-amber-900/30 px-2 py-1 rounded text-amber-400">
+                                                                        {{ $feedback['score'] }}/10
+                                                                    </span>
+                                                                    <span class="text-xs text-gray-500">
+                                                                        {{ $feedback['created_at']->format('M j, Y') }}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <p class="text-gray-300 whitespace-pre-line">{{ $feedback['feedback'] }}</p>
+                                                            
+                                                            <!-- Show rubric breakdown if available -->
+                                                            @if($feedback['rubric_scores'] && $tournament->rubrics->count() > 0)
+                                                                <div class="mt-2 pt-2 border-t border-gray-600">
+                                                                    <p class="text-xs text-gray-400 mb-1">Rubric Breakdown:</p>
+                                                                    <div class="grid grid-cols-2 gap-2">
+                                                                        @foreach($tournament->rubrics as $rubric)
+                                                                            @if(isset($feedback['rubric_scores'][$rubric->id]))
+                                                                                <div class="text-xs">
+                                                                                    <span class="text-gray-400">{{ $rubric->title }}:</span>
+                                                                                    <span class="text-amber-400 font-medium">{{ $feedback['rubric_scores'][$rubric->id] }}/10</span>
+                                                                                </div>
+                                                                            @endif
+                                                                        @endforeach
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                                
+                                                <!-- Rubric Averages (if multiple judges and rubrics exist) -->
+                                                @if($allJudgeFeedback->count() > 1 && $tournament->rubrics->count() > 0)
+                                                    @php
+                                                        $rubricAverages = $userParticipant->getRubricAverages();
+                                                    @endphp
+                                                    @if($rubricAverages->count() > 0)
+                                                        <div class="mt-4 p-3 bg-blue-900/10 rounded-lg border border-blue-800/20">
+                                                            <h6 class="font-medium text-blue-400 mb-2">Average Rubric Scores:</h6>
+                                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                                @foreach($rubricAverages as $rubric)
+                                                                    <div class="flex justify-between items-center">
+                                                                        <span class="text-sm text-gray-300">{{ $rubric['title'] }} ({{ $rubric['weight'] }}%)</span>
+                                                                        <span class="font-medium text-blue-400">{{ $rubric['average'] }}/10</span>
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                        </div>
+                                                    @endif
+                                                @endif
+                                            </div>
+                                        @else
                                             <div class="mt-3">
-                                                <p class="font-medium text-gray-300 mb-1">Feedback:</p>
-                                                <p class="text-gray-300 whitespace-pre-line bg-gray-700/50 p-3 rounded">{{ $userParticipant->feedback }}</p>
+                                                <p class="text-gray-500 italic">No feedback provided by judges yet.</p>
                                             </div>
                                         @endif
                                     </div>
@@ -233,6 +347,7 @@
                                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Team Members</th>
                                                 @endif
                                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Score</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Judge Details</th>
                                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">UEPoints Earned</th>
                                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Submission</th>
                                             </tr>
@@ -253,6 +368,10 @@
                                             @endphp
                                             
                                             @foreach($displayParticipants as $participant)
+                                                @php
+                                                    $participantScoringDetails = $participant->getScoringDetailsSummary();
+                                                    $participantJudgeBreakdown = $participant->getJudgeScoreBreakdown();
+                                                @endphp
                                                 <tr class="{{ $participant->isTopThree() ? 'bg-amber-900/5' : '' }}">
                                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                         <div class="flex items-center">
@@ -311,6 +430,21 @@
                                                         </span>
                                                     </td>
                                                     <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                                        @if($participantScoringDetails)
+                                                            <div class="text-xs">
+                                                                <p class="text-gray-400">{{ $participantScoringDetails['total_judges'] }}/{{ $participantScoringDetails['expected_judges'] }} judges</p>
+                                                                @if($participantScoringDetails['total_judges'] > 1)
+                                                                    <p class="text-gray-500">Range: {{ $participantScoringDetails['score_range']['min'] }}-{{ $participantScoringDetails['score_range']['max'] }}</p>
+                                                                @endif
+                                                                @if($participantScoringDetails['judges_with_feedback'] > 0)
+                                                                    <p class="text-blue-400">{{ $participantScoringDetails['judges_with_feedback'] }} feedback(s)</p>
+                                                                @endif
+                                                            </div>
+                                                        @else
+                                                            <span class="text-gray-500 text-xs">No scores yet</span>
+                                                        @endif
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
                                                         <div class="flex items-center">
                                                             <span class="font-bold text-blue-400">{{ $participant->ue_points_awarded }}</span>
                                                             <span class="text-gray-400 ml-1">UEPoints</span>
@@ -339,6 +473,11 @@
                             <div class="mb-8 bg-amber-900/20 p-6 rounded-lg border border-amber-800/20">
                                 <h4 class="font-semibold text-lg mb-2 text-amber-400">Tournament Results Pending</h4>
                                 <p class="text-gray-300">The tournament has ended, but judges are still grading submissions. Results will be available once all judges complete their evaluations.</p>
+                                @php
+                                    $completedJudges = $tournament->getCompletedJudgesCount();
+                                    $totalJudges = $tournament->judges()->count();
+                                @endphp
+                                <p class="text-gray-400 mt-2">Progress: {{ $completedJudges }}/{{ $totalJudges }} judges completed grading.</p>
                             </div>
                         @else
                             <!-- Show current participants for ongoing tournament -->
@@ -448,4 +587,15 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function toggleScoreBreakdown() {
+            const breakdown = document.getElementById('score-breakdown');
+            if (breakdown.classList.contains('hidden')) {
+                breakdown.classList.remove('hidden');
+            } else {
+                breakdown.classList.add('hidden');
+            }
+        }
+    </script>
 </x-app-layout>

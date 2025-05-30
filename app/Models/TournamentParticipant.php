@@ -65,13 +65,158 @@ class TournamentParticipant extends Model
             $averageScore = $judgeScores->avg('score');
             $this->score = round($averageScore, 1);
             
-            // For feedback, we could concatenate all feedback or just use the most recent
-            // For now, let's use the most recent feedback
+            // Keep the original feedback approach for backward compatibility
+            // but also provide methods to access all feedback
             $latestFeedback = $judgeScores->sortByDesc('created_at')->first()->feedback;
             $this->feedback = $latestFeedback;
             
             $this->save();
         }
+    }
+
+    /**
+     * Get all judge feedback as a formatted collection
+     */
+    public function getAllJudgeFeedback()
+    {
+        return $this->judgeScores()
+                    ->with('judge')
+                    ->whereNotNull('feedback')
+                    ->where('feedback', '!=', '')
+                    ->orderBy('created_at', 'desc')
+                    ->get()
+                    ->map(function ($judgeScore) {
+                        return [
+                            'judge_name' => $judgeScore->judge->name,
+                            'score' => $judgeScore->score,
+                            'feedback' => $judgeScore->feedback,
+                            'rubric_scores' => $judgeScore->rubric_scores,
+                            'created_at' => $judgeScore->created_at,
+                        ];
+                    });
+    }
+
+    /**
+     * Check if all assigned judges have provided scores
+     */
+    public function isFullyGradedByAllJudges()
+    {
+        $totalJudges = $this->tournament->judges()->count();
+        $judgeCount = $this->judgeScores()->count();
+        
+        return $judgeCount >= $totalJudges;
+    }
+
+    /**
+     * Get the breakdown of individual judge scores
+     */
+    public function getJudgeScoreBreakdown()
+    {
+        return $this->judgeScores()
+                    ->with('judge')
+                    ->orderBy('score', 'desc')
+                    ->get()
+                    ->map(function ($judgeScore) {
+                        return [
+                            'judge' => $judgeScore->judge->name,
+                            'score' => $judgeScore->score,
+                            'percentage' => round(($judgeScore->score / 10) * 100, 1),
+                            'graded_at' => $judgeScore->created_at->format('M j, Y g:i a'),
+                            'feedback' => $judgeScore->feedback,
+                            'rubric_scores' => $judgeScore->rubric_scores,
+                        ];
+                    });
+    }
+
+    /**
+     * Get average score by rubric category (if rubrics are used)
+     */
+    public function getRubricAverages()
+    {
+        if (!$this->tournament->rubrics()->exists()) {
+            return collect();
+        }
+        
+        $rubrics = $this->tournament->rubrics;
+        $judgeScores = $this->judgeScores()->whereNotNull('rubric_scores')->get();
+        
+        if ($judgeScores->isEmpty()) {
+            return collect();
+        }
+        
+        $averages = [];
+        
+        foreach ($rubrics as $rubric) {
+            $scores = $judgeScores->map(function ($judgeScore) use ($rubric) {
+                return $judgeScore->rubric_scores[$rubric->id] ?? null;
+            })->filter()->values();
+            
+            if ($scores->isNotEmpty()) {
+                $averages[] = [
+                    'title' => $rubric->title,
+                    'weight' => $rubric->score_weight,
+                    'average' => round($scores->avg(), 1),
+                    'min' => $scores->min(),
+                    'max' => $scores->max(),
+                    'judge_count' => $scores->count(),
+                ];
+            }
+        }
+        
+        return collect($averages);
+    }
+
+    /**
+     * Get detailed scoring summary for display
+     */
+    public function getScoringDetailsSummary()
+    {
+        $judgeScores = $this->judgeScores()->with('judge')->get();
+        
+        if ($judgeScores->isEmpty()) {
+            return null;
+        }
+        
+        return [
+            'final_score' => $this->score,
+            'total_judges' => $judgeScores->count(),
+            'expected_judges' => $this->tournament->judges()->count(),
+            'score_range' => [
+                'min' => $judgeScores->min('score'),
+                'max' => $judgeScores->max('score'),
+            ],
+            'judges_with_feedback' => $judgeScores->where('feedback', '!=', null)->where('feedback', '!=', '')->count(),
+            'all_scores' => $judgeScores->pluck('score')->toArray(),
+            'score_distribution' => $this->getScoreDistribution($judgeScores),
+        ];
+    }
+
+    /**
+     * Helper method to get score distribution
+     */
+    private function getScoreDistribution($judgeScores)
+    {
+        $distribution = [
+            'excellent' => 0,  // 9-10
+            'good' => 0,       // 7-8.9
+            'average' => 0,    // 5-6.9
+            'poor' => 0,       // 0-4.9
+        ];
+        
+        foreach ($judgeScores as $score) {
+            $value = $score->score;
+            if ($value >= 9) {
+                $distribution['excellent']++;
+            } elseif ($value >= 7) {
+                $distribution['good']++;
+            } elseif ($value >= 5) {
+                $distribution['average']++;
+            } else {
+                $distribution['poor']++;
+            }
+        }
+        
+        return $distribution;
     }
 
     /**
