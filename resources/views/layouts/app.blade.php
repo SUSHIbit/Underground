@@ -16,14 +16,20 @@
 </head>
 <body class="antialiased font-sans bg-background text-foreground">
     <div class="flex min-h-screen" x-data="{ sidebarOpen: false }">
-        <!-- Mobile sidebar backdrop -->
+        <!-- Mobile sidebar backdrop - INCREASED Z-INDEX -->
         <div x-show="sidebarOpen" 
-             class="fixed inset-0 z-20 bg-black bg-opacity-50 lg:hidden"
-             @click="sidebarOpen = false">
+             class="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+             @click="sidebarOpen = false"
+             x-transition:enter="transition-opacity ease-linear duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-linear duration-300"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0">
         </div>
 
-        <!-- Sidebar -->
-        <div class="fixed inset-y-0 z-30 flex-shrink-0 w-64 bg-gray-800 border-r border-amber-800/20 text-white transform transition-all duration-300 ease-in-out lg:static lg:translate-x-0"
+        <!-- Sidebar - INCREASED Z-INDEX and better transitions -->
+        <div class="fixed inset-y-0 z-50 flex-shrink-0 w-64 bg-gray-800 border-r border-amber-800/20 text-white transform transition-all duration-300 ease-in-out lg:static lg:translate-x-0 lg:z-auto"
              :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}">
             
             <div class="flex flex-col h-full">
@@ -33,7 +39,8 @@
                         <div class="text-amber-500 font-bold text-2xl">UG</div>
                         <span class="ml-2 text-amber-500 font-bold">Underground</span>
                     </div>
-                    <button @click="sidebarOpen = false" class="p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 lg:hidden">
+                    <!-- Close button for mobile - BETTER POSITIONING -->
+                    <button @click="sidebarOpen = false" class="p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 lg:hidden focus:outline-none focus:ring-2 focus:ring-amber-500">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -221,15 +228,15 @@
         </div>
     
 
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col min-w-0">
-            <!-- Header -->
-            <header class="bg-gray-800 shadow-md border-b border-amber-800/20">
+        <!-- Main Content - ADJUSTED Z-INDEX -->
+        <div class="flex-1 flex flex-col min-w-0 relative">
+            <!-- Header - PROPER Z-INDEX -->
+            <header class="bg-gray-800 shadow-md border-b border-amber-800/20 relative z-10">
                 <div class="px-4 sm:px-6 lg:px-8 flex items-center h-16">
                     <!-- Mobile menu button -->
                     <button 
                         @click="sidebarOpen = !sidebarOpen" 
-                        class="lg:hidden text-gray-300 hover:text-white focus:outline-none focus:text-white mr-4"
+                        class="lg:hidden text-gray-300 hover:text-white focus:outline-none focus:text-white mr-4 p-2 rounded-md hover:bg-gray-700 focus:ring-2 focus:ring-amber-500"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -252,13 +259,13 @@
                 </div>
             </header>
 
-            <!-- Page Content -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-900">
+            <!-- Page Content - PROPER Z-INDEX -->
+            <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-900 relative z-0">
                 {{ $slot }}
             </main>
 
             <!-- Footer -->
-            <footer class="py-4 border-t border-amber-800/20 bg-gray-800">
+            <footer class="py-4 border-t border-amber-800/20 bg-gray-800 relative z-10">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-center items-center">
                         <div class="text-sm text-gray-400">
@@ -269,5 +276,34 @@
             </footer>
         </div>
     </div>
+
+    <!-- ADD BODY SCROLL LOCK FOR MOBILE SIDEBAR -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('sidebarData', () => ({
+                sidebarOpen: false,
+                init() {
+                    // Watch for sidebar state changes and handle body scroll
+                    this.$watch('sidebarOpen', (value) => {
+                        if (window.innerWidth < 1024) { // Only on mobile
+                            if (value) {
+                                document.body.style.overflow = 'hidden';
+                            } else {
+                                document.body.style.overflow = '';
+                            }
+                        }
+                    });
+                    
+                    // Clean up on window resize
+                    window.addEventListener('resize', () => {
+                        if (window.innerWidth >= 1024) {
+                            document.body.style.overflow = '';
+                            this.sidebarOpen = false;
+                        }
+                    });
+                }
+            }));
+        });
+    </script>
 </body>
 </html>
