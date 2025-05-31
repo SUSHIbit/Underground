@@ -12,10 +12,21 @@
                     <!-- UEPoints Overview Section -->
                     <div class="mb-8 p-4 sm:p-6 bg-gray-900/50 rounded-lg border border-amber-800/20">
                         <h3 class="text-xl font-bold mb-4 text-amber-400">Your UEPoints</h3>
-                        <div class="flex flex-col md:flex-row md:items-center gap-6">
-                            <div class="text-center p-4 bg-gray-800 rounded-lg border border-amber-800/20 flex-grow md:max-w-xs">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- Current UEPoints -->
+                            <div class="text-center p-4 bg-gray-800 rounded-lg border border-amber-800/20">
                                 <div class="text-sm text-gray-400 mb-1">Current UEPoints</div>
                                 <div class="text-2xl sm:text-3xl font-bold text-amber-500">{{ $user->ue_points }}</div>
+                            </div>
+                            <!-- Total Earned -->
+                            <div class="text-center p-4 bg-gray-800 rounded-lg border border-green-800/20">
+                                <div class="text-sm text-gray-400 mb-1">Total Earned</div>
+                                <div class="text-2xl sm:text-3xl font-bold text-green-400">+{{ $totalEarned ?? 0 }}</div>
+                            </div>
+                            <!-- Total Spent -->
+                            <div class="text-center p-4 bg-gray-800 rounded-lg border border-red-800/20">
+                                <div class="text-sm text-gray-400 mb-1">Total Spent</div>
+                                <div class="text-2xl sm:text-3xl font-bold text-red-400">-{{ $totalSpent ?? 0 }}</div>
                             </div>
                         </div>
                     </div>
@@ -64,16 +75,19 @@
                             <!-- Mobile Layout - Stacked Cards -->
                             <div class="block lg:hidden space-y-3">
                                 <div class="bg-gray-800 p-3 rounded-lg border border-amber-800/20 flex justify-between items-center">
-                                    <span class="text-sm">Attempt a quiz</span>
+                                    <span class="text-sm">Complete a quiz</span>
                                     <span class="text-green-400 text-sm font-bold">+2 UEPoints</span>
                                 </div>
                                 <div class="bg-gray-800 p-3 rounded-lg border border-amber-800/20 flex justify-between items-center">
-                                    <span class="text-sm">Attempt a challenge</span>
+                                    <span class="text-sm">Complete a challenge</span>
                                     <span class="text-green-400 text-sm font-bold">+2 UEPoints</span>
                                 </div>
                                 <div class="bg-gray-800 p-3 rounded-lg border border-amber-800/20 flex justify-between items-center">
                                     <span class="text-sm">Join a tournament</span>
                                     <span class="text-green-400 text-sm font-bold">+2 UEPoints</span>
+                                </div>
+                                <div class="bg-gray-800 p-3 rounded-lg border border-amber-800/20">
+                                    <span class="text-sm">Tournament rankings (1st: +50, 2nd: +30, 3rd: +20, Others: +5)</span>
                                 </div>
                                 <div class="bg-gray-800 p-3 rounded-lg border border-amber-800/20">
                                     <span class="text-sm">Special events and administrative awards</span>
@@ -84,16 +98,20 @@
                             <div class="hidden lg:block bg-gray-800/50 p-4 rounded-lg border border-amber-800/20">
                                 <ul class="space-y-2 text-gray-300">
                                     <li class="flex items-center gap-2">
-                                        <span>Attempt a quiz</span>
+                                        <span>Complete a quiz</span>
                                         <span class="text-green-400">(+2 UEPoints)</span>
                                     </li>
                                     <li class="flex items-center gap-2">
-                                        <span>Attempt a challenge</span>
+                                        <span>Complete a challenge</span>
                                         <span class="text-green-400">(+2 UEPoints)</span>
                                     </li>
                                     <li class="flex items-center gap-2">
-                                        <span>Participate in a tournament</span>
+                                        <span>Join a tournament</span>
                                         <span class="text-green-400">(+2 UEPoints)</span>
+                                    </li>
+                                    <li class="flex items-center gap-2">
+                                        <span>Tournament rankings</span>
+                                        <span class="text-green-400">(1st: +50, 2nd: +30, 3rd: +20, Others: +5 UEPoints)</span>
                                     </li>
                                     <li>Special events and administrative awards</li>
                                 </ul>
@@ -101,37 +119,53 @@
                         </div>
                     </div>
 
-                    <!-- UEPoints Spending History -->
+                    <!-- UEPoints Activity History -->
                     <div class="mb-8">
                         <h3 class="text-xl font-bold mb-4 text-amber-400">Recent UEPoints Activity</h3>
-                        @if($spendingHistory->count() > 0)
+                        @if(isset($allActivities) && $allActivities->count() > 0)
                             <!-- Mobile Card Layout -->
                             <div class="block lg:hidden space-y-3">
-                                @foreach($spendingHistory as $history)
+                                @foreach($allActivities as $activity)
                                     <div class="bg-gray-900/50 p-4 rounded-lg border border-amber-800/20">
                                         <div class="flex justify-between items-start mb-2">
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-medium text-gray-300 truncate">
-                                                    @if($history->set->type === 'quiz')
-                                                        Quiz Retake
-                                                    @else
-                                                        Challenge Retake
+                                            <div class="flex items-start gap-3 flex-1 min-w-0">
+                                                <!-- Activity Icon -->
+                                                <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm
+                                                    {{ $activity['type'] === 'earning' ? 'bg-green-800/30 text-green-400' : 'bg-red-800/30 text-red-400' }}">
+                                                    @if($activity['icon'] === 'quiz')
+                                                        📝
+                                                    @elseif($activity['icon'] === 'challenge')
+                                                        🎯
+                                                    @elseif($activity['icon'] === 'tournament')
+                                                        🏆
+                                                    @elseif($activity['icon'] === 'trophy')
+                                                        🏅
                                                     @endif
-                                                </p>
-                                                <p class="text-xs text-gray-400 truncate">
-                                                    @if($history->set->type === 'quiz')
-                                                        {{ $history->set->quizDetail->subject->name }}
-                                                    @else
-                                                        {{ $history->set->challengeDetail->name }}
-                                                    @endif
-                                                </p>
-                                                <p class="text-xs text-gray-400">{{ $history->created_at->format('M d, Y') }}</p>
+                                                </div>
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-sm font-medium text-gray-300 truncate">
+                                                        {{ $activity['activity'] }}
+                                                    </p>
+                                                    <p class="text-xs text-gray-400 truncate">
+                                                        {{ $activity['description'] }}
+                                                    </p>
+                                                    <p class="text-xs text-gray-400">{{ $activity['created_at']->format('M d, Y g:i A') }}</p>
+                                                </div>
                                             </div>
                                             <div class="text-right ml-2">
-                                                <p class="text-sm text-red-400 font-bold">-{{ $history->ue_points_spent }}</p>
-                                                <p class="text-xs {{ $history->score_percentage >= 70 ? 'text-green-400' : ($history->score_percentage >= 50 ? 'text-amber-400' : 'text-red-400') }}">
-                                                    {{ $history->score }}/{{ $history->total_questions }}
+                                                <p class="text-sm font-bold
+                                                    {{ $activity['type'] === 'earning' ? 'text-green-400' : 'text-red-400' }}">
+                                                    {{ $activity['points'] > 0 ? '+' : '' }}{{ $activity['points'] }}
                                                 </p>
+                                                @if($activity['score'] !== null && $activity['total_questions'] !== null)
+                                                    <p class="text-xs {{ $activity['score']/$activity['total_questions']*100 >= 70 ? 'text-green-400' : ($activity['score']/$activity['total_questions']*100 >= 50 ? 'text-amber-400' : 'text-red-400') }}">
+                                                        {{ $activity['score'] }}/{{ $activity['total_questions'] }}
+                                                    </p>
+                                                @elseif($activity['score'] !== null)
+                                                    <p class="text-xs text-amber-400">
+                                                        Score: {{ $activity['score'] }}/10
+                                                    </p>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>
@@ -145,31 +179,52 @@
                                         <tr class="border-b border-amber-800/20">
                                             <th class="py-3 px-4 text-left text-xs font-medium text-gray-400 uppercase">Date</th>
                                             <th class="py-3 px-4 text-left text-xs font-medium text-gray-400 uppercase">Activity</th>
-                                            <th class="py-3 px-4 text-left text-xs font-medium text-gray-400 uppercase">Points</th>
+                                            <th class="py-3 px-4 text-left text-xs font-medium text-gray-400 uppercase">UEPoints</th>
                                             <th class="py-3 px-4 text-left text-xs font-medium text-gray-400 uppercase">Result</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach($spendingHistory as $history)
+                                        @foreach($allActivities as $activity)
                                             <tr class="border-b border-gray-700">
                                                 <td class="py-3 px-4 whitespace-nowrap text-sm text-gray-400">
-                                                    {{ $history->created_at->format('M d, Y') }}
+                                                    {{ $activity['created_at']->format('M d, Y g:i A') }}
                                                 </td>
                                                 <td class="py-3 px-4 text-sm font-medium text-gray-300">
-                                                    Retake: 
-                                                    @if($history->set->type === 'quiz')
-                                                        Quiz - {{ $history->set->quizDetail->subject->name }}
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="text-lg">
+                                                            @if($activity['icon'] === 'quiz')
+                                                                📝
+                                                            @elseif($activity['icon'] === 'challenge')
+                                                                🎯
+                                                            @elseif($activity['icon'] === 'tournament')
+                                                                🏆
+                                                            @elseif($activity['icon'] === 'trophy')
+                                                                🏅
+                                                            @endif
+                                                        </span>
+                                                        <div>
+                                                            <div>{{ $activity['activity'] }}</div>
+                                                            <div class="text-xs text-gray-400">{{ $activity['description'] }}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="py-3 px-4 whitespace-nowrap text-sm font-bold
+                                                    {{ $activity['type'] === 'earning' ? 'text-green-400' : 'text-red-400' }}">
+                                                    {{ $activity['points'] > 0 ? '+' : '' }}{{ $activity['points'] }}
+                                                </td>
+                                                <td class="py-3 px-4 whitespace-nowrap text-sm">
+                                                    @if($activity['score'] !== null && $activity['total_questions'] !== null)
+                                                        <span class="{{ $activity['score']/$activity['total_questions']*100 >= 70 ? 'text-green-400' : ($activity['score']/$activity['total_questions']*100 >= 50 ? 'text-amber-400' : 'text-red-400') }}">
+                                                            {{ $activity['score'] }}/{{ $activity['total_questions'] }}
+                                                            ({{ round($activity['score']/$activity['total_questions']*100) }}%)
+                                                        </span>
+                                                    @elseif($activity['score'] !== null)
+                                                        <span class="text-amber-400">
+                                                            Score: {{ $activity['score'] }}/10
+                                                        </span>
                                                     @else
-                                                        Challenge - {{ $history->set->challengeDetail->name }}
+                                                        <span class="text-gray-400">-</span>
                                                     @endif
-                                                </td>
-                                                <td class="py-3 px-4 whitespace-nowrap text-sm text-red-400">
-                                                    -{{ $history->ue_points_spent }}
-                                                </td>
-                                                <td class="py-3 px-4 whitespace-nowrap text-sm
-                                                    {{ $history->score_percentage >= 70 ? 'text-green-400' : ($history->score_percentage >= 50 ? 'text-amber-400' : 'text-red-400') }}">
-                                                    {{ $history->score }}/{{ $history->total_questions }}
-                                                    ({{ $history->score_percentage }}%)
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -178,7 +233,7 @@
                             </div>
                         @else
                             <div class="bg-gray-900/50 p-4 sm:p-6 rounded-lg text-center border border-amber-800/20">
-                                <p class="text-gray-400">You haven't spent any UEPoints yet.</p>
+                                <p class="text-gray-400">No UEPoints activity yet. Start by completing quizzes, challenges, or joining tournaments!</p>
                             </div>
                         @endif
                     </div>
