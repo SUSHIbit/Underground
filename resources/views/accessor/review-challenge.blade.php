@@ -20,6 +20,18 @@
                         <p class="text-gray-600">Set #{{ $set->set_number }}</p>
                         <p class="text-gray-600">Created by: {{ $set->creator->name }}</p>
                         
+                        <!-- Timer Information -->
+                        <div class="mt-2">
+                            <p class="text-gray-600">
+                                <span class="font-medium">Timer:</span> 
+                                @if($set->challengeDetail->timer_minutes)
+                                    <span class="text-blue-600">{{ $set->challengeDetail->timer_minutes }} minutes</span>
+                                @else
+                                    <span class="text-gray-500">Not set</span>
+                                @endif
+                            </p>
+                        </div>
+                        
                         <!-- Show current status -->
                         <div class="mt-2">
                             <span class="px-2 py-1 rounded-full text-xs 
