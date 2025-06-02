@@ -218,6 +218,41 @@
                             </div>
                         @endif
                         
+                        <!-- FIXED: Added Timer Information Display for Read-only View -->
+                        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                            <h4 class="font-medium mb-4">Quiz Configuration</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h5 class="font-medium text-gray-700 mb-2">Subject & Topic</h5>
+                                    <p class="text-gray-600">{{ $set->quizDetail->subject->name }} - {{ $set->quizDetail->topic->name }}</p>
+                                </div>
+                                <div>
+                                    <h5 class="font-medium text-gray-700 mb-2">Timer Settings</h5>
+                                    @if(isset($set->quizDetail->timer_minutes) && $set->quizDetail->timer_minutes > 0)
+                                        <p class="text-green-600">
+                                            <span class="inline-flex items-center">
+                                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                                </svg>
+                                                Enabled ({{ $set->quizDetail->timer_minutes }} minutes)
+                                            </span>
+                                        </p>
+                                        <p class="text-sm text-gray-500 mt-1">Students have {{ $set->quizDetail->timer_minutes }} minutes to complete this quiz.</p>
+                                    @else
+                                        <p class="text-gray-500">
+                                            <span class="inline-flex items-center">
+                                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L10 10.414l2.707-2.707a1 1 0 00-1.414-1.414L10 7.586 8.707 7.293z" clip-rule="evenodd"></path>
+                                                </svg>
+                                                Disabled
+                                            </span>
+                                        </p>
+                                        <p class="text-sm text-gray-500 mt-1">No time limit - students can take as long as needed.</p>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="mb-6">
                             <h4 class="font-medium mb-4">Questions</h4>
                             
