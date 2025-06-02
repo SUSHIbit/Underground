@@ -84,13 +84,14 @@
                             @csrf
                             @method('PUT')
 
-                            <!-- Insert after the challenge details section and before the questions section -->
-
+                            <!-- FIXED: Challenge Timer Settings Section -->
                             <div class="mb-6 p-4 bg-gray-50 rounded-lg">
                                 <h4 class="font-medium mb-2">Challenge Timer Settings</h4>
                                 
                                 <div class="flex items-center mb-2">
-                                    <input type="checkbox" id="enable_timer" name="enable_timer" class="h-4 w-4 text-blue-600" 
+                                    <!-- FIXED: Added hidden input for unchecked state -->
+                                    <input type="hidden" name="enable_timer" value="0">
+                                    <input type="checkbox" id="enable_timer" name="enable_timer" value="1" class="h-4 w-4 text-blue-600" 
                                         {{ isset($set->challengeDetail->timer_minutes) && $set->challengeDetail->timer_minutes > 0 ? 'checked' : '' }}>
                                     <label for="enable_timer" class="ml-2 text-gray-700">Enable Timer</label>
                                 </div>
@@ -297,7 +298,7 @@
         </div>
     </div>
 
-    <!-- Add this JavaScript to the bottom of the file -->
+    <!-- JavaScript for Timer Toggle -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const enableTimerCheckbox = document.getElementById('enable_timer');

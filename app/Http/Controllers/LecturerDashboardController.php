@@ -113,8 +113,8 @@ class LecturerDashboardController extends Controller
                 
                 // Find question directly using query builder for more reliable results
                 $question = Question::where('id', $questionId)
-                                   ->where('set_id', $set->id)
-                                   ->first();
+                                ->where('set_id', $set->id)
+                                ->first();
                 
                 if ($question) {
                     Log::info('Found question to update', [
@@ -134,20 +134,30 @@ class LecturerDashboardController extends Controller
                     
                     // Mark any comments on this question as resolved
                     SetComment::where('question_id', $question->id)
-                              ->update(['is_resolved' => true]);
+                            ->update(['is_resolved' => true]);
                 } else {
                     Log::warning('Question not found', ['id' => $questionId, 'set_id' => $set->id]);
                 }
             }
             
-            // Update timer settings
+            // FIXED: Update timer settings for both quizzes and challenges
             if ($set->type === 'quiz' && $set->quizDetail) {
                 $timerMinutes = null;
-                if ($request->has('enable_timer')) {
+                if ($request->has('enable_timer') && $request->input('enable_timer') == '1') {
                     $timerMinutes = $request->input('timer_minutes');
                 }
                 
                 $set->quizDetail->update([
+                    'timer_minutes' => $timerMinutes,
+                ]);
+            } elseif ($set->type === 'challenge' && $set->challengeDetail) {
+                // FIXED: Added timer update logic for challenges
+                $timerMinutes = null;
+                if ($request->has('enable_timer') && $request->input('enable_timer') == '1') {
+                    $timerMinutes = $request->input('timer_minutes');
+                }
+                
+                $set->challengeDetail->update([
                     'timer_minutes' => $timerMinutes,
                 ]);
             }
@@ -168,8 +178,8 @@ class LecturerDashboardController extends Controller
             ]);
             
             return redirect()->back()
-                           ->with('error', 'Failed to update questions: ' . $e->getMessage())
-                           ->withInput();
+                        ->with('error', 'Failed to update questions: ' . $e->getMessage())
+                        ->withInput();
         }
     }
 
