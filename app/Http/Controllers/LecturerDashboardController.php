@@ -265,37 +265,8 @@ class LecturerDashboardController extends Controller
         }
         
         try {
-            // Enable query logging for debugging
-            DB::enableQueryLog();
-            
-            // Filter out empty judge entries before validation
-            $judges = array_filter($request->input('judges', []), function($value) {
-                return !empty($value);
-            });
-            
-            // Rebuild judges array to be sequential
-            $judges = array_values($judges);
-            
-            // Create a filtered version of judge_roles that matches the filtered judges
-            $judgeRoles = [];
-            if (is_array($request->input('judge_roles'))) {
-                foreach ($judges as $key => $judgeId) {
-                    $originalKey = array_search($judgeId, $request->input('judges', []));
-                    if ($originalKey !== false && isset($request->input('judge_roles')[$originalKey])) {
-                        $judgeRoles[$key] = $request->input('judge_roles')[$originalKey];
-                    } else {
-                        $judgeRoles[$key] = null;
-                    }
-                }
-            }
-            
-            // Replace judges and judge_roles in the request data
-            $requestData = $request->all();
-            $requestData['judges'] = $judges;
-            $requestData['judge_roles'] = $judgeRoles;
-            
-            // Now validate the modified request data
-            $validated = validator($requestData, [
+            // FIXED: Simple validation like quiz/challenge functions - NO DATE RESTRICTIONS
+            $validated = $request->validate([
                 'title' => 'required|string|max:255',
                 'description' => 'required|string',
                 'date_time' => 'required|date',
@@ -304,18 +275,18 @@ class LecturerDashboardController extends Controller
                 'minimum_rank' => 'required|string',
                 'team_size' => 'required|integer|min:1',
                 'deadline' => 'required|date',
-                'judging_date' => 'required|date|after:deadline',
+                'judging_date' => 'required|date', // NO after:deadline restriction
                 'rules' => 'required|string',
                 'judging_criteria' => 'required|string',
                 'project_submission' => 'required|string',
                 'judges' => 'required|array|min:1',
-                'judges.*' => 'required|exists:users,id',
+                'judges.*' => 'nullable|exists:users,id',
                 'judge_roles' => 'nullable|array',
                 'judge_roles.*' => 'nullable|string|max:255',
                 'rubrics' => 'required|array|min:1',
                 'rubrics.*.title' => 'required|string|max:255',
                 'rubrics.*.score_weight' => 'required|integer|min:1|max:100',
-            ])->validate();
+            ]);
             
             // Validate total rubric weight = 100
             $totalWeight = 0;
@@ -324,46 +295,63 @@ class LecturerDashboardController extends Controller
             }
             
             if ($totalWeight !== 100) {
-                return redirect()->back()->withErrors(['rubrics' => 'Total rubric weight must equal 100'])->withInput();
+                return redirect()->back()
+                    ->withErrors(['rubrics' => 'Total rubric weight must equal 100'])
+                    ->withInput();
+            }
+            
+            // Filter out empty judges
+            $judges = array_filter($validated['judges'], function($judgeId) {
+                return !empty($judgeId);
+            });
+            
+            if (empty($judges)) {
+                return redirect()->back()
+                    ->withErrors(['judges' => 'At least one judge must be selected'])
+                    ->withInput();
             }
             
             DB::beginTransaction();
             
-            // Update tournament basic details first
-            $tournament->update([
-                'title' => $validated['title'],
-                'description' => $validated['description'],
-                'date_time' => $validated['date_time'],
-                'location' => $validated['location'],
-                'eligibility' => $validated['eligibility'],
-                'minimum_rank' => $validated['minimum_rank'],
-                'team_size' => $validated['team_size'],
-                'deadline' => $validated['deadline'],
-                'judging_date' => $validated['judging_date'],
-                'rules' => $validated['rules'],
-                'judging_criteria' => $validated['judging_criteria'],
-                'project_submission' => $validated['project_submission'],
-            ]);
+            // FIXED: Direct update like quiz/challenge functions - simple and clean
+            $tournament->title = $validated['title'];
+            $tournament->description = $validated['description'];
+            $tournament->date_time = $validated['date_time'];
+            $tournament->location = $validated['location'];
+            $tournament->eligibility = $validated['eligibility'];
+            $tournament->minimum_rank = $validated['minimum_rank'];
+            $tournament->team_size = $validated['team_size'];
+            $tournament->deadline = $validated['deadline'];
+            $tournament->judging_date = $validated['judging_date']; // Can be any date now
+            $tournament->rules = $validated['rules'];
+            $tournament->judging_criteria = $validated['judging_criteria'];
+            $tournament->project_submission = $validated['project_submission'];
+            $tournament->save();
             
-            // Clear all existing judges and add the new ones from the form
+            // Handle judges - prepare data with roles
             $judgeData = [];
-            foreach ($validated['judges'] as $index => $judgeId) {
-                // Only include role if it exists and is not empty
-                $role = isset($validated['judge_roles'][$index]) && !empty($validated['judge_roles'][$index]) 
-                    ? $validated['judge_roles'][$index] 
-                    : null;
-                    
+            $originalJudges = $validated['judges']; // Keep original array with indices
+            
+            foreach ($judges as $judgeId) {
+                // Find the original index to get the correct role
+                $originalIndex = array_search($judgeId, $originalJudges);
+                $role = null;
+                
+                if ($originalIndex !== false && 
+                    isset($validated['judge_roles'][$originalIndex]) && 
+                    !empty($validated['judge_roles'][$originalIndex])) {
+                    $role = $validated['judge_roles'][$originalIndex];
+                }
+                
                 $judgeData[$judgeId] = ['role' => $role];
             }
             
             // Sync judges
             $tournament->judges()->sync($judgeData);
-            Log::info('Judges synced successfully', ['judgeData' => $judgeData]);
             
-            // For rubrics, first delete all existing ones
+            // Update rubrics - delete existing and create new ones
             $tournament->rubrics()->delete();
             
-            // Then create new ones
             foreach ($validated['rubrics'] as $rubricData) {
                 $tournament->rubrics()->create([
                     'title' => $rubricData['title'],
@@ -373,17 +361,20 @@ class LecturerDashboardController extends Controller
             
             DB::commit();
             
-            // Log the executed queries for debugging
-            Log::info('Tournament update executed queries:', ['queries' => DB::getQueryLog()]);
-            
             return redirect()->route('lecturer.tournaments')
                     ->with('success', 'Tournament updated successfully.');
+                    
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            return redirect()->back()
+                    ->withErrors($e->validator)
+                    ->withInput();
                     
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to update tournament', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'tournament_id' => $tournament->id
             ]);
             
             return redirect()->back()
