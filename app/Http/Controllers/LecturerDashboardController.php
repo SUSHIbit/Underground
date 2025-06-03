@@ -396,6 +396,9 @@ class LecturerDashboardController extends Controller
                     ->with('success', 'Tournament submitted for approval successfully.');
     }
 
+/**
+     * Display tournament submissions with proper team loading.
+     */
     public function tournamentSubmissions(Tournament $tournament)
     {
         // Ensure the lecturer owns this tournament
@@ -403,11 +406,36 @@ class LecturerDashboardController extends Controller
             abort(403);
         }
         
-        // Load the tournament with its participants and their users
-        $tournament->load(['participants.user']);
+        // Load the tournament with its participants and their users and teams
+        $tournament->load([
+            'participants.user',
+            'participants.team.participants.user' // Load team with all team members
+        ]);
         
-        // Get all participants
-        $participants = $tournament->participants;
+        // Get all participants - for team tournaments, we want to show each team once
+        if ($tournament->team_size > 1) {
+            // For team tournaments, group by team and show one entry per team
+            $participants = $tournament->participants()
+                ->whereNotNull('team_id')
+                ->with([
+                    'user',
+                    'team.participants.user' // Load all team members
+                ])
+                ->get()
+                ->groupBy('team_id') // Group by team
+                ->map(function($teamParticipants) {
+                    // Return the team leader as the representative, or first member if no leader
+                    return $teamParticipants->sortBy(function($participant) {
+                        return $participant->role === 'leader' ? 0 : 1;
+                    })->first();
+                })
+                ->values(); // Reset array keys
+        } else {
+            // For individual tournaments, just get all participants
+            $participants = $tournament->participants()
+                ->with('user')
+                ->get();
+        }
         
         return view('lecturer.tournament-submissions', compact('tournament', 'participants'));
     }
